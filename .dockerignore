@@ -1,0 +1,124 @@
+# ================================================================
+# WOODIFY MICROSERVICES - DOCKER IGNORE
+# ================================================================
+# Cac file/folder khong can copy vao Docker image
+# Giup giam kich thuoc image va tang toc build
+# ================================================================
+
+# ========================
+# Git & Version Control
+# ========================
+**/.git
+**/.gitignore
+**/.gitattributes
+
+# ========================
+# IDE & Editor
+# ========================
+**/.vs
+**/.vscode
+**/.idea
+**/.project
+**/.settings
+**/.toolstarget
+**/*.*proj.user
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# ========================
+# Build Outputs
+# ========================
+**/bin
+**/obj
+**/out
+[Dd]ebug/
+[Rr]elease/
+
+# ========================
+# NuGet
+# ========================
+*.nupkg
+*.snupkg
+**/packages/
+
+# ========================
+# Test Results
+# ========================
+**/TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# ========================
+# Docker Related
+# ========================
+**/.dockerignore
+**/docker-compose*
+**/Dockerfile*
+**/charts
+**/azds.yaml
+**/values.dev.yaml
+**/secrets.dev.yaml
+
+# ========================
+# Node.js (if any)
+# ========================
+**/node_modules
+**/npm-debug.log
+**/yarn-error.log
+
+# ========================
+# Environment & Secrets
+# ========================
+**/.env
+**/.env.*
+*.local
+appsettings.Production.json
+appsettings.Staging.json
+secrets.json
+*.key
+*.pem
+*.pfx
+*.p12
+
+# ========================
+# Documentation
+# ========================
+*.md
+README*
+LICENSE
+docs/
+CHANGELOG*
+
+# ========================
+# Database Files
+# ========================
+*.dbmdl
+*.jfm
+*.mdf
+*.ldf
+
+# ========================
+# Logs
+# ========================
+*.log
+**/logs/
+[Ll]og/
+
+# ========================
+# OS Generated
+# ========================
+Thumbs.db
+.DS_Store
+*.swp
+*~
+
+# ========================
+# Temporary Files
+# ========================
+*.tmp
+*.temp
+*.bak
+*.cache

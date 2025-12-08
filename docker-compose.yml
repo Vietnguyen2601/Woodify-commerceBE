@@ -1,0 +1,384 @@
+# ================================================================
+# WOODIFY MICROSERVICES - DOCKER COMPOSE
+# ================================================================
+# Chạy: docker-compose up -d
+# Dừng: docker-compose down
+# Xem logs: docker-compose logs -f [service-name]
+# ================================================================
+
+version: '3.8'
+
+services:
+  # ==============================================================
+  # POSTGRESQL DATABASE
+  # ==============================================================
+  # PostgreSQL chính - tự động tạo các database cho từng service
+  # Mỗi service có database riêng biệt (database-per-service pattern)
+  # Connection string mẫu: Host=postgres;Database=account_db;Username=woodify;Password=woodify123
+  postgres:
+    image: postgres:16-alpine
+    container_name: woodify-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: woodify
+      POSTGRES_PASSWORD: woodify123
+      POSTGRES_DB: woodify_main
+    ports:
+      - "5433:5432"
+    volumes:
+      # Volume lưu trữ data - dữ liệu sẽ persist khi restart container
+      - postgres_data:/var/lib/postgresql/data
+      # Script khởi tạo databases - chạy tự động khi container start lần đầu
+      - ./docker/postgres/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
+    networks:
+      - woodify-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U woodify -d woodify_main"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==============================================================
+  # RABBITMQ MESSAGE BROKER
+  # ==============================================================
+  # Management UI: http://localhost:15672 (guest/guest)
+  # AMQP Port: 5672
+  # Dùng cho communication giữa các services (Event-Driven Architecture)
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: woodify-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: woodify
+      RABBITMQ_DEFAULT_PASS: woodify123
+    ports:
+      - "5672:5672"    # AMQP protocol
+      - "15672:15672"  # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - woodify-network
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ==============================================================
+  # ADMINER - DATABASE MANAGEMENT UI
+  # ==============================================================
+  # Web UI để quản lý PostgreSQL
+  # Truy cập: http://localhost:8080
+  # Login: System=PostgreSQL, Server=postgres, Username=woodify, Password=woodify123
+  adminer:
+    image: adminer:latest
+    container_name: woodify-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    networks:
+      - woodify-network
+    depends_on:
+      - postgres
+
+  # ==============================================================
+  # API GATEWAY (YARP)
+  # ==============================================================
+  # Entry point cho tất cả API calls
+  # Port: 5000 (HTTP), 5001 (HTTPS)
+  # Routes traffic đến các backend services
+  api-gateway:
+    build:
+      context: .
+      dockerfile: src/ApiGateway/Dockerfile
+    container_name: woodify-api-gateway
+    restart: unless-stopped
+    ports:
+      - "5000:8080"
+      - "5001:8081"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTPS_PORTS=8081
+    depends_on:
+      - account-service
+      - shop-service
+      - catalog-service
+      - product-service
+      - certification-service
+      - inventory-service
+      - order-service
+      - payment-service
+      - audit-service
+    networks:
+      - woodify-network
+
+  # ==============================================================
+  # ACCOUNT SERVICE
+  # ==============================================================
+  # Quản lý: Accounts, Roles
+  # Database: account_db
+  # Port: 5010
+  account-service:
+    build:
+      context: .
+      dockerfile: src/Services/AccountService/AccountService.APIService/Dockerfile
+    container_name: woodify-account-service
+    restart: unless-stopped
+    ports:
+      - "5010:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=account_db;Username=woodify;Password=woodify123
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=woodify
+      - RabbitMQ__Password=woodify123
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - woodify-network
+
+  # ==============================================================
+  # SHOP SERVICE
+  # ==============================================================
+  # Quản lý: Shops, Shop_Follower
+  # Database: shop_db
+  # Port: 5011
+  shop-service:
+    build:
+      context: .
+      dockerfile: src/Services/ShopService/ShopService.API/Dockerfile
+    container_name: woodify-shop-service
+    restart: unless-stopped
+    ports:
+      - "5011:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=shop_db;Username=woodify;Password=woodify123
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=woodify
+      - RabbitMQ__Password=woodify123
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - woodify-network
+
+  # ==============================================================
+  # CATALOG SERVICE
+  # ==============================================================
+  # Quản lý: Category, Product_Category
+  # Database: catalog_db
+  # Port: 5012
+  catalog-service:
+    build:
+      context: .
+      dockerfile: src/Services/CatalogService/CatalogService.API/Dockerfile
+    container_name: woodify-catalog-service
+    restart: unless-stopped
+    ports:
+      - "5012:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=catalog_db;Username=woodify;Password=woodify123
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=woodify
+      - RabbitMQ__Password=woodify123
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - woodify-network
+
+  # ==============================================================
+  # PRODUCT SERVICE
+  # ==============================================================
+  # Quản lý: Product_Master, Product_Version, Product_Media
+  # Database: product_db
+  # Port: 5013
+  product-service:
+    build:
+      context: .
+      dockerfile: src/Services/ProductService/ProductService.API/Dockerfile
+    container_name: woodify-product-service
+    restart: unless-stopped
+    ports:
+      - "5013:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=product_db;Username=woodify;Password=woodify123
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=woodify
+      - RabbitMQ__Password=woodify123
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - woodify-network
+
+  # ==============================================================
+  # CERTIFICATION SERVICE
+  # ==============================================================
+  # Quản lý: Appraisal_Certificate, Appraisal_Record, Certificate_Signature
+  # Database: certification_db
+  # Port: 5014
+  certification-service:
+    build:
+      context: .
+      dockerfile: src/Services/CertificationService/CertificationService.API/Dockerfile
+    container_name: woodify-certification-service
+    restart: unless-stopped
+    ports:
+      - "5014:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=certification_db;Username=woodify;Password=woodify123
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=woodify
+      - RabbitMQ__Password=woodify123
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - woodify-network
+
+  # ==============================================================
+  # INVENTORY SERVICE
+  # ==============================================================
+  # Quản lý: Inventory_SKU, Inventory_Batch
+  # Database: inventory_db
+  # Port: 5015
+  inventory-service:
+    build:
+      context: .
+      dockerfile: src/Services/InventoryService/InventoryService.API/Dockerfile
+    container_name: woodify-inventory-service
+    restart: unless-stopped
+    ports:
+      - "5015:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=inventory_db;Username=woodify;Password=woodify123
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=woodify
+      - RabbitMQ__Password=woodify123
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - woodify-network
+
+  # ==============================================================
+  # ORDER SERVICE
+  # ==============================================================
+  # Quản lý: Carts, Cart_Items, Orders, Order_Items
+  # Database: order_db
+  # Port: 5016
+  order-service:
+    build:
+      context: .
+      dockerfile: src/Services/OrderService/OrderService.API/Dockerfile
+    container_name: woodify-order-service
+    restart: unless-stopped
+    ports:
+      - "5016:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=order_db;Username=woodify;Password=woodify123
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=woodify
+      - RabbitMQ__Password=woodify123
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - woodify-network
+
+  # ==============================================================
+  # PAYMENT SERVICE
+  # ==============================================================
+  # Quản lý: Wallet, Wallet_Transaction, Payment
+  # Database: payment_db
+  # Port: 5017
+  payment-service:
+    build:
+      context: .
+      dockerfile: src/Services/PaymentService/PaymentService.API/Dockerfile
+    container_name: woodify-payment-service
+    restart: unless-stopped
+    ports:
+      - "5017:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=payment_db;Username=woodify;Password=woodify123
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=woodify
+      - RabbitMQ__Password=woodify123
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - woodify-network
+
+  # ==============================================================
+  # AUDIT SERVICE
+  # ==============================================================
+  # Quản lý: Financial_Log
+  # Database: audit_db
+  # Port: 5018
+  audit-service:
+    build:
+      context: .
+      dockerfile: src/Services/AuditService/AuditService.API/Dockerfile
+    container_name: woodify-audit-service
+    restart: unless-stopped
+    ports:
+      - "5018:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=audit_db;Username=woodify;Password=woodify123
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=woodify
+      - RabbitMQ__Password=woodify123
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - woodify-network
+
+# ==============================================================
+# NETWORKS
+# ==============================================================
+networks:
+  woodify-network:
+    driver: bridge
+    name: woodify-network
+
+# ==============================================================
+# VOLUMES
+# ==============================================================
+# Lưu trữ persistent data
+volumes:
+  postgres_data:
+    name: woodify-postgres-data
+  rabbitmq_data:
+    name: woodify-rabbitmq-data
