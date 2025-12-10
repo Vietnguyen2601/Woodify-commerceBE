@@ -2,9 +2,11 @@ using AccountService.Repositories.DBContext;
 using AccountService.Repositories.IRepositories;
 using AccountService.Repositories.Repositories;
 using AccountService.Repositories.UnitOfWork;
+using AccountService.Services.Consumers;
 using AccountService.Services.Interfaces;
 using AccountService.Services.InternalServices;
 using Microsoft.EntityFrameworkCore;
+using Shared.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +30,30 @@ builder.Services.AddSwaggerGen(c =>
 // Connection string từ appsettings.json hoặc environment variable
 builder.Services.AddDbContext<AccountDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// ========================================
+// RABBITMQ CONFIGURATION
+// ========================================
+var rabbitMQSettings = new RabbitMQSettings
+{
+    Host = builder.Configuration["RabbitMQ:Host"] ?? "localhost",
+    Port = int.Parse(builder.Configuration["RabbitMQ:Port"] ?? "5672"),
+    Username = builder.Configuration["RabbitMQ:Username"] ?? "guest",
+    Password = builder.Configuration["RabbitMQ:Password"] ?? "guest"
+};
+
+// Đăng ký RabbitMQ Consumer (chỉ khi có RabbitMQ)
+try
+{
+    var consumer = new RabbitMQConsumer(rabbitMQSettings);
+    builder.Services.AddSingleton(consumer);
+    builder.Services.AddHostedService<ShopCreatedConsumer>();
+    Console.WriteLine("✅ RabbitMQ Consumer connected successfully");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"⚠️ RabbitMQ not available: {ex.Message}. Running without messaging.");
+}
 
 // ========================================
 // DEPENDENCY INJECTION
