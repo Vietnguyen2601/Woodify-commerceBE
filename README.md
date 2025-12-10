@@ -243,6 +243,173 @@ taskkill /PID <PID> /F
 
 - Backend Development Team
 
-## 📄 License
+## 🐰 RabbitMQ - Message Broker
 
-Private - All rights reserved" 
+### Giới thiệu
+
+RabbitMQ là **Message Broker** dùng để giao tiếp **bất đồng bộ** giữa các microservices. Thay vì gọi API trực tiếp (HTTP), services gửi **message/event** qua RabbitMQ.
+
+### Kiến trúc
+
+```
+┌─────────────────┐                              ┌─────────────────┐
+│   ShopService   │                              │ AccountService  │
+│   (Publisher)   │                              │   (Consumer)    │
+└────────┬────────┘                              └────────▲────────┘
+         │                                                │
+         │ 1. Publish "shop.created"                      │ 3. Subscribe & Process
+         │    event sau khi tạo Shop                      │
+         ▼                                                │
+┌─────────────────────────────────────────────────────────┴────────┐
+│                         RabbitMQ                                 │
+│                    Queue: "shop.created"                         │
+│                                                                  │
+│    ┌─────────────────────────────────────────────────────────┐   │
+│    │ Message: { ShopId, ShopName, OwnerId, CreatedAt }       │   │
+│    └─────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│                     2. Message chờ trong Queue                   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Khi nào dùng RabbitMQ vs HTTP?
+
+| Use Case | Phương án | Ví dụ |
+|----------|-----------|-------|
+| Cần data ngay + chính xác | **HTTP Call** | Lấy thông tin Owner khi xem Shop |
+| Thông báo sự kiện (fire & forget) | **RabbitMQ** | Shop được tạo → gửi email |
+| Side effects không cần response | **RabbitMQ** | Order đặt → trừ kho, ghi log |
+
+### Cấu trúc code
+
+```
+src/
+├── Shared/
+│   ├── Events/
+│   │   └── DomainEvents.cs           # Định nghĩa các Event classes
+│   └── Messaging/
+│       ├── RabbitMQPublisher.cs      # Gửi message
+│       ├── RabbitMQConsumer.cs       # Nhận message
+│       └── RabbitMQSettings.cs       # Config connection
+│
+├── Services/
+│   ├── ShopService/
+│   │   └── ShopService.Services/
+│   │       └── InternalServices/
+│   │           └── ShopService.cs    # Publish event khi tạo Shop
+│   │
+│   └── AccountService/
+│       └── AccountService.Services/
+│           └── Consumers/
+│               └── ShopCreatedConsumer.cs  # Nhận và xử lý event
+```
+
+### Các bước tạo liên kết giữa 2 Services
+
+#### Bước 1: Định nghĩa Event trong Shared
+
+```csharp
+// src/Shared/Events/DomainEvents.cs
+namespace Shared.Events;
+
+public class ShopCreatedEvent
+{
+    public Guid ShopId { get; set; }
+    public string ShopName { get; set; } = string.Empty;
+    public Guid OwnerId { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+```
+
+#### Bước 2: Publisher (ShopService) - Gửi event
+
+```csharp
+// ShopService.Services/InternalServices/ShopService.cs
+public async Task<ShopDto> CreateShopAsync(CreateShopDto dto)
+{
+    // 1. Lưu Shop vào DB
+    var shop = dto.ToModel();
+    await _unitOfWork.Shops.AddAsync(shop);
+    await _unitOfWork.SaveChangesAsync();
+
+    // 2. Publish event qua RabbitMQ
+    var shopCreatedEvent = new ShopCreatedEvent
+    {
+        ShopId = shop.ShopId,
+        ShopName = shop.ShopName,
+        OwnerId = shop.OwnerId,
+        CreatedAt = shop.CreatedAt
+    };
+    _rabbitPublisher.PublishToQueue("shop.created", shopCreatedEvent);
+
+    return shop.ToDto();
+}
+```
+
+#### Bước 3: Consumer (AccountService) - Nhận event
+
+```csharp
+// AccountService.Services/Consumers/ShopCreatedConsumer.cs
+public class ShopCreatedConsumer : BackgroundService
+{
+    private readonly RabbitMQConsumer _consumer;
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        _consumer.Subscribe<ShopCreatedEvent>("shop.created", (shopEvent) =>
+        {
+            // Xử lý khi nhận được event
+            Console.WriteLine($"Shop {shopEvent.ShopName} was created!");
+            // Gửi email, log audit, cập nhật thống kê...
+        });
+        return Task.CompletedTask;
+    }
+}
+```
+
+#### Bước 4: Đăng ký DI trong Program.cs
+
+**ShopService (Publisher):**
+```csharp
+// Đăng ký RabbitMQ Publisher
+var rabbitSettings = new RabbitMQSettings { ... };
+builder.Services.AddSingleton(new RabbitMQPublisher(rabbitSettings));
+```
+
+**AccountService (Consumer):**
+```csharp
+// Đăng ký RabbitMQ Consumer + Background Service
+builder.Services.AddSingleton(new RabbitMQConsumer(rabbitSettings));
+builder.Services.AddHostedService<ShopCreatedConsumer>();
+```
+
+### Lệnh chạy test RabbitMQ
+
+```bash
+# 1. Khởi động RabbitMQ container
+docker-compose up -d rabbitmq
+
+# 2. Chạy AccountService (Consumer - nhận event)
+dotnet run --project src/Services/AccountService/AccountService.APIService
+
+# 3. Mở terminal mới, chạy ShopService (Publisher - gửi event)
+dotnet run --project src/Services/ShopService/ShopService.APIService
+
+# 4. Tạo Shop mới (sẽ trigger event)
+curl -X POST http://localhost:5011/api/shops \
+  -H "Content-Type: application/json" \
+  -d '{"shopName":"Test Shop","ownerId":"11111111-1111-1111-1111-111111111111"}'
+
+# 5. Xem log AccountService → sẽ thấy message nhận được event
+```
+
+### RabbitMQ Management UI
+
+- **URL**: http://localhost:15672
+- **Username/Password**: Liên hệ Team Lead
+
+Tại đây có thể xem:
+- Queues đang hoạt động
+- Messages trong queue
+- Connections từ các services
+
