@@ -1,5 +1,3 @@
-"# Woodify-commerceBE
-
 ## 🌲 Giới thiệu
 
 Woodify là hệ thống thương mại điện tử chuyên về sản phẩm gỗ, được xây dựng theo kiến trúc **Microservices** với .NET 8.
