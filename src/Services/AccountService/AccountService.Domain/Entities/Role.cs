@@ -12,7 +12,5 @@ public class Role
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public bool IsActive { get; set; } = true;
-
-    // Navigation property
     public virtual ICollection<Account> Accounts { get; set; } = new List<Account>();
 }
