@@ -12,7 +12,8 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ShopService.Services\ShopService.Services.csproj" />
-    <ProjectReference Include="..\ShopService.Repositories\ShopService.Repositories.csproj" />
+    <ProjectReference Include="..\ShopService.Application\ShopService.Application.csproj" />
+    <ProjectReference Include="..\ShopService.Infrastructure\ShopService.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\Shared\Shared.csproj" />
   </ItemGroup>
 </Project>

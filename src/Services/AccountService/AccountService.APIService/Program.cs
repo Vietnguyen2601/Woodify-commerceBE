@@ -1,10 +1,10 @@
-using AccountService.Repositories.DBContext;
-using AccountService.Repositories.IRepositories;
-using AccountService.Repositories.Repositories;
-using AccountService.Repositories.UnitOfWork;
-using AccountService.Services.Consumers;
-using AccountService.Services.Interfaces;
-using AccountService.Services.InternalServices;
+using AccountService.Infrastructure.Data.Context;
+using AccountService.Infrastructure.Repositories;
+using AccountService.Infrastructure.Repositories.IRepositories;
+using AccountService.Infrastructure.UnitOfWork;
+using AccountService.Application.Consumers;
+using AccountService.Application.Interfaces;
+using AccountService.Application.Services;
 using Microsoft.EntityFrameworkCore;
 using Shared.Messaging;
 
@@ -65,8 +65,12 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 
-// Services (using alias to avoid conflict with namespace)
-builder.Services.AddScoped<IAccountService, AccountService.Services.InternalServices.AccountService>();
+// Services (using fully qualified name to avoid conflict with namespace)
+builder.Services.AddScoped<IAccountService>(sp => 
+    new global::AccountService.Application.Services.AccountService(
+        sp.GetRequiredService<IAccountRepository>(),
+        sp.GetRequiredService<IRoleRepository>()
+    ));
 builder.Services.AddScoped<IRoleService, RoleService>();
 
 var app = builder.Build();

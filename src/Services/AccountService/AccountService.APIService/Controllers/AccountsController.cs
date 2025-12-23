@@ -1,5 +1,5 @@
-using AccountService.Common.DTOs;
-using AccountService.Services.Interfaces;
+using AccountService.Application.DTOs;
+using AccountService.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AccountService.APIService.Controllers;

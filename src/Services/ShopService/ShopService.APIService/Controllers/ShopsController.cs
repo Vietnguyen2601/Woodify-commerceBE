@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using ShopService.Common.DTOs;
-using ShopService.Services.Interfaces;
+using ShopService.Application.DTOs;
+using ShopService.Application.Interfaces;
 
 namespace ShopService.APIService.Controllers;
 
