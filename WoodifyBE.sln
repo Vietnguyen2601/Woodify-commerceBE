@@ -1,130 +1,27 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-
-# ========================================
-# API Gateway (YARP)
-# ========================================
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApiGateway", "src\ApiGateway\ApiGateway.csproj", "{A1B2C3D4-1111-1111-1111-111111111111}"
 EndProject
-
-# ========================================
-# Shared Library (Common code dùng chung)
-# ========================================
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "src\Shared\Shared.csproj", "{A1B2C3D4-2222-2222-2222-222222222222}"
 EndProject
-
-# ========================================
-# Account Service (Accounts, Roles)
-# Cấu trúc: APIService -> Services -> Common <- Repositories
-# ========================================
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccountService.APIService", "src\Services\AccountService\AccountService.APIService\AccountService.APIService.csproj", "{11111111-1111-1111-1111-111111111111}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccountService.Services", "src\Services\AccountService\AccountService.Services\AccountService.Services.csproj", "{11111111-1111-1111-1111-111111111112}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccountService.Application", "src\Services\AccountService\AccountService.Application\AccountService.Application.csproj", "{11111111-1111-1111-1111-111111111112}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccountService.Common", "src\Services\AccountService\AccountService.Common\AccountService.Common.csproj", "{11111111-1111-1111-1111-111111111113}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccountService.Domain", "src\Services\AccountService\AccountService.Domain\AccountService.Domain.csproj", "{11111111-1111-1111-1111-111111111113}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccountService.Repositories", "src\Services\AccountService\AccountService.Repositories\AccountService.Repositories.csproj", "{11111111-1111-1111-1111-111111111114}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccountService.Infrastructure", "src\Services\AccountService\AccountService.Infrastructure\AccountService.Infrastructure.csproj", "{11111111-1111-1111-1111-111111111114}"
 EndProject
-
-# ========================================
-# Shop Service (Shops, Shop_Follower)
-# ========================================
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShopService.APIService", "src\Services\ShopService\ShopService.APIService\ShopService.APIService.csproj", "{22222222-2222-2222-2222-222222222221}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShopService.Services", "src\Services\ShopService\ShopService.Services\ShopService.Services.csproj", "{22222222-2222-2222-2222-222222222222}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShopService.Application", "src\Services\ShopService\ShopService.Application\ShopService.Application.csproj", "{22222222-2222-2222-2222-222222222222}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShopService.Common", "src\Services\ShopService\ShopService.Common\ShopService.Common.csproj", "{22222222-2222-2222-2222-222222222223}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShopService.Domain", "src\Services\ShopService\ShopService.Domain\ShopService.Domain.csproj", "{22222222-2222-2222-2222-222222222223}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShopService.Repositories", "src\Services\ShopService\ShopService.Repositories\ShopService.Repositories.csproj", "{22222222-2222-2222-2222-222222222224}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShopService.Infrastructure", "src\Services\ShopService\ShopService.Infrastructure\ShopService.Infrastructure.csproj", "{22222222-2222-2222-2222-222222222224}"
 EndProject
-
-# ========================================
-# Catalog Service (Category, Product_Category)
-# ========================================
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CatalogService.APIService", "src\Services\CatalogService\CatalogService.APIService\CatalogService.APIService.csproj", "{33333333-3333-3333-3333-333333333331}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CatalogService.Services", "src\Services\CatalogService\CatalogService.Services\CatalogService.Services.csproj", "{33333333-3333-3333-3333-333333333332}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CatalogService.Common", "src\Services\CatalogService\CatalogService.Common\CatalogService.Common.csproj", "{33333333-3333-3333-3333-333333333333}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CatalogService.Repositories", "src\Services\CatalogService\CatalogService.Repositories\CatalogService.Repositories.csproj", "{33333333-3333-3333-3333-333333333334}"
-EndProject
-
-# ========================================
-# Product Service (Product_Master, Product_Version, Product_Media)
-# ========================================
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductService.APIService", "src\Services\ProductService\ProductService.APIService\ProductService.APIService.csproj", "{44444444-4444-4444-4444-444444444441}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductService.Services", "src\Services\ProductService\ProductService.Services\ProductService.Services.csproj", "{44444444-4444-4444-4444-444444444442}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductService.Common", "src\Services\ProductService\ProductService.Common\ProductService.Common.csproj", "{44444444-4444-4444-4444-444444444443}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductService.Repositories", "src\Services\ProductService\ProductService.Repositories\ProductService.Repositories.csproj", "{44444444-4444-4444-4444-444444444444}"
-EndProject
-
-# ========================================
-# Certification Service (Appraisal_Certificate, Appraisal_Record, Certificate_Signature)
-# ========================================
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CertificationService.APIService", "src\Services\CertificationService\CertificationService.APIService\CertificationService.APIService.csproj", "{55555555-5555-5555-5555-555555555551}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CertificationService.Services", "src\Services\CertificationService\CertificationService.Services\CertificationService.Services.csproj", "{55555555-5555-5555-5555-555555555552}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CertificationService.Common", "src\Services\CertificationService\CertificationService.Common\CertificationService.Common.csproj", "{55555555-5555-5555-5555-555555555553}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CertificationService.Repositories", "src\Services\CertificationService\CertificationService.Repositories\CertificationService.Repositories.csproj", "{55555555-5555-5555-5555-555555555554}"
-EndProject
-
-# ========================================
-# Inventory Service (Inventory_SKU, Inventory_Batch)
-# ========================================
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryService.APIService", "src\Services\InventoryService\InventoryService.APIService\InventoryService.APIService.csproj", "{66666666-6666-6666-6666-666666666661}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryService.Services", "src\Services\InventoryService\InventoryService.Services\InventoryService.Services.csproj", "{66666666-6666-6666-6666-666666666662}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryService.Common", "src\Services\InventoryService\InventoryService.Common\InventoryService.Common.csproj", "{66666666-6666-6666-6666-666666666663}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryService.Repositories", "src\Services\InventoryService\InventoryService.Repositories\InventoryService.Repositories.csproj", "{66666666-6666-6666-6666-666666666664}"
-EndProject
-
-# ========================================
-# Order Service (Carts, Cart_Items, Orders, Order_Items)
-# ========================================
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderService.APIService", "src\Services\OrderService\OrderService.APIService\OrderService.APIService.csproj", "{77777777-7777-7777-7777-777777777771}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderService.Services", "src\Services\OrderService\OrderService.Services\OrderService.Services.csproj", "{77777777-7777-7777-7777-777777777772}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderService.Common", "src\Services\OrderService\OrderService.Common\OrderService.Common.csproj", "{77777777-7777-7777-7777-777777777773}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderService.Repositories", "src\Services\OrderService\OrderService.Repositories\OrderService.Repositories.csproj", "{77777777-7777-7777-7777-777777777774}"
-EndProject
-
-# ========================================
-# Payment Service (Wallet, Wallet_Transaction, Payment)
-# ========================================
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PaymentService.APIService", "src\Services\PaymentService\PaymentService.APIService\PaymentService.APIService.csproj", "{88888888-8888-8888-8888-888888888881}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PaymentService.Services", "src\Services\PaymentService\PaymentService.Services\PaymentService.Services.csproj", "{88888888-8888-8888-8888-888888888882}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PaymentService.Common", "src\Services\PaymentService\PaymentService.Common\PaymentService.Common.csproj", "{88888888-8888-8888-8888-888888888883}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PaymentService.Repositories", "src\Services\PaymentService\PaymentService.Repositories\PaymentService.Repositories.csproj", "{88888888-8888-8888-8888-888888888884}"
-EndProject
-
-# ========================================
-# Audit Service (Financial_Log)
-# ========================================
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuditService.APIService", "src\Services\AuditService\AuditService.APIService\AuditService.APIService.csproj", "{99999999-9999-9999-9999-999999999991}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuditService.Services", "src\Services\AuditService\AuditService.Services\AuditService.Services.csproj", "{99999999-9999-9999-9999-999999999992}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuditService.Common", "src\Services\AuditService\AuditService.Common\AuditService.Common.csproj", "{99999999-9999-9999-9999-999999999993}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuditService.Repositories", "src\Services\AuditService\AuditService.Repositories\AuditService.Repositories.csproj", "{99999999-9999-9999-9999-999999999994}"
-EndProject
-
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -135,5 +32,47 @@ Global
 		{A1B2C3D4-1111-1111-1111-111111111111}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A1B2C3D4-1111-1111-1111-111111111111}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A1B2C3D4-1111-1111-1111-111111111111}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-2222-2222-2222-222222222222}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-2222-2222-2222-222222222222}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-2222-2222-2222-222222222222}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-2222-2222-2222-222222222222}.Release|Any CPU.Build.0 = Release|Any CPU
+		{11111111-1111-1111-1111-111111111111}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{11111111-1111-1111-1111-111111111111}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{11111111-1111-1111-1111-111111111111}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{11111111-1111-1111-1111-111111111111}.Release|Any CPU.Build.0 = Release|Any CPU
+		{11111111-1111-1111-1111-111111111112}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{11111111-1111-1111-1111-111111111112}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{11111111-1111-1111-1111-111111111112}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{11111111-1111-1111-1111-111111111112}.Release|Any CPU.Build.0 = Release|Any CPU
+		{11111111-1111-1111-1111-111111111113}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{11111111-1111-1111-1111-111111111113}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{11111111-1111-1111-1111-111111111113}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{11111111-1111-1111-1111-111111111113}.Release|Any CPU.Build.0 = Release|Any CPU
+		{11111111-1111-1111-1111-111111111114}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{11111111-1111-1111-1111-111111111114}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{11111111-1111-1111-1111-111111111114}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{11111111-1111-1111-1111-111111111114}.Release|Any CPU.Build.0 = Release|Any CPU
+		{22222222-2222-2222-2222-222222222221}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{22222222-2222-2222-2222-222222222221}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{22222222-2222-2222-2222-222222222221}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{22222222-2222-2222-2222-222222222221}.Release|Any CPU.Build.0 = Release|Any CPU
+		{22222222-2222-2222-2222-222222222222}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{22222222-2222-2222-2222-222222222222}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{22222222-2222-2222-2222-222222222222}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{22222222-2222-2222-2222-222222222222}.Release|Any CPU.Build.0 = Release|Any CPU
+		{22222222-2222-2222-2222-222222222223}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{22222222-2222-2222-2222-222222222223}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{22222222-2222-2222-2222-222222222223}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{22222222-2222-2222-2222-222222222223}.Release|Any CPU.Build.0 = Release|Any CPU
+		{22222222-2222-2222-2222-222222222224}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{22222222-2222-2222-2222-222222222224}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{22222222-2222-2222-2222-222222222224}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{22222222-2222-2222-2222-222222222224}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {39D98019-8713-43C4-9B5D-9A69885708EE}
 	EndGlobalSection
 EndGlobal

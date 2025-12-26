@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Shared.Messaging;
-using ShopService.Repositories.DBContext;
-using ShopService.Repositories.UnitOfWork;
-using ShopService.Services.Interfaces;
-using InternalShopService = ShopService.Services.InternalServices.ShopService;
+using ShopService.Infrastructure.Data.Context;
+using ShopService.Infrastructure.UnitOfWork;
+using ShopService.Application.Interfaces;
+using InternalShopService = ShopService.Application.Services.ShopService;
 
 var builder = WebApplication.CreateBuilder(args);
 
