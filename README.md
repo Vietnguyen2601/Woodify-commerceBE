@@ -10,15 +10,16 @@ Woodify là hệ thống thương mại điện tử chuyên về sản phẩm g
 │                         Port: 5000                              │
 └─────────────────────────────────────────────────────────────────┘
                                 │
-        ┌───────────────────────┼───────────────────────┐
-        ▼                       ▼                       ▼
-┌───────────────┐    ┌───────────────┐    ┌───────────────┐
-│ AccountService│    │  ShopService  │    │ CatalogService│
-│   Port: 5010  │    │   Port: 5011  │    │   Port: 5012  │
-└───────────────┘    └───────────────┘    └───────────────┘
-        │                       │                       │
-        └───────────────────────┼───────────────────────┘
-                                ▼
+        ┌───────────┬───────────┼───────────┬───────────┬──────────┐
+        ▼           ▼           ▼           ▼           ▼          ▼
+┌──────────────┐ ┌──────────┐ ┌─────────┐ ┌─────────┐ ┌────────┐ ┌─────────┐
+│   Identity   │ │  Shop    │ │Product  │ │Inventory│ │ Order  │ │Payment  │
+│   Service    │ │ Service  │ │Service  │ │Service  │ │Service │ │Service  │
+│  Port: 5010  │ │Port: 5011│ │Port:5012│ │Port:5013│ │Port:5014 │Port:5015│
+└──────────────┘ └──────────┘ └─────────┘ └─────────┘ └────────┘ └─────────┘
+        │           │           │           │           │          │
+        └───────────┴───────────┴───────────┴───────────┴──────────┴─────────┘
+                                │
                     ┌───────────────────────┐
                     │   PostgreSQL + RabbitMQ│
                     └───────────────────────┘
@@ -26,18 +27,15 @@ Woodify là hệ thống thương mại điện tử chuyên về sản phẩm g
 
 ### Microservices
 
-| Service | Port | Database | Mô tả |
-|---------|------|----------|-------|
+| Service | Port | Database | Domain |
+|---------|------|----------|--------|
 | API Gateway | 5000 | - | YARP Reverse Proxy |
-| Account Service | 5010 | account_db | Quản lý tài khoản, roles |
-| Shop Service | 5011 | shop_db | Quản lý cửa hàng |
-| Catalog Service | 5012 | catalog_db | Quản lý danh mục |
-| Product Service | 5013 | product_db | Quản lý sản phẩm |
-| Certification Service | 5014 | certification_db | Chứng nhận gỗ |
-| Inventory Service | 5015 | inventory_db | Quản lý kho |
-| Order Service | 5016 | order_db | Quản lý đơn hàng |
-| Payment Service | 5017 | payment_db | Thanh toán |
-| Audit Service | 5018 | audit_db | Log tài chính |
+| Identity Service | 5010 | identity_db | User, Account |
+| Shop Service | 5011 | shop_db | Shop, Follow |
+| Product Service | 5012 | product_db | Product, Certificate |
+| Inventory Service | 5013 | inventory_db | Stock |
+| Order Service | 5014 | order_db | Cart, Order |
+| Payment Service | 5015 | payment_db | Payment, Wallet |
 
 ## 📋 Yêu cầu hệ thống
 

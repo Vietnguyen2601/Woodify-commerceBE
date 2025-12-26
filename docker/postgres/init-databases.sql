@@ -12,62 +12,44 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- TẠO CÁC DATABASE CHO TỪNG SERVICE
 -- ================================================================
 
--- Account Service Database (Accounts, Roles)
-CREATE DATABASE account_db;
+-- Identity Service Database (User, Account)
+CREATE DATABASE identity_db;
 
--- Shop Service Database (Shops, Shop_Follower)
+-- Shop Service Database (Shop, Follow)
 CREATE DATABASE shop_db;
 
--- Catalog Service Database (Category, Product_Category)
-CREATE DATABASE catalog_db;
-
--- Product Service Database (Product_Master, Product_Version, Product_Media)
+-- Product Service Database (Product, Certificate)
 CREATE DATABASE product_db;
 
--- Certification Service Database (Appraisal_Certificate, Appraisal_Record, Certificate_Signature)
-CREATE DATABASE certification_db;
-
--- Inventory Service Database (Inventory_SKU, Inventory_Batch)
+-- Inventory Service Database (Stock)
 CREATE DATABASE inventory_db;
 
--- Order Service Database (Carts, Cart_Items, Orders, Order_Items)
+-- Order Service Database (Cart, Order)
 CREATE DATABASE order_db;
 
--- Payment Service Database (Wallet, Wallet_Transaction, Payment)
+-- Payment Service Database (Payment, Wallet)
 CREATE DATABASE payment_db;
-
--- Audit Service Database (Financial_Log)
-CREATE DATABASE audit_db;
 
 -- ================================================================
 -- CẤP QUYỀN CHO USER
 -- ================================================================
-GRANT ALL PRIVILEGES ON DATABASE account_db TO woodify;
+GRANT ALL PRIVILEGES ON DATABASE identity_db TO woodify;
 GRANT ALL PRIVILEGES ON DATABASE shop_db TO woodify;
-GRANT ALL PRIVILEGES ON DATABASE catalog_db TO woodify;
 GRANT ALL PRIVILEGES ON DATABASE product_db TO woodify;
-GRANT ALL PRIVILEGES ON DATABASE certification_db TO woodify;
 GRANT ALL PRIVILEGES ON DATABASE inventory_db TO woodify;
 GRANT ALL PRIVILEGES ON DATABASE order_db TO woodify;
 GRANT ALL PRIVILEGES ON DATABASE payment_db TO woodify;
-GRANT ALL PRIVILEGES ON DATABASE audit_db TO woodify;
 
 -- ================================================================
 -- TẠO EXTENSION uuid-ossp CHO TỪNG DATABASE
 -- ================================================================
-\c account_db
+\c identity_db
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 \c shop_db
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-\c catalog_db
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 \c product_db
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
-\c certification_db
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 \c inventory_db
@@ -77,9 +59,6 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 \c payment_db
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
-\c audit_db
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ================================================================
