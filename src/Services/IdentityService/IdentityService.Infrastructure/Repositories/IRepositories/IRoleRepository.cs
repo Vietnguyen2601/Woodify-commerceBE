@@ -6,7 +6,7 @@ namespace IdentityService.Infrastructure.Repositories.IRepositories;
 /// <summary>
 /// Interface Repository cho Role
 /// </summary>
-public interface IRoleRepository : IBaseRepository<Role>
+public interface IRoleRepository : IGenericRepository<Role>
 {
     Task<Role?> GetByNameAsync(string roleName);
 }
