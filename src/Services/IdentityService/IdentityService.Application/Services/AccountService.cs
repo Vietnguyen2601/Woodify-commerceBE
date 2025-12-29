@@ -29,12 +29,12 @@ public class AccountService : IAccountService
     public async Task<AccountDto> CreateAsync(CreateAccountDto dto)
     {
         var account = dto.ToModel(dto.Password);
-        var created = await _accountRepository.AddAsync(account);
+        await _accountRepository.CreateAsync(account);
         
-        if (created.RoleId.HasValue)
-            created.Role = await _roleRepository.GetByIdAsync(created.RoleId.Value);
+        if (account.RoleId.HasValue)
+            account.Role = await _roleRepository.GetByIdAsync(account.RoleId.Value);
 
-        return created.ToDto();
+        return account.ToDto();
     }
 
     public async Task<AccountDto?> UpdateAsync(Guid id, UpdateAccountDto dto)
@@ -50,8 +50,9 @@ public class AccountService : IAccountService
 
     public async Task<bool> DeleteAsync(Guid id)
     {
-        if (!await _accountRepository.ExistsAsync(id)) return false;
-        await _accountRepository.DeleteAsync(id);
+        var account = await _accountRepository.GetByIdAsync(id);
+        if (account == null) return false;
+        await _accountRepository.RemoveAsync(account);
         return true;
     }
 }
