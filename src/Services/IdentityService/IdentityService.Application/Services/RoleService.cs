@@ -21,7 +21,11 @@ public class RoleService : Interfaces.IRoleService
         => (await _roleRepository.GetAllAsync()).Select(r => r.ToDto());
 
     public async Task<RoleDto> CreateAsync(CreateRoleDto dto)
-        => (await _roleRepository.AddAsync(dto.ToModel())).ToDto();
+    {
+        var role = dto.ToModel();
+        await _roleRepository.CreateAsync(role);
+        return role.ToDto();
+    }
 
     public async Task<RoleDto?> UpdateAsync(Guid id, UpdateRoleDto dto)
     {
@@ -36,8 +40,9 @@ public class RoleService : Interfaces.IRoleService
 
     public async Task<bool> DeleteAsync(Guid id)
     {
-        if (!await _roleRepository.ExistsAsync(id)) return false;
-        await _roleRepository.DeleteAsync(id);
+        var role = await _roleRepository.GetByIdAsync(id);
+        if (role == null) return false;
+        await _roleRepository.RemoveAsync(role);
         return true;
     }
 }
