@@ -28,7 +28,9 @@ services:
       # Volume lưu trữ data - dữ liệu sẽ persist khi restart container
       - postgres_data:/var/lib/postgresql/data
       # Script khởi tạo databases - chạy tự động khi container start lần đầu
-      - ./docker/postgres/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
+      - ./docker/postgres/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql
+      # Script seed data
+      - ./docker/postgres/data.sql:/docker-entrypoint-initdb.d/02-data.sql
     networks:
       - woodify-network
     healthcheck:

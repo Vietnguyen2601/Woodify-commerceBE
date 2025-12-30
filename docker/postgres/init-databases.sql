@@ -1,10 +1,3 @@
--- ================================================================
--- WOODIFY MICROSERVICES - DATABASE INITIALIZATION
--- ================================================================
--- Script này tự động chạy khi PostgreSQL container khởi tạo lần đầu
--- Tạo các database riêng biệt cho từng microservice
--- ================================================================
-
 -- Tạo extension uuid-ossp cho database mặc định
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
@@ -62,6 +55,66 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ================================================================
--- HOÀN TẤT
+-- TẠO FUNCTION CẬP NHẬT updatedAt TỰ ĐỘNG
 -- ================================================================
--- Các database đã được tạo. EF Core Migrations sẽ tự động tạo tables.
+\c identity_db
+CREATE OR REPLACE FUNCTION update_updatedAt()
+    RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updatedat = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- LƯU Ý: Triggers được tạo TRONG APP sau khi migrations chạy
+-- Trigger sẽ tự động cập nhật updatedat khi có UPDATE
+
+-- ================================================================
+-- TẠO FUNCTION VÀ TRIGGER CHO CÁC SERVICE KHÁC
+-- ================================================================
+\c shop_db
+CREATE OR REPLACE FUNCTION update_updatedAt()
+    RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updatedat = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+\c product_db
+CREATE OR REPLACE FUNCTION update_updatedAt()
+    RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updatedat = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+\c inventory_db
+CREATE OR REPLACE FUNCTION update_updatedAt()
+    RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updatedat = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+\c order_db
+CREATE OR REPLACE FUNCTION update_updatedAt()
+    RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updatedat = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+\c payment_db
+CREATE OR REPLACE FUNCTION update_updatedAt()
+    RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updatedat = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
