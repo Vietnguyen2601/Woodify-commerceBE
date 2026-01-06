@@ -1,4 +1,5 @@
 using IdentityService.Application.DTOs;
+using Shared.Results;
 
 namespace IdentityService.Application.Interfaces;
 
@@ -7,10 +8,10 @@ namespace IdentityService.Application.Interfaces;
 /// </summary>
 public interface IAccountService
 {
-    Task<AccountDto?> GetByIdAsync(Guid id);
-    Task<AccountDto?> GetByUsernameAsync(string username);
-    Task<IEnumerable<AccountDto>> GetAllAsync();
-    Task<AccountDto> CreateAsync(CreateAccountDto dto);
-    Task<AccountDto?> UpdateAsync(Guid id, UpdateAccountDto dto);
-    Task<bool> DeleteAsync(Guid id);
+    Task<ServiceResult<AccountDto>> GetByIdAsync(Guid id);
+    Task<ServiceResult<AccountDto>> GetByUsernameAsync(string username);
+    Task<ServiceResult<IEnumerable<AccountDto>>> GetAllAsync();
+    Task<ServiceResult<AccountDto>> CreateAsync(CreateAccountDto dto);
+    Task<ServiceResult<AccountDto>> UpdateAsync(Guid id, UpdateAccountDto dto);
+    Task<ServiceResult> DeleteAsync(Guid id);
 }

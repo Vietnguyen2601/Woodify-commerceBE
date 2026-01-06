@@ -6,12 +6,17 @@ using Microsoft.EntityFrameworkCore;
 using Shared.Messaging;
 using IdentityService.Infrastructure.Repositories;
 using IdentityService.APIService.Extensions;
+using IdentityService.APIService.Middlewares;
+using IdentityService.APIService.Filters;
 using DotNetEnv;
 
 var builder = WebApplication.CreateBuilder(args);
 
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<ValidationFilter>();
+});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -50,6 +55,7 @@ if (File.Exists(envPath))
 }
 
 builder.Services.AddAccountServices();
+builder.Services.AddValidators();
 
 var app = builder.Build();
 
@@ -65,6 +71,8 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Identity Service API v1");
     c.RoutePrefix = "";
 });
+
+app.UseValidationExceptionMiddleware();
 
 app.UseAuthorization();
 
