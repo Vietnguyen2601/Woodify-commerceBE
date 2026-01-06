@@ -4,9 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace IdentityService.APIService.Controllers;
 
-/// <summary>
-/// Controller quản lý Roles
-/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class RolesController : ControllerBase
@@ -18,20 +15,14 @@ public class RolesController : ControllerBase
         _roleService = roleService;
     }
 
-    /// <summary>
-    /// Lấy tất cả roles
-    /// </summary>
-    [HttpGet]
+    [HttpGet("GetAllRoles")]
     public async Task<ActionResult<IEnumerable<RoleDto>>> GetAll()
     {
         var roles = await _roleService.GetAllAsync();
         return Ok(roles);
     }
 
-    /// <summary>
-    /// Lấy role theo ID
-    /// </summary>
-    [HttpGet("{id:guid}")]
+    [HttpGet("GetRoleById/{id:guid}")]
     public async Task<ActionResult<RoleDto>> GetById(Guid id)
     {
         var role = await _roleService.GetByIdAsync(id);
@@ -39,20 +30,14 @@ public class RolesController : ControllerBase
         return Ok(role);
     }
 
-    /// <summary>
-    /// Tạo role mới
-    /// </summary>
-    [HttpPost]
+    [HttpPost("CreateRole")]
     public async Task<ActionResult<RoleDto>> Create([FromBody] CreateRoleDto dto)
     {
         var role = await _roleService.CreateAsync(dto);
         return CreatedAtAction(nameof(GetById), new { id = role.RoleId }, role);
     }
 
-    /// <summary>
-    /// Cập nhật role
-    /// </summary>
-    [HttpPut("{id:guid}")]
+    [HttpPut("UpdateRole/{id:guid}")]
     public async Task<ActionResult<RoleDto>> Update(Guid id, [FromBody] UpdateRoleDto dto)
     {
         var role = await _roleService.UpdateAsync(id, dto);
@@ -60,10 +45,7 @@ public class RolesController : ControllerBase
         return Ok(role);
     }
 
-    /// <summary>
-    /// Xóa role
-    /// </summary>
-    [HttpDelete("{id:guid}")]
+    [HttpDelete("DeleteRole/{id:guid}")]
     public async Task<ActionResult> Delete(Guid id)
     {
         var result = await _roleService.DeleteAsync(id);

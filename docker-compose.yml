@@ -13,7 +13,6 @@ services:
   # POSTGRESQL DATABASE
   # ==============================================================
   # PostgreSQL chính - tự động tạo các database cho từng service
-  # Mỗi service có database riêng biệt (database-per-service pattern)
   postgres:
     image: postgres:16-alpine
     container_name: woodify-postgres

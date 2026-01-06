@@ -15,20 +15,14 @@ public class ShopsController : ControllerBase
         _shopService = shopService;
     }
 
-    /// <summary>
-    /// Lấy danh sách tất cả shops
-    /// </summary>
-    [HttpGet]
+    [HttpGet("GetAllShops")]
     public async Task<ActionResult<IEnumerable<ShopDto>>> GetAllShops()
     {
         var shops = await _shopService.GetAllShopsAsync();
         return Ok(shops);
     }
 
-    /// <summary>
-    /// Lấy shop theo ID
-    /// </summary>
-    [HttpGet("{id}")]
+    [HttpGet("GetShopById/{id}")]
     public async Task<ActionResult<ShopDto>> GetShopById(Guid id)
     {
         var shop = await _shopService.GetShopByIdAsync(id);
@@ -36,10 +30,7 @@ public class ShopsController : ControllerBase
         return Ok(shop);
     }
 
-    /// <summary>
-    /// Lấy shop theo Owner ID
-    /// </summary>
-    [HttpGet("owner/{ownerId}")]
+    [HttpGet("GetShopByOwnerId/{ownerId}")]
     public async Task<ActionResult<ShopDto>> GetShopByOwnerId(Guid ownerId)
     {
         var shop = await _shopService.GetShopByOwnerIdAsync(ownerId);
@@ -47,20 +38,14 @@ public class ShopsController : ControllerBase
         return Ok(shop);
     }
 
-    /// <summary>
-    /// Tạo shop mới
-    /// </summary>
-    [HttpPost]
+    [HttpPost("CreateShop")]
     public async Task<ActionResult<ShopDto>> CreateShop([FromBody] CreateShopDto dto)
     {
         var shop = await _shopService.CreateShopAsync(dto);
         return CreatedAtAction(nameof(GetShopById), new { id = shop.ShopId }, shop);
     }
 
-    /// <summary>
-    /// Cập nhật shop
-    /// </summary>
-    [HttpPut("{id}")]
+    [HttpPut("UpdateShop/{id}")]
     public async Task<ActionResult<ShopDto>> UpdateShop(Guid id, [FromBody] UpdateShopDto dto)
     {
         var shop = await _shopService.UpdateShopAsync(id, dto);
@@ -68,10 +53,7 @@ public class ShopsController : ControllerBase
         return Ok(shop);
     }
 
-    /// <summary>
-    /// Xóa shop (soft delete)
-    /// </summary>
-    [HttpDelete("{id}")]
+    [HttpDelete("DeleteShop/{id}")]
     public async Task<IActionResult> DeleteShop(Guid id)
     {
         var result = await _shopService.DeleteShopAsync(id);
