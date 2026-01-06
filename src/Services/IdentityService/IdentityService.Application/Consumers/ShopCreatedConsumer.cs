@@ -24,13 +24,13 @@ public class ShopCreatedConsumer : BackgroundService
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("🎧 ShopCreatedConsumer started. Listening for 'shop.created' events...");
+        _logger.LogInformation("ShopCreatedConsumer started. Listening for 'shop.created' events...");
 
         // Subscribe để nhận message từ queue "shop.created"
         _consumer.Subscribe<ShopCreatedEvent>("shop.created", (shopEvent) =>
         {
             _logger.LogInformation(
-                "📬 [RabbitMQ] Received shop.created event: ShopId={ShopId}, ShopName={ShopName}, OwnerId={OwnerId}",
+                "[RabbitMQ] Received shop.created event: ShopId={ShopId}, ShopName={ShopName}, OwnerId={OwnerId}",
                 shopEvent.ShopId,
                 shopEvent.ShopName,
                 shopEvent.OwnerId
@@ -52,7 +52,7 @@ public class ShopCreatedConsumer : BackgroundService
         // - Cập nhật số lượng shop của user
         
         _logger.LogInformation(
-            "✅ Processed shop.created event for Shop: {ShopName} (Owner: {OwnerId})",
+            "Processed shop.created event for Shop: {ShopName} (Owner: {OwnerId})",
             shopEvent.ShopName,
             shopEvent.OwnerId
         );

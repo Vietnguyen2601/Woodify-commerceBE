@@ -5,10 +5,6 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace IdentityService.Infrastructure.Persistence;
 
-/// <summary>
-/// Unit of Work Implementation
-/// Quản lý transaction và repositories
-/// </summary>
 public class UnitOfWork : IUnitOfWork
 {
     private readonly AccountDbContext _context;

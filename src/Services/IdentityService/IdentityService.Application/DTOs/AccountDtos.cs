@@ -1,8 +1,5 @@
 namespace IdentityService.Application.DTOs;
 
-/// <summary>
-/// DTO tạo Account mới
-/// </summary>
 public class CreateAccountDto
 {
     public string Username { get; set; } = string.Empty;
@@ -13,9 +10,7 @@ public class CreateAccountDto
     public Guid? RoleId { get; set; }
 }
 
-/// <summary>
-/// DTO cập nhật Account
-/// </summary>
+
 public class UpdateAccountDto
 {
     public string? Name { get; set; }
@@ -25,9 +20,7 @@ public class UpdateAccountDto
     public bool? IsActive { get; set; }
 }
 
-/// <summary>
-/// DTO trả về thông tin Account
-/// </summary>
+
 public class AccountDto
 {
     public Guid AccountId { get; set; }

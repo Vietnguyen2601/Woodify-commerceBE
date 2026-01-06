@@ -7,7 +7,7 @@ Woodify là hệ thống thương mại điện tử chuyên về sản phẩm g
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        API Gateway (YARP)                       │
-│                         Port: 5000                              │
+│                         Port: ...                               │
 └─────────────────────────────────────────────────────────────────┘
                                 │
         ┌───────────┬───────────┼───────────┬───────────┬──────────┐
@@ -15,10 +15,10 @@ Woodify là hệ thống thương mại điện tử chuyên về sản phẩm g
 ┌──────────────┐ ┌──────────┐ ┌─────────┐ ┌─────────┐ ┌────────┐ ┌─────────┐
 │   Identity   │ │  Shop    │ │Product  │ │Inventory│ │ Order  │ │Payment  │
 │   Service    │ │ Service  │ │Service  │ │Service  │ │Service │ │Service  │
-│  Port: 5010  │ │Port: 5011│ │Port:5012│ │Port:5013│ │Port:5014 │Port:5015│
+│  Port: ...   │ │Port: ... │ │Port:... │ │Port:... │ │Port:...│ │Port:... │
 └──────────────┘ └──────────┘ └─────────┘ └─────────┘ └────────┘ └─────────┘
         │           │           │           │           │          │
-        └───────────┴───────────┴───────────┴───────────┴──────────┴─────────┘
+        └───────────┴───────────┴───────────┴───────────┴──────────┴──────
                                 │
                     ┌───────────────────────┐
                     │   PostgreSQL + RabbitMQ│
@@ -29,13 +29,13 @@ Woodify là hệ thống thương mại điện tử chuyên về sản phẩm g
 
 | Service | Port | Database | Domain |
 |---------|------|----------|--------|
-| API Gateway | 5000 | - | YARP Reverse Proxy |
-| Identity Service | 5010 | identity_db | User, Account |
-| Shop Service | 5011 | shop_db | Shop, Follow |
-| Product Service | 5012 | product_db | Product, Certificate |
-| Inventory Service | 5013 | inventory_db | Stock |
-| Order Service | 5014 | order_db | Cart, Order |
-| Payment Service | 5015 | payment_db | Payment, Wallet |
+| API Gateway | ... | - | YARP Reverse Proxy |
+| Identity Service | ... | identity_db | User, Account |
+| Shop Service | ... | shop_db | Shop, Follow |
+| Product Service | ... | product_db | Product, Certificate |
+| Inventory Service | ... | inventory_db | Stock |
+| Order Service | ... | order_db | Cart, Order |
+| Payment Service | ... | payment_db | Payment, Wallet |
 
 ## 📋 Yêu cầu hệ thống
 
@@ -72,27 +72,63 @@ Tạo file `appsettings.json` trong folder `src/Services/AccountService/AccountS
   },
   "RabbitMQ": {
     "Host": "localhost",
-    "Port": 5672,
+    "Port": "<RABBITMQ_PORT>",
     "Username": "<RABBITMQ_USER>",
     "Password": "<RABBITMQ_PASSWORD>"
   }
 }
 ```
 
-### Bước 3: Khởi động Docker Containers
+### Bước 3: Khởi động Docker Infrastructure
 
 ```bash
 # Khởi động PostgreSQL, RabbitMQ và Adminer
-docker-compose up -d postgres rabbitmq adminer
+docker-compose up -d
 ```
 
 Đợi khoảng 10-15 giây để containers khởi động hoàn tất.
 
-### Bước 4: Chạy Service
+### Bước 4: Chạy Services (Tự động - Recommended)
+
+Chúng tôi cung cấp PowerShell Script để quản lý tất cả services một cách dễ dàng:
+
+```powershell
+# Từ root folder, chạy script
+.\src\ApiGateway\start-services.ps1
+```
+
+**Script sẽ:**
+1. Hiển thị menu chọn services cần chạy
+2. Tự động chạy `dotnet run` cho từng service trong terminal riêng
+3. Hiển thị thông tin port và URLs
+
+**Ví dụ:**
+```
+========================================
+  WOODIFY SERVICES LAUNCHER
+========================================
+[Chọn services cần chạy]
+
+1. Identity Service
+2. Shop Service
+3. Product Service
+...
+0. Start Selected Services
+
+Chọn (0-9): 1
+[Chọn] 2
+[Chọn] 0
+
+=> Khởi động Identity Service và Shop Service
+```
+
+### Bước 4 (Alternative): Chạy Service Thủ Công
+
+Nếu bạn muốn chạy từng service một cách thủ công:
 
 ```bash
-# Di chuyển vào folder AccountService
-cd src/Services/....
+# Di chuyển vào folder service
+cd src/Services/IdentityService/IdentityService.APIService
 
 # Chạy service
 dotnet run
@@ -100,10 +136,6 @@ dotnet run
 
 ### Bước 5: Kiểm tra
 
-- **Swagger UI**: http://localhost:5000/swagger
-- **Health Check**: http://localhost:5000/health
-- **Adminer (DB UI)**: http://localhost:8080
-- **RabbitMQ Management**: http://localhost:15672
 
 ## 🔧 Các lệnh thường dùng
 

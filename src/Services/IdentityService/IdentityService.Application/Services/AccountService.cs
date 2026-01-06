@@ -3,6 +3,7 @@ using IdentityService.Application.Interfaces;
 using IdentityService.Application.Mappers;
 using IdentityService.Domain.Entities;
 using IdentityService.Infrastructure.Repositories.IRepositories;
+using Shared.Results;
 
 namespace IdentityService.Application.Services;
 
@@ -17,42 +18,84 @@ public class AccountService : IAccountService
         _roleRepository = roleRepository;
     }
 
-    public async Task<AccountDto?> GetByIdAsync(Guid id)
-        => (await _accountRepository.GetByIdAsync(id))?.ToDto();
-
-    public async Task<AccountDto?> GetByUsernameAsync(string username)
-        => (await _accountRepository.GetByUsernameAsync(username))?.ToDto();
-
-    public async Task<IEnumerable<AccountDto>> GetAllAsync()
-        => (await _accountRepository.GetAllAsync()).Select(a => a.ToDto());
-
-    public async Task<AccountDto> CreateAsync(CreateAccountDto dto)
-    {
-        var account = dto.ToModel(dto.Password);
-        await _accountRepository.CreateAsync(account);
-        
-        if (account.RoleId.HasValue)
-            account.Role = await _roleRepository.GetByIdAsync(account.RoleId.Value);
-
-        return account.ToDto();
-    }
-
-    public async Task<AccountDto?> UpdateAsync(Guid id, UpdateAccountDto dto)
+    public async Task<ServiceResult<AccountDto>> GetByIdAsync(Guid id)
     {
         var account = await _accountRepository.GetByIdAsync(id);
-        if (account == null) return null;
-
-        dto.MapToUpdate(account);
-        await _accountRepository.UpdateAsync(account);
+        if (account == null)
+            return ServiceResult<AccountDto>.NotFound("Account not found");
         
-        return (await _accountRepository.GetByIdAsync(id))?.ToDto();
+        return ServiceResult<AccountDto>.Success(account.ToDto());
     }
 
-    public async Task<bool> DeleteAsync(Guid id)
+    public async Task<ServiceResult<AccountDto>> GetByUsernameAsync(string username)
     {
-        var account = await _accountRepository.GetByIdAsync(id);
-        if (account == null) return false;
-        await _accountRepository.RemoveAsync(account);
-        return true;
+        var account = await _accountRepository.GetByUsernameAsync(username);
+        if (account == null)
+            return ServiceResult<AccountDto>.NotFound("Account not found");
+        
+        return ServiceResult<AccountDto>.Success(account.ToDto());
+    }
+
+    public async Task<ServiceResult<IEnumerable<AccountDto>>> GetAllAsync()
+    {
+        var accounts = await _accountRepository.GetAllAsync();
+        var accountDtos = accounts.Select(a => a.ToDto());
+        
+        return ServiceResult<IEnumerable<AccountDto>>.Success(accountDtos);
+    }
+
+    public async Task<ServiceResult<AccountDto>> CreateAsync(CreateAccountDto dto)
+    {
+        try
+        {
+            var account = dto.ToModel(dto.Password);
+            await _accountRepository.CreateAsync(account);
+            
+            if (account.RoleId.HasValue)
+                account.Role = await _roleRepository.GetByIdAsync(account.RoleId.Value);
+
+            return ServiceResult<AccountDto>.Created(account.ToDto(), "Account created successfully");
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<AccountDto>.InternalServerError($"Error creating account: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<AccountDto>> UpdateAsync(Guid id, UpdateAccountDto dto)
+    {
+        try
+        {
+            var account = await _accountRepository.GetByIdAsync(id);
+            if (account == null)
+                return ServiceResult<AccountDto>.NotFound("Account not found");
+
+            dto.MapToUpdate(account);
+            await _accountRepository.UpdateAsync(account);
+            
+            var updatedAccount = await _accountRepository.GetByIdAsync(id);
+            return ServiceResult<AccountDto>.Success(updatedAccount!.ToDto(), "Account updated successfully");
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<AccountDto>.InternalServerError($"Error updating account: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult> DeleteAsync(Guid id)
+    {
+        try
+        {
+            var account = await _accountRepository.GetByIdAsync(id);
+            if (account == null)
+                return ServiceResult.NotFound("Account not found");
+            
+            await _accountRepository.RemoveAsync(account);
+            return ServiceResult.Success("Account deleted successfully");
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult.InternalServerError($"Error deleting account: {ex.Message}");
+        }
     }
 }

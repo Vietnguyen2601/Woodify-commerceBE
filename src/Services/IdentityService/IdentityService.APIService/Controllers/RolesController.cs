@@ -1,12 +1,10 @@
 using IdentityService.Application.DTOs;
 using IdentityService.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Shared.Results;
 
 namespace IdentityService.APIService.Controllers;
 
-/// <summary>
-/// Controller quản lý Roles
-/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class RolesController : ControllerBase
@@ -18,56 +16,60 @@ public class RolesController : ControllerBase
         _roleService = roleService;
     }
 
-    /// <summary>
-    /// Lấy tất cả roles
-    /// </summary>
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<RoleDto>>> GetAll()
+    [HttpGet("GetAllRoles")]
+    public async Task<ActionResult<ServiceResult<IEnumerable<RoleDto>>>> GetAll()
     {
-        var roles = await _roleService.GetAllAsync();
-        return Ok(roles);
+        var result = await _roleService.GetAllAsync();
+        return Ok(result);
     }
 
-    /// <summary>
-    /// Lấy role theo ID
-    /// </summary>
-    [HttpGet("{id:guid}")]
-    public async Task<ActionResult<RoleDto>> GetById(Guid id)
+    [HttpGet("GetRoleById/{id:guid}")]
+    public async Task<ActionResult<ServiceResult<RoleDto>>> GetById(Guid id)
     {
-        var role = await _roleService.GetByIdAsync(id);
-        if (role == null) return NotFound();
-        return Ok(role);
+        var result = await _roleService.GetByIdAsync(id);
+        
+        if (result.Status == 404)
+            return NotFound(result);
+        
+        return Ok(result);
     }
 
-    /// <summary>
-    /// Tạo role mới
-    /// </summary>
-    [HttpPost]
-    public async Task<ActionResult<RoleDto>> Create([FromBody] CreateRoleDto dto)
+    [HttpPost("CreateRole")]
+    public async Task<ActionResult<ServiceResult<RoleDto>>> Create([FromBody] CreateRoleDto dto)
     {
-        var role = await _roleService.CreateAsync(dto);
-        return CreatedAtAction(nameof(GetById), new { id = role.RoleId }, role);
+        var result = await _roleService.CreateAsync(dto);
+        
+        if (result.Status == 201)
+            return CreatedAtAction(nameof(GetById), new { id = result.Data?.RoleId }, result);
+        
+        return BadRequest(result);
     }
 
-    /// <summary>
-    /// Cập nhật role
-    /// </summary>
-    [HttpPut("{id:guid}")]
-    public async Task<ActionResult<RoleDto>> Update(Guid id, [FromBody] UpdateRoleDto dto)
+    [HttpPut("UpdateRole/{id:guid}")]
+    public async Task<ActionResult<ServiceResult<RoleDto>>> Update(Guid id, [FromBody] UpdateRoleDto dto)
     {
-        var role = await _roleService.UpdateAsync(id, dto);
-        if (role == null) return NotFound();
-        return Ok(role);
+        var result = await _roleService.UpdateAsync(id, dto);
+        
+        if (result.Status == 404)
+            return NotFound(result);
+        
+        if (result.Status != 200)
+            return BadRequest(result);
+        
+        return Ok(result);
     }
 
-    /// <summary>
-    /// Xóa role
-    /// </summary>
-    [HttpDelete("{id:guid}")]
-    public async Task<ActionResult> Delete(Guid id)
+    [HttpDelete("DeleteRole/{id:guid}")]
+    public async Task<ActionResult<ServiceResult>> Delete(Guid id)
     {
         var result = await _roleService.DeleteAsync(id);
-        if (!result) return NotFound();
-        return NoContent();
+        
+        if (result.Status == 404)
+            return NotFound(result);
+        
+        if (result.Status != 200)
+            return BadRequest(result);
+        
+        return Ok(result);
     }
 }

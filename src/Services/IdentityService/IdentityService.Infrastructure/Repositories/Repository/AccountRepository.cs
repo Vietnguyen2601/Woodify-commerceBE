@@ -6,9 +6,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IdentityService.Infrastructure.Repositories;
 
-/// <summary>
-/// Repository implementation cho Account
-/// </summary>
 public class AccountRepository : GenericRepository<Account>, IAccountRepository
 {
     public AccountRepository(AccountDbContext context) : base(context)

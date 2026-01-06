@@ -6,9 +6,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IdentityService.Infrastructure.Repositories;
 
-/// <summary>
-/// Repository implementation cho Role
-/// </summary>
 public class RoleRepository : GenericRepository<Role>, IRoleRepository
 {
     public RoleRepository(AccountDbContext context) : base(context)
