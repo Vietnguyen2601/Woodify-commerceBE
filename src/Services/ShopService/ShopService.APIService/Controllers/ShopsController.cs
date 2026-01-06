@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Shared.Results;
 using ShopService.Application.DTOs;
 using ShopService.Application.Interfaces;
 
@@ -16,48 +17,72 @@ public class ShopsController : ControllerBase
     }
 
     [HttpGet("GetAllShops")]
-    public async Task<ActionResult<IEnumerable<ShopDto>>> GetAllShops()
+    public async Task<ActionResult<ServiceResult<IEnumerable<ShopDto>>>> GetAllShops()
     {
-        var shops = await _shopService.GetAllShopsAsync();
-        return Ok(shops);
+        var result = await _shopService.GetAllShopsAsync();
+        return Ok(result);
     }
 
     [HttpGet("GetShopById/{id}")]
-    public async Task<ActionResult<ShopDto>> GetShopById(Guid id)
+    public async Task<ActionResult<ServiceResult<ShopDto>>> GetShopById(Guid id)
     {
-        var shop = await _shopService.GetShopByIdAsync(id);
-        if (shop == null) return NotFound();
-        return Ok(shop);
+        var result = await _shopService.GetShopByIdAsync(id);
+        
+        if (result.Status == 404)
+            return NotFound(result);
+        
+        return Ok(result);
     }
 
     [HttpGet("GetShopByOwnerId/{ownerId}")]
-    public async Task<ActionResult<ShopDto>> GetShopByOwnerId(Guid ownerId)
+    public async Task<ActionResult<ServiceResult<ShopDto>>> GetShopByOwnerId(Guid ownerId)
     {
-        var shop = await _shopService.GetShopByOwnerIdAsync(ownerId);
-        if (shop == null) return NotFound();
-        return Ok(shop);
+        var result = await _shopService.GetShopByOwnerIdAsync(ownerId);
+        
+        if (result.Status == 404)
+            return NotFound(result);
+        
+        return Ok(result);
     }
 
     [HttpPost("CreateShop")]
-    public async Task<ActionResult<ShopDto>> CreateShop([FromBody] CreateShopDto dto)
+    public async Task<ActionResult<ServiceResult<ShopDto>>> CreateShop([FromBody] CreateShopDto dto)
     {
-        var shop = await _shopService.CreateShopAsync(dto);
-        return CreatedAtAction(nameof(GetShopById), new { id = shop.ShopId }, shop);
+        var result = await _shopService.CreateShopAsync(dto);
+        
+        if (result.Status == 201)
+            return CreatedAtAction(nameof(GetShopById), new { id = result.Data?.ShopId }, result);
+        
+        return BadRequest(result);
     }
 
     [HttpPut("UpdateShop/{id}")]
-    public async Task<ActionResult<ShopDto>> UpdateShop(Guid id, [FromBody] UpdateShopDto dto)
+    public async Task<ActionResult<ServiceResult<ShopDto>>> UpdateShop(Guid id, [FromBody] UpdateShopDto dto)
     {
-        var shop = await _shopService.UpdateShopAsync(id, dto);
-        if (shop == null) return NotFound();
-        return Ok(shop);
+        var result = await _shopService.UpdateShopAsync(id, dto);
+        
+        if (result.Status == 404)
+            return NotFound(result);
+        
+        if (result.Status != 200)
+            return BadRequest(result);
+        
+        return Ok(result);
     }
 
     [HttpDelete("DeleteShop/{id}")]
-    public async Task<IActionResult> DeleteShop(Guid id)
+    public async Task<ActionResult<ServiceResult>> DeleteShop(Guid id)
     {
         var result = await _shopService.DeleteShopAsync(id);
-        if (!result) return NotFound();
-        return NoContent();
+        
+        if (result.Status == 404)
+            return NotFound(result);
+        
+        if (result.Status != 200)
+            return BadRequest(result);
+        
+        return Ok(result);
     }
 }
+
+
