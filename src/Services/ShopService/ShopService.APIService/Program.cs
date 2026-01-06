@@ -1,10 +1,9 @@
-using Microsoft.EntityFrameworkCore;
 using DotNetEnv;
+using Microsoft.EntityFrameworkCore;
 using Shared.Messaging;
-using ShopService.Infrastructure.Data.Context;
-using ShopService.Infrastructure.UnitOfWork;
-using ShopService.Application.Interfaces;
-using InternalShopService = ShopService.Application.Services.ShopService;
+using ShopService.APIService.Extensions;
+using ShopService.APIService.Middlewares;
+using ShopService.APIService.Filters;
 
 var rootPath = Directory.GetParent(Directory.GetCurrentDirectory())?.Parent?.Parent?.Parent?.FullName;
 var envPath = Path.Combine(rootPath ?? "", ".env");
@@ -15,13 +14,16 @@ if (File.Exists(envPath))
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ================================================================
-// DATABASE CONFIGURATION
-// ================================================================
-var connectionString = Environment.GetEnvironmentVariable("DefaultConnection") 
-    ?? builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<ShopDbContext>(options =>
-    options.UseNpgsql(connectionString));
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<ValidationFilter>();
+});
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new() { Title = "Shop Service API", Version = "v1" });
+});
 
 // ================================================================
 // RABBITMQ CONFIGURATION
@@ -46,43 +48,13 @@ catch (Exception ex)
     Console.WriteLine($"RabbitMQ not available: {ex.Message}. Running without messaging.");
 }
 
-// ================================================================
-// DEPENDENCY INJECTION
-// ================================================================
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-builder.Services.AddScoped<IShopService>(sp =>
-{
-    var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
-    var publisher = sp.GetService<RabbitMQPublisher>(); // Có thể null nếu RabbitMQ không available
-    return new InternalShopService(unitOfWork, publisher);
-});
-
-// ================================================================
-// API CONFIGURATION
-// ================================================================
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-// CORS
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
-});
+builder.Services.AddShopServices(builder.Configuration);
+builder.Services.AddValidators();
 
 var app = builder.Build();
 
-//configure the HTTP request pipeline.
+// Configure the HTTP request pipeline.
 var port = Environment.GetEnvironmentVariable("SHOP_SERVICE_PORT");
-if (string.IsNullOrEmpty(port))
-{
-    throw new InvalidOperationException("SHOP_SERVICE_PORT not found in .env file");
-}
 app.Urls.Add($"http://localhost:{port}");
 
 app.UseSwagger();
@@ -92,8 +64,13 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "";
 });
 
-app.UseCors("AllowAll");
+app.UseValidationExceptionMiddleware();
+
+app.UseAuthorization();
+
 app.MapControllers();
+
+// Health check endpoint
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "shop-service" }));
 
 app.Run();
