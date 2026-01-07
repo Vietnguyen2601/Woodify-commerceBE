@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ShopService.Domain.Entities;
+using Microsoft.Extensions.Configuration;
 
 namespace ShopService.Infrastructure.Data.Context;
 
@@ -11,6 +12,60 @@ public class ShopDbContext : DbContext
 
     public DbSet<Shop> Shops { get; set; }
     public DbSet<ShopFollower> ShopFollowers { get; set; }
+
+     private static string GetConnectionString(string connectionStringName)
+    {
+        var rootEnvPath = FindEnvFile();
+        if (rootEnvPath != null && File.Exists(rootEnvPath))
+        {
+            foreach (var line in File.ReadAllLines(rootEnvPath))
+            {
+                if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#"))
+                    continue;
+                var parts = line.Split('=', 2);
+                if (parts.Length == 2)
+                    Environment.SetEnvironmentVariable(parts[0].Trim(), parts[1].Trim());
+            }
+        }
+
+        // Kiểm tra biến môi trường trước
+        string envConnectionString = Environment.GetEnvironmentVariable($"ConnectionStrings__{connectionStringName}");
+        if (!string.IsNullOrEmpty(envConnectionString))
+        {
+            return envConnectionString;
+        }
+
+        var config = new ConfigurationBuilder()
+            .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+            .AddJsonFile("appsettings.json", optional: true)
+            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development"}.json", optional: true)
+            .AddEnvironmentVariables()
+            .Build();
+
+        return config.GetConnectionString(connectionStringName);
+    }
+
+    private static string FindEnvFile()
+    {
+        var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+        while (dir != null)
+        {
+            var envFile = Path.Combine(dir.FullName, ".env");
+            if (File.Exists(envFile))
+                return envFile;
+            dir = dir.Parent;
+        }
+        return null;
+    }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            optionsBuilder.UseNpgsql(GetConnectionString("ShopService"))
+                .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
