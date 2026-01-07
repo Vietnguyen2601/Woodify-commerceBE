@@ -4,6 +4,7 @@ using Shared.Messaging;
 using ShopService.APIService.Extensions;
 using ShopService.APIService.Middlewares;
 using ShopService.APIService.Filters;
+using ShopService.Infrastructure.Data.Context;
 
 var rootPath = Directory.GetParent(Directory.GetCurrentDirectory())?.Parent?.Parent?.Parent?.FullName;
 var envPath = Path.Combine(rootPath ?? "", ".env");
@@ -25,9 +26,8 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new() { Title = "Shop Service API", Version = "v1" });
 });
 
-// ================================================================
-// RABBITMQ CONFIGURATION
-// ================================================================
+builder.Services.AddDbContext<ShopDbContext>();
+
 var rabbitMQSettings = new RabbitMQSettings
 {
     Host = Environment.GetEnvironmentVariable("RabbitMQ_Host") ?? builder.Configuration["RabbitMQ:Host"] ?? "localhost",

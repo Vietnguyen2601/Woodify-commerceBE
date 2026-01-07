@@ -12,10 +12,7 @@ public class ShopCreatedEvent
     public DateTime CreatedAt { get; set; }
 }
 
-/// <summary>
-/// Event khi Account được tạo mới
-/// AccountService publish → các service khác consume
-/// </summary>
+
 public class AccountCreatedEvent
 {
     public Guid AccountId { get; set; }

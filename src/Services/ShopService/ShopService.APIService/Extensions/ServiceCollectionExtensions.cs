@@ -16,12 +16,6 @@ namespace ShopService.APIService.Extensions
     {
         public static IServiceCollection AddShopServices(this IServiceCollection services, IConfiguration configuration)
         {
-            // Database Context
-            var connectionString = Environment.GetEnvironmentVariable("DefaultConnection") 
-                ?? configuration.GetConnectionString("DefaultConnection");
-            services.AddDbContext<ShopDbContext>(options =>
-                options.UseNpgsql(connectionString));
-
             // Unit of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
