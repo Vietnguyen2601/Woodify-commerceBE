@@ -250,7 +250,6 @@ __pycache__/
 .env
 .env.*
 *.local
-**/appsettings*.json
 secrets.json
 *.key
 *.pem
