@@ -6,12 +6,6 @@ using ShopService.APIService.Middlewares;
 using ShopService.APIService.Filters;
 using ShopService.Infrastructure.Data.Context;
 
-var rootPath = Directory.GetParent(Directory.GetCurrentDirectory())?.Parent?.Parent?.Parent?.FullName;
-var envPath = Path.Combine(rootPath ?? "", ".env");
-if (File.Exists(envPath))
-{
-    Env.Load(envPath);
-}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,6 +44,13 @@ catch (Exception ex)
 
 builder.Services.AddShopServices(builder.Configuration);
 builder.Services.AddValidators();
+
+var rootPath = Directory.GetParent(Directory.GetCurrentDirectory())?.Parent?.Parent?.Parent?.FullName;
+var envPath = Path.Combine(rootPath ?? "", ".env");
+if (File.Exists(envPath))
+{
+    Env.Load(envPath);
+}
 
 var app = builder.Build();
 
