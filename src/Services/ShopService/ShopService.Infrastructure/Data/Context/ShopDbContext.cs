@@ -13,7 +13,7 @@ public class ShopDbContext : DbContext
     public DbSet<Shop> Shops { get; set; }
     public DbSet<ShopFollower> ShopFollowers { get; set; }
 
-     private static string GetConnectionString(string connectionStringName)
+     private static string? GetConnectionString(string connectionStringName)
     {
         var rootEnvPath = FindEnvFile();
         if (rootEnvPath != null && File.Exists(rootEnvPath))
@@ -29,7 +29,7 @@ public class ShopDbContext : DbContext
         }
 
         // Kiểm tra biến môi trường trước
-        string envConnectionString = Environment.GetEnvironmentVariable($"ConnectionStrings__{connectionStringName}");
+        string? envConnectionString = Environment.GetEnvironmentVariable($"ConnectionStrings__{connectionStringName}");
         if (!string.IsNullOrEmpty(envConnectionString))
         {
             return envConnectionString;
@@ -45,7 +45,7 @@ public class ShopDbContext : DbContext
         return config.GetConnectionString(connectionStringName);
     }
 
-    private static string FindEnvFile()
+    private static string? FindEnvFile()
     {
         var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
         while (dir != null)
