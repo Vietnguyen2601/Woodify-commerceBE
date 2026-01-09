@@ -1,0 +1,118 @@
+using FluentValidation;
+using ProductService.Application.DTOs;
+using ProductService.Domain.Entities;
+
+namespace ProductService.Application.Validators;
+
+public class CreateProductMasterValidator : AbstractValidator<CreateProductMasterDto>
+{
+    public CreateProductMasterValidator()
+    {
+        RuleFor(x => x.ShopId)
+            .NotEmpty()
+            .WithMessage("Shop ID is required");
+
+        RuleFor(x => x.GlobalSku)
+            .MaximumLength(255)
+            .WithMessage("Global SKU cannot exceed 255 characters")
+            .When(x => !string.IsNullOrEmpty(x.GlobalSku));
+
+        RuleFor(x => x.Status)
+            .IsInEnum()
+            .WithMessage("Invalid product status");
+    }
+}
+
+public class UpdateProductMasterValidator : AbstractValidator<UpdateProductMasterDto>
+{
+    public UpdateProductMasterValidator()
+    {
+        RuleFor(x => x.GlobalSku)
+            .MaximumLength(255)
+            .WithMessage("Global SKU cannot exceed 255 characters")
+            .When(x => !string.IsNullOrEmpty(x.GlobalSku));
+
+        RuleFor(x => x.Status)
+            .IsInEnum()
+            .WithMessage("Invalid product status")
+            .When(x => x.Status.HasValue);
+
+        RuleFor(x => x.AvgRating)
+            .InclusiveBetween(0, 5)
+            .WithMessage("Average rating must be between 0 and 5")
+            .When(x => x.AvgRating.HasValue);
+
+        RuleFor(x => x.ReviewCount)
+            .GreaterThanOrEqualTo(0)
+            .WithMessage("Review count must be greater than or equal to 0")
+            .When(x => x.ReviewCount.HasValue);
+    }
+}
+
+public class CreateProductVersionValidator : AbstractValidator<CreateProductVersionDto>
+{
+    public CreateProductVersionValidator()
+    {
+        RuleFor(x => x.ProductId)
+            .NotEmpty()
+            .WithMessage("Product ID is required");
+
+        RuleFor(x => x.Title)
+            .NotEmpty()
+            .WithMessage("Title is required")
+            .MaximumLength(500)
+            .WithMessage("Title cannot exceed 500 characters");
+
+        RuleFor(x => x.Description)
+            .MaximumLength(2000)
+            .WithMessage("Description cannot exceed 2000 characters")
+            .When(x => !string.IsNullOrEmpty(x.Description));
+
+        RuleFor(x => x.PriceCents)
+            .GreaterThanOrEqualTo(0)
+            .WithMessage("Price must be greater than or equal to 0")
+            .When(x => x.PriceCents.HasValue);
+
+        RuleFor(x => x.Currency)
+            .NotEmpty()
+            .WithMessage("Currency is required")
+            .MaximumLength(10)
+            .WithMessage("Currency cannot exceed 10 characters");
+
+        RuleFor(x => x.Sku)
+            .MaximumLength(255)
+            .WithMessage("SKU cannot exceed 255 characters")
+            .When(x => !string.IsNullOrEmpty(x.Sku));
+    }
+}
+
+public class UpdateProductVersionValidator : AbstractValidator<UpdateProductVersionDto>
+{
+    public UpdateProductVersionValidator()
+    {
+        RuleFor(x => x.Title)
+            .MaximumLength(500)
+            .WithMessage("Title cannot exceed 500 characters")
+            .When(x => !string.IsNullOrEmpty(x.Title));
+
+        RuleFor(x => x.Description)
+            .MaximumLength(2000)
+            .WithMessage("Description cannot exceed 2000 characters")
+            .When(x => !string.IsNullOrEmpty(x.Description));
+
+        RuleFor(x => x.PriceCents)
+            .GreaterThanOrEqualTo(0)
+            .WithMessage("Price must be greater than or equal to 0")
+            .When(x => x.PriceCents.HasValue);
+
+        RuleFor(x => x.Currency)
+            .MaximumLength(10)
+            .WithMessage("Currency cannot exceed 10 characters")
+            .When(x => !string.IsNullOrEmpty(x.Currency));
+
+        RuleFor(x => x.Sku)
+            .MaximumLength(255)
+            .WithMessage("SKU cannot exceed 255 characters")
+            .When(x => !string.IsNullOrEmpty(x.Sku));
+    }
+}
