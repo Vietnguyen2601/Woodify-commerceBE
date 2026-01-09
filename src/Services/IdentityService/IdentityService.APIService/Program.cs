@@ -61,7 +61,7 @@ var app = builder.Build();
 
 //configure the HTTP request pipeline.
 var port = Environment.GetEnvironmentVariable("IDENTITY_SERVICE_PORT");
-app.Urls.Add($"http://localhost:{port}");
+app.Urls.Add($"http://*:{port}");
 
 
 
@@ -78,7 +78,8 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Health check endpoint
+// Health check endpoints
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "identity-service" }));
+app.MapGet("/api/identity/health", () => Results.Ok(new { status = "healthy", service = "identity-service" }));
 
 app.Run();

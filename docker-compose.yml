@@ -86,29 +86,26 @@ services:
   # Entry point cho tất cả API calls
   # Port: 5000 (HTTP), 5001 (HTTPS)
   # Routes traffic đến các backend services
-  # ⚠️  COMMENTED OUT FOR DEVELOPMENT - Run locally: .\src\ApiGateway\start-services.ps1
-  # api-gateway:
-  #   build:
-  #     context: .
-  #     dockerfile: src/ApiGateway/Dockerfile
-  #   container_name: woodify-api-gateway
-  #   restart: unless-stopped
-  #   ports:
-  #     - "5000:8080"
-  #     - "5001:8081"
-  #   environment:
-  #     - ASPNETCORE_ENVIRONMENT=Development
-  #     - ASPNETCORE_HTTP_PORTS=8080
-  #     - ASPNETCORE_HTTPS_PORTS=8081
-  #   depends_on:
-  #     - identity-service
-  #     - shop-service
-  #     - product-service
-  #     - inventory-service
-  #     - order-service
-  #     - payment-service
-  #   networks:
-  #     - woodify-network
+  api-gateway:
+    build:
+      context: .
+      dockerfile: src/ApiGateway/Dockerfile
+    container_name: woodify-api-gateway
+    restart: unless-stopped
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+    depends_on:
+      - identity-service
+    networks:
+      - woodify-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # ==============================================================
   # IDENTITY SERVICE
@@ -116,26 +113,27 @@ services:
   # Quản lý: User, Account
   # Database: identity_db
   # Port: 5010
-  # ⚠️  COMMENTED OUT FOR DEVELOPMENT - Run locally: .\src\ApiGateway\start-services.ps1
-  # identity-service:
-  #   build:
-  #     context: .
-  #     dockerfile: src/Services/IdentityService/IdentityService.APIService/Dockerfile
-  #   container_name: woodify-identity-service
-  #   restart: unless-stopped
-  #   ports:
-  #     - "5010:8080"
-  #   environment:
-  #     - ASPNETCORE_ENVIRONMENT=Development
-  #   volumes:
-  #     - ./.env:/app/.env
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     rabbitmq:
-  #       condition: service_healthy
-  #   networks:
-  #     - woodify-network
+  identity-service:
+    build:
+      context: .
+      dockerfile: src/Services/IdentityService/IdentityService.APIService/Dockerfile
+    container_name: woodify-identity-service
+    restart: unless-stopped
+    ports:
+      - "5010:5010"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5010
+      - IDENTITY_SERVICE_PORT=5010
+    volumes:
+      - ./.env:/app/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - woodify-network
 
   # ==============================================================
   # SHOP SERVICE
@@ -143,7 +141,7 @@ services:
   # Quản lý: Shop, Follow
   # Database: shop_db
   # Port: 5011
-  # ⚠️  COMMENTED OUT FOR DEVELOPMENT - Run locally: .\src\ApiGateway\start-services.ps1
+  # ⚠️ COMMENTED OUT - Dockerfile chưa có
   # shop-service:
   #   build:
   #     context: .
@@ -170,7 +168,7 @@ services:
   # Quản lý: Product, Certificate
   # Database: product_db
   # Port: 5012
-  # ⚠️  COMMENTED OUT FOR DEVELOPMENT - Run locally: .\src\ApiGateway\start-services.ps1
+  # ⚠️ COMMENTED OUT - Dockerfile chưa có
   # product-service:
   #   build:
   #     context: .
@@ -197,7 +195,7 @@ services:
   # Quản lý: Stock
   # Database: inventory_db
   # Port: 5013
-  # ⚠️  COMMENTED OUT FOR DEVELOPMENT - Run locally: .\src\ApiGateway\start-services.ps1
+  # ⚠️ COMMENTED OUT - Dockerfile chưa có
   # inventory-service:
   #   build:
   #     context: .
@@ -224,7 +222,7 @@ services:
   # Quản lý: Cart, Order
   # Database: order_db
   # Port: 5014
-  # ⚠️  COMMENTED OUT FOR DEVELOPMENT - Run locally: .\src\ApiGateway\start-services.ps1
+  # ⚠️ COMMENTED OUT - Dockerfile chưa có
   # order-service:
   #   build:
   #     context: .
@@ -251,7 +249,7 @@ services:
   # Quản lý: Payment, Wallet
   # Database: payment_db
   # Port: 5015
-  # ⚠️  COMMENTED OUT FOR DEVELOPMENT - Run locally: .\src\ApiGateway\start-services.ps1
+  # ⚠️ COMMENTED OUT - Dockerfile chưa có
   # payment-service:
   #   build:
   #     context: .
