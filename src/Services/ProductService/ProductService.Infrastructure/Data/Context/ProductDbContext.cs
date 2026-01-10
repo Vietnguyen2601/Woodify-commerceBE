@@ -17,6 +17,7 @@ public class ProductDbContext : DbContext
 
     public DbSet<ProductMaster> ProductMasters { get; set; }
     public DbSet<ProductVersion> ProductVersions { get; set; }
+    public DbSet<Category> Categories { get; set; }
 
     private static string GetConnectionString(string connectionStringName)
     {
@@ -86,6 +87,7 @@ public class ProductDbContext : DbContext
             
             entity.Property(e => e.ProductId).HasColumnName("product_id");
             entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
+            entity.Property(e => e.CategoryId).HasColumnName("category_id").IsRequired();
             entity.Property(e => e.GlobalSku).HasColumnName("global_sku").HasMaxLength(255);
             entity.Property(e => e.Status)
                 .HasColumnName("status")
@@ -103,8 +105,15 @@ public class ProductDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 
+            // Foreign Key to Category
+            entity.HasOne(p => p.Category)
+                .WithMany()
+                .HasForeignKey(p => p.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // Indexes
             entity.HasIndex(e => e.ShopId);
+            entity.HasIndex(e => e.CategoryId);
             entity.HasIndex(e => e.GlobalSku).IsUnique();
             entity.HasIndex(e => e.Status);
         });
@@ -140,6 +149,55 @@ public class ProductDbContext : DbContext
             entity.HasIndex(e => e.Sku).IsUnique();
             entity.HasIndex(e => e.CreatedAt);
         });
+
+        // Configure Category
+        modelBuilder.Entity<Category>(entity =>
+        {
+            entity.ToTable("category");
+
+            entity.HasKey(e => e.CategoryId);
+
+            entity.Property(e => e.CategoryId)
+                .HasColumnName("category_id")
+                .ValueGeneratedOnAdd();
+
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(255)
+                .HasColumnName("name");
+
+            entity.Property(e => e.Description)
+                .HasMaxLength(1000)
+                .HasColumnName("description");
+
+            entity.Property(e => e.ParentCategoryId)
+                .HasColumnName("parent_category_id");
+
+            entity.Property(e => e.IsActive)
+                .IsRequired()
+                .HasDefaultValue(true)
+                .HasColumnName("is_active");
+
+            entity.Property(e => e.CreatedAt)
+                .IsRequired()
+                .HasColumnName("created_at")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.Property(e => e.UpdatedAt)
+                .IsRequired()
+                .HasColumnName("updated_at")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // Self-referencing relationship
+            entity.HasOne(c => c.ParentCategory)
+                .WithMany(c => c.SubCategories)
+                .HasForeignKey(c => c.ParentCategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => e.ParentCategoryId);
+            entity.HasIndex(e => e.Name);
+            entity.HasIndex(e => e.IsActive);
+        });
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -154,6 +212,8 @@ public class ProductDbContext : DbContext
                 product.UpdatedAt = DateTime.UtcNow;
             else if (entry.Entity is ProductVersion version)
                 version.UpdatedAt = DateTime.UtcNow;
+            else if (entry.Entity is Category category)
+                category.UpdatedAt = DateTime.UtcNow;
         }
 
         return base.SaveChangesAsync(cancellationToken);

@@ -12,6 +12,10 @@ public class CreateProductMasterValidator : AbstractValidator<CreateProductMaste
             .NotEmpty()
             .WithMessage("Shop ID is required");
 
+        RuleFor(x => x.CategoryId)
+            .NotEmpty()
+            .WithMessage("Category ID is required");
+
         RuleFor(x => x.GlobalSku)
             .MaximumLength(255)
             .WithMessage("Global SKU cannot exceed 255 characters")
@@ -114,5 +118,38 @@ public class UpdateProductVersionValidator : AbstractValidator<UpdateProductVers
             .MaximumLength(255)
             .WithMessage("SKU cannot exceed 255 characters")
             .When(x => !string.IsNullOrEmpty(x.Sku));
+    }
+}
+
+public class CreateCategoryValidator : AbstractValidator<CreateCategoryDto>
+{
+    public CreateCategoryValidator()
+    {
+        RuleFor(x => x.Name)
+            .NotEmpty()
+            .WithMessage("Category name is required")
+            .MaximumLength(255)
+            .WithMessage("Category name cannot exceed 255 characters");
+
+        RuleFor(x => x.Description)
+            .MaximumLength(1000)
+            .WithMessage("Description cannot exceed 1000 characters")
+            .When(x => !string.IsNullOrEmpty(x.Description));
+    }
+}
+
+public class UpdateCategoryValidator : AbstractValidator<UpdateCategoryDto>
+{
+    public UpdateCategoryValidator()
+    {
+        RuleFor(x => x.Name)
+            .MaximumLength(255)
+            .WithMessage("Category name cannot exceed 255 characters")
+            .When(x => !string.IsNullOrEmpty(x.Name));
+
+        RuleFor(x => x.Description)
+            .MaximumLength(1000)
+            .WithMessage("Description cannot exceed 1000 characters")
+            .When(x => !string.IsNullOrEmpty(x.Description));
     }
 }

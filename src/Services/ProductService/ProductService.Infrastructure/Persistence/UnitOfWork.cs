@@ -12,6 +12,7 @@ public class UnitOfWork : IUnitOfWork
     
     private IProductMasterRepository? _productMasters;
     private IProductVersionRepository? _productVersions;
+    private ICategoryRepository? _categories;
 
     public UnitOfWork(ProductDbContext context)
     {
@@ -20,6 +21,7 @@ public class UnitOfWork : IUnitOfWork
 
     public IProductMasterRepository ProductMasters => _productMasters ??= new ProductMasterRepository(_context);
     public IProductVersionRepository ProductVersions => _productVersions ??= new ProductVersionRepository(_context);
+    public ICategoryRepository Categories => _categories ??= new CategoryRepository(_context);
 
     public async Task<int> SaveChangesAsync()
     {

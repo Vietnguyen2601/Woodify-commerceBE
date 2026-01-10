@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ProductService.Infrastructure.Data.Context;
@@ -11,9 +12,11 @@ using ProductService.Infrastructure.Data.Context;
 namespace ProductService.Infrastructure.Migrations
 {
     [DbContext(typeof(ProductDbContext))]
-    partial class ProductDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260110002603_AddCategory")]
+    partial class AddCategory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -87,10 +90,6 @@ namespace ProductService.Infrastructure.Migrations
                         .HasDefaultValue(0m)
                         .HasColumnName("avg_rating");
 
-                    b.Property<Guid>("CategoryId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("category_id");
-
                     b.Property<bool>("Certified")
                         .HasColumnType("boolean")
                         .HasColumnName("certified");
@@ -128,8 +127,6 @@ namespace ProductService.Infrastructure.Migrations
                         .HasColumnName("updated_at");
 
                     b.HasKey("ProductId");
-
-                    b.HasIndex("CategoryId");
 
                     b.HasIndex("GlobalSku")
                         .IsUnique();
@@ -214,17 +211,6 @@ namespace ProductService.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("ParentCategory");
-                });
-
-            modelBuilder.Entity("ProductService.Domain.Entities.ProductMaster", b =>
-                {
-                    b.HasOne("ProductService.Domain.Entities.Category", "Category")
-                        .WithMany()
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Category");
                 });
 
             modelBuilder.Entity("ProductService.Domain.Entities.ProductVersion", b =>

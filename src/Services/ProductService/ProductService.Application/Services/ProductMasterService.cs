@@ -2,6 +2,7 @@ using ProductService.Application.DTOs;
 using ProductService.Application.Interfaces;
 using ProductService.Application.Mappers;
 using ProductService.Infrastructure.Repositories.IRepositories;
+using ProductService.Infrastructure.Persistence;
 using Shared.Results;
 
 namespace ProductService.Application.Services;
@@ -9,10 +10,12 @@ namespace ProductService.Application.Services;
 public class ProductMasterService : IProductMasterService
 {
     private readonly IProductMasterRepository _productMasterRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public ProductMasterService(IProductMasterRepository productMasterRepository)
+    public ProductMasterService(IProductMasterRepository productMasterRepository, IUnitOfWork unitOfWork)
     {
         _productMasterRepository = productMasterRepository;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<ServiceResult<ProductMasterDto>> GetByIdAsync(Guid id)
@@ -53,6 +56,11 @@ public class ProductMasterService : IProductMasterService
     {
         try
         {
+            // Validate Category exists
+            var categoryExists = await _unitOfWork.Categories.ExistsAsync(dto.CategoryId);
+            if (!categoryExists)
+                return ServiceResult<ProductMasterDto>.NotFound("Category not found");
+
             var product = dto.ToModel();
             await _productMasterRepository.CreateAsync(product);
 
@@ -71,6 +79,14 @@ public class ProductMasterService : IProductMasterService
             var product = await _productMasterRepository.GetByIdAsync(id);
             if (product == null)
                 return ServiceResult<ProductMasterDto>.NotFound("Product not found");
+
+            // Validate Category if being updated
+            if (dto.CategoryId.HasValue)
+            {
+                var categoryExists = await _unitOfWork.Categories.ExistsAsync(dto.CategoryId.Value);
+                if (!categoryExists)
+                    return ServiceResult<ProductMasterDto>.NotFound("Category not found");
+            }
 
             dto.MapToUpdate(product);
             await _productMasterRepository.UpdateAsync(product);

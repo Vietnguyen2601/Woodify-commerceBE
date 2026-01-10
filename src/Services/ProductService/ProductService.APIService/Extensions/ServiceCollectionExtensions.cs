@@ -22,10 +22,13 @@ namespace ProductService.APIService.Extensions
                 new ProductMasterRepository(sp.GetRequiredService<ProductDbContext>()));
             services.AddScoped<IProductVersionRepository>(sp => 
                 new ProductVersionRepository(sp.GetRequiredService<ProductDbContext>()));
+            services.AddScoped<ICategoryRepository>(sp => 
+                new CategoryRepository(sp.GetRequiredService<ProductDbContext>()));
 
             // Services
             services.AddScoped<IProductMasterService, ProductMasterService>();
             services.AddScoped<IProductVersionService, ProductVersionService>();
+            services.AddScoped<ICategoryService, CategoryService>();
 
             return services;
         }

@@ -15,18 +15,21 @@ public class ProductMasterRepository : GenericRepository<ProductMaster>, IProduc
     public override async Task<ProductMaster?> GetByIdAsync(Guid id)
     {
         return await _dbSet
+            .Include(p => p.Category)
             .FirstOrDefaultAsync(p => p.ProductId == id);
     }
 
     public async Task<ProductMaster?> GetByGlobalSkuAsync(string globalSku)
     {
         return await _dbSet
+            .Include(p => p.Category)
             .FirstOrDefaultAsync(p => p.GlobalSku == globalSku);
     }
 
     public async Task<List<ProductMaster>> GetByShopIdAsync(Guid shopId)
     {
         return await _dbSet
+            .Include(p => p.Category)
             .Where(p => p.ShopId == shopId)
             .ToListAsync();
     }
@@ -34,13 +37,16 @@ public class ProductMasterRepository : GenericRepository<ProductMaster>, IProduc
     public async Task<List<ProductMaster>> GetByStatusAsync(ProductStatus status)
     {
         return await _dbSet
+            .Include(p => p.Category)
             .Where(p => p.Status == status)
             .ToListAsync();
     }
 
     public override async Task<List<ProductMaster>> GetAllAsync()
     {
-        return await _dbSet.ToListAsync();
+        return await _dbSet
+            .Include(p => p.Category)
+            .ToListAsync();
     }
 
     public override async Task<bool> ExistsAsync(Guid id)

@@ -10,6 +10,7 @@ public interface IUnitOfWork : IDisposable
 {
     IProductMasterRepository ProductMasters { get; }
     IProductVersionRepository ProductVersions { get; }
+    ICategoryRepository Categories { get; }
     
     Task<int> SaveChangesAsync();
     Task BeginTransactionAsync();

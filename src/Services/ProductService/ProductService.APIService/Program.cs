@@ -7,6 +7,7 @@ using ProductService.Infrastructure.Repositories;
 using ProductService.APIService.Extensions;
 using ProductService.APIService.Middlewares;
 using ProductService.APIService.Filters;
+using ProductService.APIService.Converters;
 using DotNetEnv;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,6 +16,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationFilter>();
+})
+.AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.Never;
+    options.JsonSerializerOptions.Converters.Add(new NullableGuidConverter());
 });
 
 builder.Services.AddEndpointsApiExplorer();

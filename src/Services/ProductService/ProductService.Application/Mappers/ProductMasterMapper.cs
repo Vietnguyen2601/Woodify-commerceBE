@@ -13,6 +13,8 @@ public static class ProductMasterMapper
         {
             ProductId = product.ProductId,
             ShopId = product.ShopId,
+            CategoryId = product.CategoryId,
+            CategoryName = product.Category?.Name,
             GlobalSku = product.GlobalSku,
             Status = product.Status,
             Certified = product.Certified,
@@ -34,6 +36,7 @@ public static class ProductMasterMapper
         return new ProductMaster
         {
             ShopId = dto.ShopId,
+            CategoryId = dto.CategoryId,
             GlobalSku = dto.GlobalSku,
             Status = dto.Status,
             Certified = dto.Certified,
@@ -54,6 +57,9 @@ public static class ProductMasterMapper
         {
             throw new ArgumentNullException(nameof(product), "ProductMaster cannot be null.");
         }
+
+        if (dto.CategoryId.HasValue)
+            product.CategoryId = dto.CategoryId.Value;
 
         if (dto.GlobalSku != null)
             product.GlobalSku = dto.GlobalSku;

@@ -5,6 +5,7 @@ namespace ProductService.Application.DTOs;
 public class CreateProductMasterDto
 {
     public Guid ShopId { get; set; }
+    public Guid CategoryId { get; set; }
     public string? GlobalSku { get; set; }
     public ProductStatus Status { get; set; } = ProductStatus.DRAFT;
     public bool Certified { get; set; } = false;
@@ -13,6 +14,7 @@ public class CreateProductMasterDto
 
 public class UpdateProductMasterDto
 {
+    public Guid? CategoryId { get; set; }
     public string? GlobalSku { get; set; }
     public ProductStatus? Status { get; set; }
     public bool? Certified { get; set; }
@@ -25,6 +27,8 @@ public class ProductMasterDto
 {
     public Guid ProductId { get; set; }
     public Guid ShopId { get; set; }
+    public Guid CategoryId { get; set; }
+    public string? CategoryName { get; set; }
     public string? GlobalSku { get; set; }
     public ProductStatus Status { get; set; }
     public bool Certified { get; set; }
