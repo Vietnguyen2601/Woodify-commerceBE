@@ -9,6 +9,7 @@ using ProductService.APIService.Middlewares;
 using ProductService.APIService.Filters;
 using ProductService.APIService.Converters;
 using DotNetEnv;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,7 +29,6 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "Product Service API", Version = "v1" });
 });
-
 
 builder.Services.AddDbContext<ProductDbContext>();
 
@@ -63,26 +63,30 @@ builder.Services.AddValidators();
 
 var app = builder.Build();
 
-//configure the HTTP request pipeline.
 var port = Environment.GetEnvironmentVariable("PRODUCT_SERVICE_PORT");
 app.Urls.Add($"http://localhost:{port}");
 
-
-
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+try
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Product Service API v1");
-    c.RoutePrefix = "";
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Product Service API v1");
+        c.RoutePrefix = "";
+    });
 
-app.UseValidationExceptionMiddleware();
+    app.UseValidationExceptionMiddleware();
 
-app.UseAuthorization();
+    app.UseAuthorization();
 
-app.MapControllers();
+    app.MapControllers();
 
-// Health check endpoint
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "product-service" }));
+    app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "product-service" }));
+    app.MapGet("/api/product/health", () => Results.Ok(new { status = "healthy", service = "product-service" }));
 
-app.Run();
+    app.Run();
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Failed to start application: {ex.Message}");
+}

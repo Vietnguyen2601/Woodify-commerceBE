@@ -99,6 +99,7 @@ services:
       - ASPNETCORE_URLS=http://+:8080
     depends_on:
       - identity-service
+      - product-service
     networks:
       - woodify-network
     healthcheck:
@@ -168,26 +169,27 @@ services:
   # Quản lý: Product, Certificate
   # Database: product_db
   # Port: 5012
-  # ⚠️ COMMENTED OUT - Dockerfile chưa có
-  # product-service:
-  #   build:
-  #     context: .
-  #     dockerfile: src/Services/ProductService/ProductService.APIService/Dockerfile
-  #   container_name: woodify-product-service
-  #   restart: unless-stopped
-  #   ports:
-  #     - "5012:8080"
-  #   environment:
-  #     - ASPNETCORE_ENVIRONMENT=Development
-  #   volumes:
-  #     - ./.env:/app/.env
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     rabbitmq:
-  #       condition: service_healthy
-  #   networks:
-  #     - woodify-network
+  product-service:
+    build:
+      context: .
+      dockerfile: src/Services/ProductService/ProductService.APIService/Dockerfile
+    container_name: woodify-product-service
+    restart: unless-stopped
+    ports:
+      - "5012:5012"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5012
+      - PRODUCT_SERVICE_PORT=5012
+    volumes:
+      - ./.env:/app/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - woodify-network
 
   # ==============================================================
   # INVENTORY SERVICE
