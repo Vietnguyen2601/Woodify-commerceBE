@@ -59,26 +59,28 @@ builder.Services.AddValidators();
 
 var app = builder.Build();
 
-//configure the HTTP request pipeline.
-var port = Environment.GetEnvironmentVariable("IDENTITY_SERVICE_PORT");
-app.Urls.Add($"http://localhost:{port}");
 
-
-
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+try
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Identity Service API v1");
-    c.RoutePrefix = "";
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Identity Service API v1");
+        c.RoutePrefix = "";
+    });
 
-app.UseValidationExceptionMiddleware();
+    app.UseValidationExceptionMiddleware();
 
-app.UseAuthorization();
+    app.UseAuthorization();
 
-app.MapControllers();
+    app.MapControllers();
 
-// Health check endpoint
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "identity-service" }));
+    app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "identity-service" }));
+    app.MapGet("/api/identity/health", () => Results.Ok(new { status = "healthy", service = "identity-service" }));
 
-app.Run();
+    app.Run();
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Failed to start application: {ex.Message}");
+}
