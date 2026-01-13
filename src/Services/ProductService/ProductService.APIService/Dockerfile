@@ -1,10 +1,3 @@
-# ================================================================
-# PRODUCT SERVICE DOCKERFILE
-# ================================================================
-# Build: docker build -t woodify-product-service -f src/Services/ProductService/ProductService.APIService/Dockerfile .
-# Run: docker run -p 5012:8080 woodify-product-service
-# ================================================================
-
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 EXPOSE 8080

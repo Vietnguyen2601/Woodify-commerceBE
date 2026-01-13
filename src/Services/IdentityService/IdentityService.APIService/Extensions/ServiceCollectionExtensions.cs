@@ -18,14 +18,16 @@ namespace IdentityService.APIService.Extensions
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             // Repositories
-            services.AddScoped<IAccountRepository>(sp => 
+            services.AddScoped<IAccountRepository>(sp =>
                 new AccountRepository(sp.GetRequiredService<AccountDbContext>()));
-            services.AddScoped<IRoleRepository>(sp => 
+            services.AddScoped<IRoleRepository>(sp =>
                 new RoleRepository(sp.GetRequiredService<AccountDbContext>()));
 
             // Services
             services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<IRoleService, RoleService>();
+            services.AddScoped<IEmailService, EmailService>();
+            services.AddScoped<IAuthenService, AuthenService>();
 
             return services;
         }

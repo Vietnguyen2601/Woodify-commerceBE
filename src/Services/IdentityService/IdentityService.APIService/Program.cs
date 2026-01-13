@@ -60,7 +60,7 @@ builder.Services.AddValidators();
 var app = builder.Build();
 
 var port = Environment.GetEnvironmentVariable("IDENTITY_SERVICE_PORT");
-app.Urls.Add($"http://*:{port}");
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 
 try{
