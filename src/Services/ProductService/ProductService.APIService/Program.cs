@@ -63,9 +63,6 @@ builder.Services.AddValidators();
 
 var app = builder.Build();
 
-var port = Environment.GetEnvironmentVariable("PRODUCT_SERVICE_PORT");
-app.Urls.Add($"http://localhost:{port}");
-
 try
 {
     app.UseSwagger();

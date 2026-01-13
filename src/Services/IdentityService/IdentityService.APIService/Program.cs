@@ -59,11 +59,9 @@ builder.Services.AddValidators();
 
 var app = builder.Build();
 
-var port = Environment.GetEnvironmentVariable("IDENTITY_SERVICE_PORT");
-builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
-
-try{
+try
+{
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
@@ -81,7 +79,8 @@ try{
     app.MapGet("/api/identity/health", () => Results.Ok(new { status = "healthy", service = "identity-service" }));
 
     app.Run();
-}catch(Exception ex)
+}
+catch (Exception ex)
 {
     Console.WriteLine($"Failed to start application: {ex.Message}");
 }
