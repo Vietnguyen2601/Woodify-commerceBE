@@ -18,9 +18,9 @@ services:
     container_name: woodify-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: woodify
-      POSTGRES_PASSWORD: woodify123
-      POSTGRES_DB: woodify_main
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5433:5432"
     volumes:
@@ -49,8 +49,8 @@ services:
     container_name: woodify-rabbitmq
     restart: unless-stopped
     environment:
-      RABBITMQ_DEFAULT_USER: woodify
-      RABBITMQ_DEFAULT_PASS: woodify123
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     ports:
       - "5672:5672"    # AMQP protocol
       - "15672:15672"  # Management UI
