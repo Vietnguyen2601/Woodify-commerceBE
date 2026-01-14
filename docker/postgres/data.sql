@@ -1,7 +1,8 @@
 -- ================================================================
 -- IDENTITY SERVICE
 -- ================================================================
-\c identity_db -- Connect to identity_db
+-- Connect to identity_db
+\c identity_db
 
 -- Tạo Roles
 INSERT INTO roles (role_id, role_name, description, createdat, updatedat, is_active)

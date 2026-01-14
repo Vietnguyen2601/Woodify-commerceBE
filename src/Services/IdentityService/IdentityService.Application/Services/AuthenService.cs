@@ -1,8 +1,8 @@
 using System.Collections.Concurrent;
+using IdentityService.Application.Constants;
 using IdentityService.Application.Interfaces;
+using IdentityService.Domain.Entities;
 using IdentityService.Infrastructure.Persistence;
-
-
 
 namespace IdentityService.Application.Services
 {
@@ -10,16 +10,19 @@ namespace IdentityService.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailService _emailService;
+        private readonly IPasswordHasher _passwordHasher;
         private static readonly ConcurrentDictionary<string, (string Otp, DateTime Expiry)> _otpStorage = new();
         private static readonly ConcurrentDictionary<string, bool> _verifiedEmails = new();
         private static readonly ConcurrentDictionary<string, (string Email, DateTime Expiry)> _resetTokens = new();
 
-        public AuthenService(IUnitOfWork unitOfWork, IEmailService emailService)
+        public AuthenService(IUnitOfWork unitOfWork, IEmailService emailService, IPasswordHasher passwordHasher)
         {
             _unitOfWork = unitOfWork;
             _emailService = emailService;
+            _passwordHasher = passwordHasher;
         }
 
+        #region OTP Methods
         public async Task<bool> SendOtpAsync(string email)
         {
             var user = await _unitOfWork.Accounts.GetByEmailAsync(email);
@@ -65,6 +68,91 @@ namespace IdentityService.Application.Services
             return false;
         }
 
+        public async Task<bool> IsOtpVerified(string email)
+        {
+            return _verifiedEmails.TryGetValue(email, out var isVerified) && isVerified;
+        }
+
+        public async Task<bool> IsEmailVerifiedAsync(string email)
+        {
+            return _verifiedEmails.TryGetValue(email, out var isVerified) && isVerified;
+        }
+
+        public async Task MarkOtpVerified(string email)
+        {
+            _verifiedEmails[email] = true;
+        }
+        #endregion
+
+        #region Register & Login
+        public async Task<(bool Success, Guid? AccountId, string? ErrorMessage)> RegisterAsync(string email, string password, string username)
+        {
+            // Kiểm tra email đã xác minh OTP chưa
+            if (!_verifiedEmails.TryGetValue(email, out var isVerified) || !isVerified)
+            {
+                return (false, null, AuthMessages.OtpNotVerifiedForRegister);
+            }
+
+            // Kiểm tra email đã tồn tại chưa
+            var existingAccount = await _unitOfWork.Accounts.GetByEmailAsync(email);
+            if (existingAccount != null)
+            {
+                return (false, null, AuthMessages.EmailAlreadyRegistered);
+            }
+
+            // Kiểm tra username đã tồn tại chưa
+            var existingUsername = await _unitOfWork.Accounts.GetByUsernameAsync(username);
+            if (existingUsername != null)
+            {
+                return (false, null, AuthMessages.UsernameAlreadyExists);
+            }
+
+            // Tạo tài khoản mới
+            var account = new Account
+            {
+                AccountId = Guid.NewGuid(),
+                Email = email,
+                Username = username,
+                PasswordHash = _passwordHasher.HashPassword(password),
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _unitOfWork.Accounts.CreateAsync(account);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Xóa trạng thái verified sau khi đăng ký thành công
+            _verifiedEmails.TryRemove(email, out _);
+
+            return (true, account.AccountId, null);
+        }
+
+        public async Task<(bool Success, Guid? AccountId, string? Email, string? Username, string? ErrorMessage)> LoginAsync(string email, string password)
+        {
+            var account = await _unitOfWork.Accounts.GetByEmailAsync(email);
+
+            if (account == null)
+            {
+                return (false, null, null, null, AuthMessages.InvalidCredentials);
+            }
+
+            // Verify password
+            if (!_passwordHasher.VerifyHashedPassword(account.PasswordHash, password))
+            {
+                return (false, null, null, null, AuthMessages.InvalidCredentials);
+            }
+
+            if (!account.IsActive)
+            {
+                return (false, null, null, null, AuthMessages.AccountNotActive);
+            }
+
+            return (true, account.AccountId, account.Email, account.Username, null);
+        }
+        #endregion
+
+        #region Forgot Password
         public async Task<bool> SendResetPasswordOtpAsync(string email)
         {
             var user = await _unitOfWork.Accounts.GetByEmailAsync(email);
@@ -107,33 +195,7 @@ namespace IdentityService.Application.Services
             && storedOtp.Expiry > DateTime.UtcNow;
         }
 
-        public async Task<bool> ResetPasswordAsync(string email, string newPassword)
-        {
-            var user = await _unitOfWork.Accounts.GetByEmailAsync(email);
-            if (user == null) return false;
-
-            user.PasswordHash = newPassword;
-            await _unitOfWork.Accounts.UpdateAsync(user);
-            _otpStorage.Remove(email, out _);
-            return true;
-        }
-
-        public async Task<bool> IsOtpVerified(string email)
-        {
-            return _verifiedEmails.TryGetValue(email, out var isVerified) && isVerified;
-        }
-
-        public async Task<bool> IsEmailVerifiedAsync(string email)
-        {
-            return _verifiedEmails.TryGetValue(email, out var isVerified) && isVerified;
-        }
-
-        public async Task MarkOtpVerified(string email)
-        {
-            _verifiedEmails[email] = true;
-        }
-
-        public async Task<(bool Success, string ResetToken)> VerifyResetPasswordOtpWithTokenAsync(string email, string otp)
+        public async Task<(bool Success, string? ResetToken)> VerifyResetPasswordOtpWithTokenAsync(string email, string otp)
         {
             if (_otpStorage.TryGetValue(email, out var storedOtp) && storedOtp.Otp == otp && storedOtp.Expiry > DateTime.UtcNow)
             {
@@ -145,6 +207,17 @@ namespace IdentityService.Application.Services
                 return (true, resetToken);
             }
             return (false, null);
+        }
+
+        public async Task<bool> ResetPasswordAsync(string email, string newPassword)
+        {
+            var user = await _unitOfWork.Accounts.GetByEmailAsync(email);
+            if (user == null) return false;
+
+            user.PasswordHash = newPassword;
+            await _unitOfWork.Accounts.UpdateAsync(user);
+            _otpStorage.Remove(email, out _);
+            return true;
         }
 
         public async Task<bool> ResetPasswordWithTokenAsync(string resetToken, string newPassword)
@@ -163,5 +236,6 @@ namespace IdentityService.Application.Services
             }
             return false;
         }
+        #endregion
     }
 }

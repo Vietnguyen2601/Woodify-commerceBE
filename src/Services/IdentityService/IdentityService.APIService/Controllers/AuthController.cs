@@ -17,6 +17,7 @@ public class AuthController : ControllerBase
         _authenService = authenService;
     }
 
+    #region OTP Endpoints
     /// <summary>
     /// Gửi OTP để xác minh email khi đăng ký tài khoản mới
     /// </summary>
@@ -80,7 +81,65 @@ public class AuthController : ControllerBase
             isVerified ? AuthMessages.EmailVerified : AuthMessages.EmailNotVerified
         ));
     }
+    #endregion
 
+    #region Register & Login Endpoints
+    /// <summary>
+    /// Đăng ký tài khoản mới (yêu cầu đã xác minh OTP trước đó)
+    /// </summary>
+    [HttpPost("register")]
+    public async Task<ActionResult<ServiceResult<RegisterResponse>>> Register([FromBody] RegisterRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ServiceResult<RegisterResponse>.BadRequest(AuthMessages.InvalidData));
+        }
+
+        // Kiểm tra mật khẩu xác nhận
+        if (request.Password != request.ConfirmPassword)
+        {
+            return BadRequest(ServiceResult<RegisterResponse>.BadRequest(AuthMessages.PasswordMismatch));
+        }
+
+        var (success, accountId, errorMessage) = await _authenService.RegisterAsync(request.Email, request.Password, request.Username);
+
+        if (!success)
+        {
+            return BadRequest(ServiceResult<RegisterResponse>.BadRequest(errorMessage ?? AuthMessages.InvalidData));
+        }
+
+        return Ok(ServiceResult<RegisterResponse>.Success(
+            new RegisterResponse(true, AuthMessages.RegisterSuccess, accountId),
+            AuthMessages.RegisterSuccess
+        ));
+    }
+
+    /// <summary>
+    /// Đăng nhập với email và mật khẩu
+    /// </summary>
+    [HttpPost("login")]
+    public async Task<ActionResult<ServiceResult<LoginResponse>>> Login([FromBody] LoginRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ServiceResult<LoginResponse>.BadRequest(AuthMessages.InvalidData));
+        }
+
+        var (success, accountId, email, username, errorMessage) = await _authenService.LoginAsync(request.Email, request.Password);
+
+        if (!success)
+        {
+            return Unauthorized(ServiceResult<LoginResponse>.Unauthorized(errorMessage ?? AuthMessages.InvalidCredentials));
+        }
+
+        return Ok(ServiceResult<LoginResponse>.Success(
+            new LoginResponse(true, AuthMessages.LoginSuccess, accountId, email, username),
+            AuthMessages.LoginSuccess
+        ));
+    }
+    #endregion
+
+    #region Forgot Password Endpoints
     /// <summary>
     /// Gửi OTP để đặt lại mật khẩu (dành cho người dùng đã có tài khoản)
     /// </summary>
@@ -105,6 +164,9 @@ public class AuthController : ControllerBase
         ));
     }
 
+    /// <summary>
+    /// Xác minh OTP đặt lại mật khẩu và nhận reset token
+    /// </summary>
     [HttpPost("forgot-password/verify-otp")]
     public async Task<ActionResult<ServiceResult<OtpVerifyResponse>>> VerifyResetPasswordOtp([FromBody] VerifyOtpRequest request)
     {
@@ -127,7 +189,7 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Đặt lại mật khẩu sử dụng reset token (khuyên dùng - an toàn hơn)
+    /// Đặt lại mật khẩu sử dụng reset token
     /// </summary>
     [HttpPost("reset-password")]
     public async Task<ActionResult<ServiceResult<ResetPasswordResponse>>> ResetPassword([FromBody] ResetPasswordRequest request)
@@ -149,34 +211,5 @@ public class AuthController : ControllerBase
             AuthMessages.ResetPasswordSuccess
         ));
     }
-
-    /// <summary>
-    /// Đặt lại mật khẩu sử dụng email trực tiếp (legacy - yêu cầu OTP đã xác minh trước đó)
-    /// </summary>
-    [HttpPost("reset-password-legacy")]
-    public async Task<ActionResult<ServiceResult<ResetPasswordResponse>>> ResetPasswordLegacy([FromBody] ResetPasswordWithEmailRequest request)
-    {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ServiceResult<ResetPasswordResponse>.BadRequest(AuthMessages.InvalidData));
-        }
-
-        var isVerified = await _authenService.IsEmailVerifiedAsync(request.Email);
-        if (!isVerified)
-        {
-            return BadRequest(ServiceResult<ResetPasswordResponse>.BadRequest(AuthMessages.OtpNotVerified));
-        }
-
-        var result = await _authenService.ResetPasswordAsync(request.Email, request.NewPassword);
-
-        if (!result)
-        {
-            return NotFound(ServiceResult<ResetPasswordResponse>.NotFound(AuthMessages.AccountNotFound));
-        }
-
-        return Ok(ServiceResult<ResetPasswordResponse>.Success(
-            new ResetPasswordResponse(true, AuthMessages.ResetPasswordSuccess),
-            AuthMessages.ResetPasswordSuccess
-        ));
-    }
+    #endregion
 }

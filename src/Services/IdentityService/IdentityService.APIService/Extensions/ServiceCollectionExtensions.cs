@@ -27,6 +27,7 @@ namespace IdentityService.APIService.Extensions
             services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<IRoleService, RoleService>();
             services.AddScoped<IEmailService, EmailService>();
+            services.AddSingleton<IPasswordHasher, PasswordHasherService>();
             services.AddScoped<IAuthenService, AuthenService>();
 
             return services;
