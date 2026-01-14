@@ -113,7 +113,7 @@ namespace IdentityService.Application.Services
                 AccountId = Guid.NewGuid(),
                 Email = email,
                 Username = username,
-                PasswordHash = _passwordHasher.HashPassword(password),
+                Password = _passwordHasher.HashPassword(password),
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -138,7 +138,7 @@ namespace IdentityService.Application.Services
             }
 
             // Verify password
-            if (!_passwordHasher.VerifyHashedPassword(account.PasswordHash, password))
+            if (!_passwordHasher.VerifyHashedPassword(account.Password, password))
             {
                 return (false, null, null, null, AuthMessages.InvalidCredentials);
             }
@@ -214,7 +214,7 @@ namespace IdentityService.Application.Services
             var user = await _unitOfWork.Accounts.GetByEmailAsync(email);
             if (user == null) return false;
 
-            user.PasswordHash = newPassword;
+            user.Password = newPassword;
             await _unitOfWork.Accounts.UpdateAsync(user);
             _otpStorage.Remove(email, out _);
             return true;
@@ -228,7 +228,7 @@ namespace IdentityService.Application.Services
                 var user = await _unitOfWork.Accounts.GetByEmailAsync(email);
                 if (user == null) return false;
 
-                user.PasswordHash = newPassword;
+                user.Password = newPassword;
                 await _unitOfWork.Accounts.UpdateAsync(user);
                 _resetTokens.TryRemove(resetToken, out _);
                 _verifiedEmails.TryRemove(email, out _);
