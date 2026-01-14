@@ -15,6 +15,17 @@ public static class AuthMessages
     public const string EmailVerified = "Email đã được xác minh";
     public const string EmailNotVerified = "Email chưa được xác minh";
 
+    // Register
+    public const string RegisterSuccess = "Đăng ký tài khoản thành công.";
+    public const string OtpNotVerifiedForRegister = "Vui lòng xác minh OTP trước khi đăng ký tài khoản.";
+    public const string UsernameAlreadyExists = "Tên người dùng đã tồn tại. Vui lòng chọn tên khác.";
+    public const string PasswordMismatch = "Mật khẩu xác nhận không khớp.";
+
+    // Login
+    public const string LoginSuccess = "Đăng nhập thành công.";
+    public const string InvalidCredentials = "Email hoặc mật khẩu không đúng.";
+    public const string AccountNotActive = "Tài khoản chưa được kích hoạt.";
+
     // Forgot Password
     public const string ResetOtpSentSuccess = "OTP đặt lại mật khẩu đã được gửi đến email của bạn.";
     public const string EmailNotFound = "Email không tồn tại trong hệ thống";
