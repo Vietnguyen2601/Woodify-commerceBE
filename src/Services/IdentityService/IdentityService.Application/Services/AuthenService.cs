@@ -107,13 +107,15 @@ namespace IdentityService.Application.Services
                 return (false, null, AuthMessages.UsernameAlreadyExists);
             }
 
-            // Tạo tài khoản mới
+            var customerRole = await _unitOfWork.Roles.GetByNameAsync("Customer");
+
             var account = new Account
             {
                 AccountId = Guid.NewGuid(),
                 Email = email,
                 Username = username,
                 Password = _passwordHasher.HashPassword(password),
+                RoleId = customerRole?.RoleId,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -128,27 +130,33 @@ namespace IdentityService.Application.Services
             return (true, account.AccountId, null);
         }
 
-        public async Task<(bool Success, Guid? AccountId, string? Email, string? Username, string? ErrorMessage)> LoginAsync(string email, string password)
+        public async Task<(bool Success, Account? Account, string? ErrorMessage)> LoginAsync(string email, string password)
         {
             var account = await _unitOfWork.Accounts.GetByEmailAsync(email);
 
             if (account == null)
             {
-                return (false, null, null, null, AuthMessages.InvalidCredentials);
+                return (false, null, AuthMessages.InvalidCredentials);
             }
 
             // Verify password
             if (!_passwordHasher.VerifyHashedPassword(account.Password, password))
             {
-                return (false, null, null, null, AuthMessages.InvalidCredentials);
+                return (false, null, AuthMessages.InvalidCredentials);
             }
 
             if (!account.IsActive)
             {
-                return (false, null, null, null, AuthMessages.AccountNotActive);
+                return (false, null, AuthMessages.AccountNotActive);
             }
 
-            return (true, account.AccountId, account.Email, account.Username, null);
+            // Load Role for JWT claims
+            if (account.RoleId.HasValue)
+            {
+                account.Role = await _unitOfWork.Roles.GetByIdAsync(account.RoleId.Value);
+            }
+
+            return (true, account, null);
         }
         #endregion
 

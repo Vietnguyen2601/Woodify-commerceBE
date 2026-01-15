@@ -76,7 +76,8 @@ public record LoginResponse(
     string Message,
     Guid? AccountId = null,
     string? Email = null,
-    string? Username = null
+    string? Username = null,
+    string? Token = null
 );
 
 public record ResetPasswordResponse(

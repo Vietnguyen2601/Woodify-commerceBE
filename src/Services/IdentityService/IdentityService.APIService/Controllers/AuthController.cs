@@ -11,10 +11,12 @@ namespace IdentityService.APIService.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthenService _authenService;
+    private readonly IJwtTokenService _jwtTokenService;
 
-    public AuthController(IAuthenService authenService)
+    public AuthController(IAuthenService authenService, IJwtTokenService jwtTokenService)
     {
         _authenService = authenService;
+        _jwtTokenService = jwtTokenService;
     }
 
     #region OTP Endpoints
@@ -125,15 +127,18 @@ public class AuthController : ControllerBase
             return BadRequest(ServiceResult<LoginResponse>.BadRequest(AuthMessages.InvalidData));
         }
 
-        var (success, accountId, email, username, errorMessage) = await _authenService.LoginAsync(request.Email, request.Password);
+        var (success, account, errorMessage) = await _authenService.LoginAsync(request.Email, request.Password);
 
-        if (!success)
+        if (!success || account == null)
         {
             return Unauthorized(ServiceResult<LoginResponse>.Unauthorized(errorMessage ?? AuthMessages.InvalidCredentials));
         }
 
+        // Generate JWT token
+        var token = _jwtTokenService.GenerateJSONWebToken(account);
+
         return Ok(ServiceResult<LoginResponse>.Success(
-            new LoginResponse(true, AuthMessages.LoginSuccess, accountId, email, username),
+            new LoginResponse(true, AuthMessages.LoginSuccess, account.AccountId, account.Email, account.Username, token),
             AuthMessages.LoginSuccess
         ));
     }

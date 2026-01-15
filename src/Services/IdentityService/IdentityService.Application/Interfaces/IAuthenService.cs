@@ -1,4 +1,5 @@
 using IdentityService.Application.DTOs;
+using IdentityService.Domain.Entities;
 
 namespace IdentityService.Application.Interfaces;
 
@@ -13,7 +14,7 @@ public interface IAuthenService
 
     // Register & Login
     Task<(bool Success, Guid? AccountId, string? ErrorMessage)> RegisterAsync(string email, string password, string username);
-    Task<(bool Success, Guid? AccountId, string? Email, string? Username, string? ErrorMessage)> LoginAsync(string email, string password);
+    Task<(bool Success, Account? Account, string? ErrorMessage)> LoginAsync(string email, string password);
 
     // Forgot Password
     Task<bool> SendResetPasswordOtpAsync(string email);
