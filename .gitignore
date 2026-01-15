@@ -272,3 +272,4 @@ $RECYCLE.BIN/
 .Spotlight-V100
 .Trashes
 src/ApiGateway/start-services.ps1
+.agent

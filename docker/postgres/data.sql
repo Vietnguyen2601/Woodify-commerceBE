@@ -7,36 +7,24 @@
 -- Tạo Roles
 INSERT INTO roles (role_id, role_name, description, createdat, updatedat, is_active)
 VALUES
-('a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'Admin', 'Administrator role', NOW(), NOW(), true),
-('a1b2c3d4-e5f6-7890-abcd-ef1234567891', 'User', 'Regular user role', NOW(), NOW(), true),
-('a1b2c3d4-e5f6-7890-abcd-ef1234567892', 'Seller', 'Seller role', NOW(), NOW(), true),
-('a1b2c3d4-e5f6-7890-abcd-ef1234567893', 'Moderator', 'Moderator role', NOW(), NOW(), true),
-('a1b2c3d4-e5f6-7890-abcd-ef1234567894', 'Viewer', 'Viewer role', NOW(), NOW(), true)
+(gen_random_uuid(), 'Admin',    'Full access: manage users, roles, system settings and data.',          Now(), Now(), TRUE),
+(gen_random_uuid(), 'Support',  'Handles customer inquiries, tickets, and troubleshooting.',         Now(), Now(), TRUE),
+(gen_random_uuid(), 'Staff',    'Internal staff with limited management and operational permissions.', Now(), Now(), TRUE),
+(gen_random_uuid(), 'Seller',   'Seller role: manage product listings, inventory and orders.',        Now(), Now(), TRUE),
+(gen_random_uuid(), 'Customer', 'End user: browse products, place orders and manage their account.', Now(), Now(), TRUE)
 ON CONFLICT DO NOTHING;
 
--- Tạo 10 Accounts
-INSERT INTO accounts (
-    account_id, 
-    username, 
-    password_hash, 
-    email, 
-    name, 
-    phone_number, 
-    role_id, 
-    createdat, 
-    updatedat, 
-    is_active
-) VALUES
-('550e8400-e29b-41d4-a716-446655440001', 'user01', '$2a$12$E8q7L5u/ZNzVf0LsR8zNj.JJzAzVn8vUY0n.Q0Q.VVJ.QvJ8v7YE2', 'user01@gmail.com', 'Nguyễn Văn A', '0901000001', 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', NOW(), NOW(), true),
-('550e8400-e29b-41d4-a716-446655440002', 'user02', '$2a$12$E8q7L5u/ZNzVf0LsR8zNj.JJzAzVn8vUY0n.Q0Q.VVJ.QvJ8v7YE2', 'user02@gmail.com', 'Trần Thị B', '0901000002', 'a1b2c3d4-e5f6-7890-abcd-ef1234567891', NOW(), NOW(), true),
-('550e8400-e29b-41d4-a716-446655440003', 'user03', '$2a$12$E8q7L5u/ZNzVf0LsR8zNj.JJzAzVn8vUY0n.Q0Q.VVJ.QvJ8v7YE2', 'user03@gmail.com', 'Lê Văn C', '0901000003', 'a1b2c3d4-e5f6-7890-abcd-ef1234567892', NOW(), NOW(), true),
-('550e8400-e29b-41d4-a716-446655440004', 'user04', '$2a$12$E8q7L5u/ZNzVf0LsR8zNj.JJzAzVn8vUY0n.Q0Q.VVJ.QvJ8v7YE2', 'user04@gmail.com', 'Phạm Thị D', '0901000004', 'a1b2c3d4-e5f6-7890-abcd-ef1234567893', NOW(), NOW(), true),
-('550e8400-e29b-41d4-a716-446655440005', 'user05', '$2a$12$E8q7L5u/ZNzVf0LsR8zNj.JJzAzVn8vUY0n.Q0Q.VVJ.QvJ8v7YE2', 'user05@gmail.com', 'Hoàng Văn E', '0901000005', 'a1b2c3d4-e5f6-7890-abcd-ef1234567894', NOW(), NOW(), true),
-('550e8400-e29b-41d4-a716-446655440006', 'user06', '$2a$12$E8q7L5u/ZNzVf0LsR8zNj.JJzAzVn8vUY0n.Q0Q.VVJ.QvJ8v7YE2', 'user06@gmail.com', 'Vũ Thị F', '0901000006', 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', NOW(), NOW(), true),
-('550e8400-e29b-41d4-a716-446655440007', 'user07', '$2a$12$E8q7L5u/ZNzVf0LsR8zNj.JJzAzVn8vUY0n.Q0Q.VVJ.QvJ8v7YE2', 'user07@gmail.com', 'Đặng Văn G', '0901000007', 'a1b2c3d4-e5f6-7890-abcd-ef1234567891', NOW(), NOW(), true),
-('550e8400-e29b-41d4-a716-446655440008', 'user08', '$2a$12$E8q7L5u/ZNzVf0LsR8zNj.JJzAzVn8vUY0n.Q0Q.VVJ.QvJ8v7YE2', 'user08@gmail.com', 'Bùi Thị H', '0901000008', 'a1b2c3d4-e5f6-7890-abcd-ef1234567892', NOW(), NOW(), true),
-('550e8400-e29b-41d4-a716-446655440009', 'user09', '$2a$12$E8q7L5u/ZNzVf0LsR8zNj.JJzAzVn8vUY0n.Q0Q.VVJ.QvJ8v7YE2', 'user09@gmail.com', 'Đỗ Văn I', '0901000009', 'a1b2c3d4-e5f6-7890-abcd-ef1234567893', NOW(), NOW(), false),
-('550e8400-e29b-41d4-a716-446655440010', 'user10', '$2a$12$E8q7L5u/ZNzVf0LsR8zNj.JJzAzVn8vUY0n.Q0Q.VVJ.QvJ8v7YE2', 'user10@gmail.com', 'Ngô Thị K', '0901000010', 'a1b2c3d4-e5f6-7890-abcd-ef1234567894', NOW(), NOW(), false)
+-- Tạo Accounts (Admin: 1, Staff: 1, Support: 2, Seller: 2, Customer: 2)
+INSERT INTO accounts (account_id, username, password, email, name, phone_number, role_id, createdat, updatedat, is_active)
+VALUES
+(gen_random_uuid(), 'admin01', 'password1', 'admin@woodify.com', 'Admin User', '0901000001', (SELECT role_id FROM roles WHERE role_name = 'Admin'), Now(), Now(), TRUE),
+(gen_random_uuid(), 'staff01', 'password2', 'staff01@woodify.com', 'Staff User', '0901000002', (SELECT role_id FROM roles WHERE role_name = 'Staff'), Now(), Now(), TRUE),
+(gen_random_uuid(), 'support01', 'password3', 'support01@woodify.com', 'Support One', '0901000003', (SELECT role_id FROM roles WHERE role_name = 'Support'), Now(), Now(), TRUE),
+(gen_random_uuid(), 'support02', 'password4', 'support02@woodify.com', 'Support Two', '0901000004', (SELECT role_id FROM roles WHERE role_name = 'Support'), Now(), Now(), TRUE),
+(gen_random_uuid(), 'seller01', 'password5', 'seller01@gmail.com', 'Nguyễn Văn Seller', '0901000005', (SELECT role_id FROM roles WHERE role_name = 'Seller'), Now(), Now(), TRUE),
+(gen_random_uuid(), 'seller02', 'password6', 'seller02@gmail.com', 'Trần Thị Seller', '0901000006', (SELECT role_id FROM roles WHERE role_name = 'Seller'), Now(), Now(), TRUE),
+(gen_random_uuid(), 'customer01', 'password7', 'customer01@gmail.com', 'Lê Văn Customer', '0901000007', (SELECT role_id FROM roles WHERE role_name = 'Customer'), Now(), Now(), TRUE),
+(gen_random_uuid(), 'customer02', 'password8', 'customer02@gmail.com', 'Phạm Thị Customer', '0901000008', (SELECT role_id FROM roles WHERE role_name = 'Customer'), Now(), Now(), TRUE)
 ON CONFLICT DO NOTHING;
 
 -- ================================================================

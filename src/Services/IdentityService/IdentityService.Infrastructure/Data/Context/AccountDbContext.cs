@@ -83,7 +83,7 @@ public class AccountDbContext : DbContext
         {
             entity.ToTable("roles");
             entity.HasKey(e => e.RoleId);
-            
+
             entity.Property(e => e.RoleId).HasColumnName("role_id");
             entity.Property(e => e.RoleName).HasColumnName("role_name").IsRequired();
             entity.Property(e => e.Description).HasColumnName("description");
@@ -99,10 +99,10 @@ public class AccountDbContext : DbContext
         {
             entity.ToTable("accounts");
             entity.HasKey(e => e.AccountId);
-            
+
             entity.Property(e => e.AccountId).HasColumnName("account_id");
             entity.Property(e => e.Username).HasColumnName("username").IsRequired();
-            entity.Property(e => e.PasswordHash).HasColumnName("password_hash").IsRequired();
+            entity.Property(e => e.Password).HasColumnName("password").IsRequired();
             entity.Property(e => e.Email).HasColumnName("email").IsRequired();
             entity.Property(e => e.Name).HasColumnName("name");
             entity.Property(e => e.PhoneNumber).HasColumnName("phone_number");
