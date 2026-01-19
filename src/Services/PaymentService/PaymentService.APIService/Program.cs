@@ -14,11 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 // ==========================================
 var rootPath = Directory.GetParent(Directory.GetCurrentDirectory())?.Parent?.Parent?.Parent?.FullName;
 var envPath = Path.Combine(rootPath ?? "", ".env");
-if (File.Exists(envPath))
-{
-    Env.Load(envPath);
-    Console.WriteLine($"Loaded .env from: {envPath}");
-}
+Env.Load(envPath);
 
 
 // ==========================================
@@ -136,6 +132,7 @@ app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Payment Service API v1");
+    c.RoutePrefix = "";
 });
 
 // Map Controllers
