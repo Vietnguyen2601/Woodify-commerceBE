@@ -5,8 +5,21 @@ using PaymentService.Infrastructure.Data;
 using PaymentService.Infrastructure.PayOs;
 using PaymentService.Infrastructure.Repositories;
 using Shared.Messaging;
+using DotNetEnv;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ==========================================
+// 0. Load .env file
+// ==========================================
+var rootPath = Directory.GetParent(Directory.GetCurrentDirectory())?.Parent?.Parent?.Parent?.FullName;
+var envPath = Path.Combine(rootPath ?? "", ".env");
+if (File.Exists(envPath))
+{
+    Env.Load(envPath);
+    Console.WriteLine($"Loaded .env from: {envPath}");
+}
+
 
 // ==========================================
 // 1. Controllers & Swagger
@@ -102,7 +115,13 @@ catch (Exception ex)
 var app = builder.Build();
 
 // ==========================================
-// 9. Middleware Pipeline
+// 9. Configure Port
+// ==========================================
+var port = Environment.GetEnvironmentVariable("PAYMENT_SERVICE_PORT");
+app.Urls.Add($"http://localhost:{port}");
+
+// ==========================================
+// 10. Middleware Pipeline
 // ==========================================
 
 // Enable request body buffering for webhook signature verification
