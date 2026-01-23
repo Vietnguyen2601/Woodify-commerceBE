@@ -9,6 +9,9 @@ using IdentityService.APIService.Extensions;
 using IdentityService.APIService.Middlewares;
 using IdentityService.APIService.Filters;
 using DotNetEnv;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +25,31 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "Identity Service API", Version = "v1" });
+
+    // JWT Bearer token support in Swagger
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Nhập JWT token"
+    });
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
 });
 
 
@@ -57,28 +85,53 @@ if (File.Exists(envPath))
 builder.Services.AddAccountServices();
 builder.Services.AddValidators();
 
+// JWT Authentication
+var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY") ?? builder.Configuration["Jwt:Key"] ?? "default-secret-key-change-in-production-32chars";
+var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? builder.Configuration["Jwt:Issuer"] ?? "WoodifyBE";
+var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? builder.Configuration["Jwt:Audience"] ?? "WoodifyApp";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
-//configure the HTTP request pipeline.
-var port = Environment.GetEnvironmentVariable("IDENTITY_SERVICE_PORT");
-app.Urls.Add($"http://localhost:{port}");
 
-
-
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+try
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Identity Service API v1");
-    c.RoutePrefix = "";
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Identity Service API v1");
+        c.RoutePrefix = "";
+    });
 
-app.UseValidationExceptionMiddleware();
+    app.UseValidationExceptionMiddleware();
 
-app.UseAuthorization();
+    app.UseAuthentication();
+    app.UseAuthorization();
 
-app.MapControllers();
+    app.MapControllers();
 
-// Health check endpoint
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "identity-service" }));
+    app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "identity-service" }));
+    app.MapGet("/api/identity/health", () => Results.Ok(new { status = "healthy", service = "identity-service" }));
 
-app.Run();
+    app.Run();
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Failed to start application: {ex.Message}");
+}

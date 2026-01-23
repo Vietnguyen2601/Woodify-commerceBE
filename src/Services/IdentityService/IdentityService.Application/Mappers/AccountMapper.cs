@@ -8,7 +8,7 @@ public static class AccountMapper
     public static AccountDto ToDto(this Account account)
     {
         if (account == null) throw new ArgumentNullException(nameof(account), "Account cannot be null");
-        
+
         return new AccountDto
         {
             AccountId = account.AccountId,
@@ -40,7 +40,7 @@ public static class AccountMapper
         return new Account
         {
             Username = dto.Username,
-            PasswordHash = passwordHash,
+            Password = passwordHash,
             Email = dto.Email,
             Name = dto.Name,
             PhoneNumber = dto.PhoneNumber,
