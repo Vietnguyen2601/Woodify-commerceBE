@@ -153,3 +153,61 @@ public class UpdateCategoryValidator : AbstractValidator<UpdateCategoryDto>
             .When(x => !string.IsNullOrEmpty(x.Description));
     }
 }
+
+public class CreateProductReviewValidator : AbstractValidator<CreateProductReviewDto>
+{
+    public CreateProductReviewValidator()
+    {
+        RuleFor(x => x.ProductId)
+            .NotEmpty()
+            .WithMessage("Product ID is required");
+
+        RuleFor(x => x.OrderId)
+            .NotEmpty()
+            .WithMessage("Order ID is required");
+
+        RuleFor(x => x.AccountId)
+            .NotEmpty()
+            .WithMessage("Account ID is required");
+
+        RuleFor(x => x.Rating)
+            .InclusiveBetween(1, 5)
+            .WithMessage("Rating must be between 1 and 5 stars");
+
+        RuleFor(x => x.Title)
+            .MaximumLength(500)
+            .WithMessage("Title cannot exceed 500 characters")
+            .When(x => !string.IsNullOrEmpty(x.Title));
+
+        RuleFor(x => x.Content)
+            .MaximumLength(5000)
+            .WithMessage("Content cannot exceed 5000 characters")
+            .When(x => !string.IsNullOrEmpty(x.Content));
+    }
+}
+
+public class UpdateProductReviewValidator : AbstractValidator<UpdateProductReviewDto>
+{
+    public UpdateProductReviewValidator()
+    {
+        RuleFor(x => x.Rating)
+            .InclusiveBetween(1, 5)
+            .WithMessage("Rating must be between 1 and 5 stars")
+            .When(x => x.Rating.HasValue);
+
+        RuleFor(x => x.Title)
+            .MaximumLength(500)
+            .WithMessage("Title cannot exceed 500 characters")
+            .When(x => !string.IsNullOrEmpty(x.Title));
+
+        RuleFor(x => x.Content)
+            .MaximumLength(5000)
+            .WithMessage("Content cannot exceed 5000 characters")
+            .When(x => !string.IsNullOrEmpty(x.Content));
+
+        RuleFor(x => x.HelpfulCount)
+            .GreaterThanOrEqualTo(0)
+            .WithMessage("Helpful count must be greater than or equal to 0")
+            .When(x => x.HelpfulCount.HasValue);
+    }
+}

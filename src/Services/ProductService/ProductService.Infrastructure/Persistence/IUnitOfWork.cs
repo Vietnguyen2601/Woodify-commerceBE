@@ -11,6 +11,7 @@ public interface IUnitOfWork : IDisposable
     IProductMasterRepository ProductMasters { get; }
     IProductVersionRepository ProductVersions { get; }
     ICategoryRepository Categories { get; }
+    IProductReviewRepository ProductReviews { get; }
     
     Task<int> SaveChangesAsync();
     Task BeginTransactionAsync();
