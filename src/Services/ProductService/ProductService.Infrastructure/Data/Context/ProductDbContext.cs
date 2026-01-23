@@ -18,6 +18,7 @@ public class ProductDbContext : DbContext
     public DbSet<ProductMaster> ProductMasters { get; set; }
     public DbSet<ProductVersion> ProductVersions { get; set; }
     public DbSet<Category> Categories { get; set; }
+    public DbSet<ProductReview> ProductReviews { get; set; }
 
     private static string GetConnectionString(string connectionStringName)
     {
@@ -198,6 +199,43 @@ public class ProductDbContext : DbContext
             entity.HasIndex(e => e.Name);
             entity.HasIndex(e => e.IsActive);
         });
+
+        // ========================================
+        // Cấu hình bảng Product_Review
+        // ========================================
+        modelBuilder.Entity<ProductReview>(entity =>
+        {
+            entity.ToTable("product_review");
+            entity.HasKey(e => e.ReviewId);
+            
+            entity.Property(e => e.ReviewId).HasColumnName("review_id");
+            entity.Property(e => e.ProductId).HasColumnName("product_id").IsRequired();
+            entity.Property(e => e.OrderId).HasColumnName("order_id").IsRequired();
+            entity.Property(e => e.AccountId).HasColumnName("account_id").IsRequired();
+            entity.Property(e => e.Rating).HasColumnName("rating").IsRequired();
+            entity.Property(e => e.Title).HasColumnName("title").HasMaxLength(500);
+            entity.Property(e => e.Content).HasColumnName("content").HasMaxLength(5000);
+            entity.Property(e => e.IsVerified).HasColumnName("is_verified").HasDefaultValue(false);
+            entity.Property(e => e.HelpfulCount).HasColumnName("helpful_count").HasDefaultValue(0);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            // Foreign Key to Product
+            entity.HasOne(r => r.Product)
+                .WithMany()
+                .HasForeignKey(r => r.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Indexes
+            entity.HasIndex(e => e.ProductId);
+            entity.HasIndex(e => e.AccountId);
+            entity.HasIndex(e => e.OrderId);
+            entity.HasIndex(e => e.IsVerified);
+            entity.HasIndex(e => e.CreatedAt);
+            
+            // Unique constraint: một user chỉ review một order một lần
+            entity.HasIndex(e => new { e.OrderId, e.AccountId }).IsUnique();
+        });
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -214,6 +252,8 @@ public class ProductDbContext : DbContext
                 version.UpdatedAt = DateTime.UtcNow;
             else if (entry.Entity is Category category)
                 category.UpdatedAt = DateTime.UtcNow;
+            else if (entry.Entity is ProductReview review)
+                review.UpdatedAt = DateTime.UtcNow;
         }
 
         return base.SaveChangesAsync(cancellationToken);
