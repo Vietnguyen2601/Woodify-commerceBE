@@ -67,9 +67,13 @@ public class ProductVersionService : IProductVersionService
         try
         {
             // Validate that ProductId exists
-            var productExists = await _productMasterRepository.ExistsAsync(dto.ProductId);
-            if (!productExists)
+            var product = await _productMasterRepository.GetByIdAsync(dto.ProductId);
+            if (product == null)
                 return ServiceResult<ProductVersionDto>.NotFound($"Product with ID {dto.ProductId} not found");
+
+            // Check if product is archived
+            if (product.Status == Domain.Entities.ProductStatus.ARCHIVED)
+                return ServiceResult<ProductVersionDto>.BadRequest("Cannot create new version for archived product");
 
             var version = dto.ToModel();
             await _productVersionRepository.CreateAsync(version);

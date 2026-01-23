@@ -15,15 +15,6 @@ public class CreateProductMasterValidator : AbstractValidator<CreateProductMaste
         RuleFor(x => x.CategoryId)
             .NotEmpty()
             .WithMessage("Category ID is required");
-
-        RuleFor(x => x.GlobalSku)
-            .MaximumLength(255)
-            .WithMessage("Global SKU cannot exceed 255 characters")
-            .When(x => !string.IsNullOrEmpty(x.GlobalSku));
-
-        RuleFor(x => x.Status)
-            .IsInEnum()
-            .WithMessage("Invalid product status");
     }
 }
 
