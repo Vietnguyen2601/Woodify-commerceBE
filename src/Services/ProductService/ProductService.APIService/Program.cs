@@ -63,6 +63,21 @@ builder.Services.AddValidators();
 
 var app = builder.Build();
 
+// Auto-migrate database on startup (Development only)
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ProductDbContext>();
+    try
+    {
+        dbContext.Database.Migrate();
+        Console.WriteLine("Database migration applied successfully");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Database migration failed: {ex.Message}");
+    }
+}
+
 try
 {
     app.UseSwagger();

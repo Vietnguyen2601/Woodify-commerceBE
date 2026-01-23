@@ -44,6 +44,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 \c product_db
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Enable postgres_fdw for cross-database queries
+CREATE EXTENSION IF NOT EXISTS postgres_fdw;
 
 \c inventory_db
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -53,6 +55,32 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 \c payment_db
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ================================================================
+-- SETUP FOREIGN DATA WRAPPER CHO CROSS-DATABASE QUERIES
+-- ================================================================
+-- Cho phép product_db truy vấn identity_db.accounts
+
+\c product_db
+
+-- Tạo foreign server trỏ đến identity_db
+CREATE SERVER IF NOT EXISTS identity_server
+    FOREIGN DATA WRAPPER postgres_fdw
+    OPTIONS (host 'localhost', dbname 'identity_db', port '5432');
+
+-- Tạo user mapping
+CREATE USER MAPPING IF NOT EXISTS FOR woodify
+    SERVER identity_server
+    OPTIONS (user 'woodify', password 'woodify123');
+
+-- Tạo schema cho foreign tables
+CREATE SCHEMA IF NOT EXISTS identity_remote;
+
+-- Import accounts table từ identity_db
+IMPORT FOREIGN SCHEMA public
+    LIMIT TO (accounts)
+    FROM SERVER identity_server
+    INTO identity_remote;
 
 -- ================================================================
 -- TẠO FUNCTION CẬP NHẬT updatedAt TỰ ĐỘNG

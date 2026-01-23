@@ -1,5 +1,6 @@
 using FluentValidation;
 using ProductService.Infrastructure.Repositories;
+using ProductService.Infrastructure.Repositories.Repository;
 using ProductService.Infrastructure.Repositories.IRepositories;
 using ProductService.Infrastructure.Persistence;
 using ProductService.Application.Interfaces;
@@ -24,11 +25,14 @@ namespace ProductService.APIService.Extensions
                 new ProductVersionRepository(sp.GetRequiredService<ProductDbContext>()));
             services.AddScoped<ICategoryRepository>(sp => 
                 new CategoryRepository(sp.GetRequiredService<ProductDbContext>()));
+            services.AddScoped<IProductReviewRepository>(sp => 
+                new ProductReviewRepository(sp.GetRequiredService<ProductDbContext>()));
 
             // Services
             services.AddScoped<IProductMasterService, ProductMasterService>();
             services.AddScoped<IProductVersionService, ProductVersionService>();
             services.AddScoped<ICategoryService, CategoryService>();
+            services.AddScoped<IProductReviewService, ProductReviewService>();
 
             return services;
         }
