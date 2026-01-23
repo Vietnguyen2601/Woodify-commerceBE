@@ -36,8 +36,10 @@ builder.Services.AddSwaggerGen(c =>
 // ==========================================
 // 2. Database - EF Core PostgreSQL
 // ==========================================
-var connectionString = builder.Configuration.GetConnectionString("PaymentService")
-    ?? builder.Configuration["ConnectionStrings__PaymentService"];
+var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__PaymentService")
+    ?? builder.Configuration.GetConnectionString("PaymentService");
+
+Console.WriteLine($"Connection String loaded: {!string.IsNullOrEmpty(connectionString)}");
 
 builder.Services.AddDbContext<PaymentDbContext>(options =>
     options.UseNpgsql(connectionString));
@@ -77,11 +79,13 @@ builder.Services.AddHttpClient<IPayOsService, PayOsService>(client =>
 // 5. Repositories
 // ==========================================
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<IWalletRepository, WalletRepository>();
 
 // ==========================================
 // 6. Application Services
 // ==========================================
 builder.Services.AddScoped<IPaymentAppService, PaymentAppService>();
+builder.Services.AddScoped<IWalletService, WalletService>();
 
 // ==========================================
 // 7. RabbitMQ (Optional - existing configuration)
@@ -113,8 +117,8 @@ var app = builder.Build();
 // ==========================================
 // 9. Configure Port
 // ==========================================
-var port = Environment.GetEnvironmentVariable("PAYMENT_SERVICE_PORT");
-app.Urls.Add($"http://localhost:{port}");
+var port = Environment.GetEnvironmentVariable("PAYMENT_SERVICE_PORT") ?? "5015";
+app.Urls.Add($"http://*:{port}");
 
 // ==========================================
 // 10. Middleware Pipeline

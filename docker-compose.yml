@@ -250,26 +250,25 @@ services:
   # Quản lý: Payment, Wallet
   # Database: payment_db
   # Port: 5015
-  # ⚠️ COMMENTED OUT - Dockerfile chưa có
-  # payment-service:
-  #   build:
-  #     context: .
-  #     dockerfile: src/Services/PaymentService/PaymentService.APIService/Dockerfile
-  #   container_name: woodify-payment-service
-  #   restart: unless-stopped
-  #   ports:
-  #     - "5015:8080"
-  #   environment:
-  #     - ASPNETCORE_ENVIRONMENT=Development
-  #   volumes:
-  #     - ./.env:/app/.env
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     rabbitmq:
-  #       condition: service_healthy
-  #   networks:
-  #     - woodify-network
+  payment-service:
+    build:
+      context: .
+      dockerfile: src/Services/PaymentService/PaymentService.APIService/Dockerfile
+    container_name: woodify-payment-service
+    restart: unless-stopped
+    ports:
+      - "5015:5015"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    volumes:
+      - ./.env:/app/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - woodify-network
 
 
 # ==============================================================
