@@ -54,6 +54,21 @@ if (File.Exists(envPath))
 
 var app = builder.Build();
 
+// Auto-migrate database on startup
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ShopDbContext>();
+    try
+    {
+        dbContext.Database.Migrate();
+        Console.WriteLine("Database migration applied successfully");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Database migration failed: {ex.Message}");
+    }
+}
+
 // Configure the HTTP request pipeline.
 var port = Environment.GetEnvironmentVariable("SHOP_SERVICE_PORT");
 app.Urls.Add($"http://localhost:{port}");
