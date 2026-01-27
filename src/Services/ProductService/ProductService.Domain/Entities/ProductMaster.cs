@@ -9,7 +9,7 @@ public class ProductMaster
     public Guid ProductId { get; set; } = Guid.NewGuid();
     public Guid ShopId { get; set; }
     public Guid CategoryId { get; set; }
-    public string? GlobalSku { get; set; }
+    public string GlobalSku { get; set; } = string.Empty; // Empty by default, will be generated when first version is created
     public ProductStatus Status { get; set; } = ProductStatus.DRAFT;
     public bool Certified { get; set; } = false;
     public Guid? CurrentVersionId { get; set; }

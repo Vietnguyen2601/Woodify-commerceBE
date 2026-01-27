@@ -19,4 +19,5 @@ public interface IProductMasterService
     Task<ServiceResult<IEnumerable<ProductMasterDto>>> GetArchivedProductsAsync();
     Task<ServiceResult<ProductMasterDto>> PublishProductAsync(Guid id);
     Task<ServiceResult<IEnumerable<ProductMasterDto>>> GetPublishedProductsAsync();
+    Task<ServiceResult<ProductSearchResultDto>> SearchProductsAsync(ProductSearchDto searchDto);
 }
