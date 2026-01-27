@@ -3,6 +3,7 @@ using ProductService.Application.Interfaces;
 using ProductService.Application.Mappers;
 using ProductService.Infrastructure.Repositories.IRepositories;
 using ProductService.Infrastructure.Persistence;
+using ProductService.Domain.Parameters;
 using Shared.Results;
 
 namespace ProductService.Application.Services;
@@ -194,6 +195,62 @@ public class ProductMasterService : IProductMasterService
         catch (Exception ex)
         {
             return ServiceResult<IEnumerable<ProductMasterDto>>.InternalServerError($"Error retrieving published products: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<ProductSearchResultDto>> SearchProductsAsync(ProductSearchDto searchDto)
+    {
+        try
+        {
+            // Convert DTO to Parameters
+            var searchParams = new ProductSearchParameters
+            {
+                Keyword = searchDto.Keyword,
+                Status = searchDto.Status?.ToString() ?? "PUBLISHED",
+                CategoryName = searchDto.CategoryName,
+                MinRating = (double?)searchDto.MinRating,
+                MaxRating = (double?)searchDto.MaxRating,
+                Page = searchDto.Page,
+                PageSize = searchDto.PageSize,
+                SortBy = searchDto.SortBy,
+                SortDirection = searchDto.SortDirection
+            };
+
+            var (products, totalCount) = await _productMasterRepository.SearchAsync(searchParams);
+            
+            // Get current version info for each product
+            var productDtos = new List<ProductMasterDto>();
+            foreach (var product in products)
+            {
+                var dto = product.ToDto();
+                
+                // Get current version details if available
+                if (product.CurrentVersionId.HasValue)
+                {
+                    var version = await _unitOfWork.ProductVersions.GetByIdAsync(product.CurrentVersionId.Value);
+                    if (version != null)
+                    {
+                        dto.CurrentVersionTitle = version.Title;
+                        dto.CurrentVersionDescription = version.Description;
+                    }
+                }
+                
+                productDtos.Add(dto);
+            }
+            
+            var result = new ProductSearchResultDto
+            {
+                Products = productDtos,
+                TotalCount = totalCount,
+                Page = searchDto.Page,
+                PageSize = searchDto.PageSize
+            };
+            
+            return ServiceResult<ProductSearchResultDto>.Success(result);
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<ProductSearchResultDto>.InternalServerError($"Error searching products: {ex.Message}");
         }
     }
 }

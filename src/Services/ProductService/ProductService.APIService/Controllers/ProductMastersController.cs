@@ -132,4 +132,15 @@ public class ProductMastersController : ControllerBase
         var result = await _productMasterService.GetPublishedProductsAsync();
         return Ok(result);
     }
+
+    /// <summary>
+    /// Search products with filters
+    /// Only indexes PUBLISHED products by default
+    /// </summary>
+    [HttpPost("SearchProducts")]
+    public async Task<ActionResult<ServiceResult<ProductSearchResultDto>>> SearchProducts([FromBody] ProductSearchDto searchDto)
+    {
+        var result = await _productMasterService.SearchProductsAsync(searchDto);
+        return Ok(result);
+    }
 }
