@@ -116,4 +116,84 @@ public class ProductMasterService : IProductMasterService
             return ServiceResult.InternalServerError($"Error deleting product: {ex.Message}");
         }
     }
+
+    public async Task<ServiceResult<ProductMasterDto>> ArchiveProductAsync(Guid id)
+    {
+        try
+        {
+            var product = await _productMasterRepository.GetByIdAsync(id);
+            if (product == null)
+                return ServiceResult<ProductMasterDto>.NotFound("Product not found");
+
+            if (product.Status == Domain.Entities.ProductStatus.ARCHIVED)
+                return ServiceResult<ProductMasterDto>.BadRequest("Product is already archived");
+
+            product.Status = Domain.Entities.ProductStatus.ARCHIVED;
+            product.UpdatedAt = DateTime.UtcNow;
+            await _productMasterRepository.UpdateAsync(product);
+
+            return ServiceResult<ProductMasterDto>.Success(product.ToDto(), "Product archived successfully");
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<ProductMasterDto>.InternalServerError($"Error archiving product: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<IEnumerable<ProductMasterDto>>> GetArchivedProductsAsync()
+    {
+        try
+        {
+            var archivedProducts = await _productMasterRepository.GetByStatusAsync(Domain.Entities.ProductStatus.ARCHIVED);
+            var productDtos = archivedProducts.Select(p => p.ToDto());
+            
+            return ServiceResult<IEnumerable<ProductMasterDto>>.Success(productDtos);
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<IEnumerable<ProductMasterDto>>.InternalServerError($"Error retrieving archived products: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<ProductMasterDto>> PublishProductAsync(Guid id)
+    {
+        try
+        {
+            var product = await _productMasterRepository.GetByIdAsync(id);
+            if (product == null)
+                return ServiceResult<ProductMasterDto>.NotFound("Product not found");
+
+            // Chỉ cho phép chuyển từ DRAFT hoặc ARCHIVED sang PUBLISHED
+            if (product.Status == Domain.Entities.ProductStatus.DELETED)
+                return ServiceResult<ProductMasterDto>.BadRequest("Cannot publish a deleted product");
+
+            if (product.Status == Domain.Entities.ProductStatus.PUBLISHED)
+                return ServiceResult<ProductMasterDto>.BadRequest("Product is already published");
+
+            product.Status = Domain.Entities.ProductStatus.PUBLISHED;
+            product.UpdatedAt = DateTime.UtcNow;
+            await _productMasterRepository.UpdateAsync(product);
+
+            return ServiceResult<ProductMasterDto>.Success(product.ToDto(), "Product published successfully");
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<ProductMasterDto>.InternalServerError($"Error publishing product: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<IEnumerable<ProductMasterDto>>> GetPublishedProductsAsync()
+    {
+        try
+        {
+            var publishedProducts = await _productMasterRepository.GetByStatusAsync(Domain.Entities.ProductStatus.PUBLISHED);
+            var productDtos = publishedProducts.Select(p => p.ToDto());
+            
+            return ServiceResult<IEnumerable<ProductMasterDto>>.Success(productDtos);
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<IEnumerable<ProductMasterDto>>.InternalServerError($"Error retrieving published products: {ex.Message}");
+        }
+    }
 }

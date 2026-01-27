@@ -6,10 +6,7 @@ public class CreateProductMasterDto
 {
     public Guid ShopId { get; set; }
     public Guid CategoryId { get; set; }
-    public string? GlobalSku { get; set; }
-    public ProductStatus Status { get; set; } = ProductStatus.DRAFT;
     public bool Certified { get; set; } = false;
-    public Guid? CurrentVersionId { get; set; }
 }
 
 public class UpdateProductMasterDto

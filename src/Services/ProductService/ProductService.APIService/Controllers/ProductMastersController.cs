@@ -90,4 +90,46 @@ public class ProductMastersController : ControllerBase
         
         return Ok(result);
     }
+
+    [HttpPatch("ArchiveProduct/{id:guid}")]
+    public async Task<ActionResult<ServiceResult<ProductMasterDto>>> ArchiveProduct(Guid id)
+    {
+        var result = await _productMasterService.ArchiveProductAsync(id);
+        
+        if (result.Status == 404)
+            return NotFound(result);
+        
+        if (result.Status != 200)
+            return BadRequest(result);
+        
+        return Ok(result);
+    }
+
+    [HttpGet("GetArchivedProducts")]
+    public async Task<ActionResult<ServiceResult<IEnumerable<ProductMasterDto>>>> GetArchivedProducts()
+    {
+        var result = await _productMasterService.GetArchivedProductsAsync();
+        return Ok(result);
+    }
+
+    [HttpPatch("PublishProduct/{id:guid}")]
+    public async Task<ActionResult<ServiceResult<ProductMasterDto>>> PublishProduct(Guid id)
+    {
+        var result = await _productMasterService.PublishProductAsync(id);
+        
+        if (result.Status == 404)
+            return NotFound(result);
+        
+        if (result.Status != 200)
+            return BadRequest(result);
+        
+        return Ok(result);
+    }
+
+    [HttpGet("GetPublishedProducts")]
+    public async Task<ActionResult<ServiceResult<IEnumerable<ProductMasterDto>>>> GetPublishedProducts()
+    {
+        var result = await _productMasterService.GetPublishedProductsAsync();
+        return Ok(result);
+    }
 }
