@@ -37,10 +37,10 @@ public static class ProductMasterMapper
         {
             ShopId = dto.ShopId,
             CategoryId = dto.CategoryId,
-            GlobalSku = dto.GlobalSku,
-            Status = dto.Status,
+            GlobalSku = null,
+            Status = ProductStatus.DRAFT,
             Certified = dto.Certified,
-            CurrentVersionId = dto.CurrentVersionId,
+            CurrentVersionId = null,
             AvgRating = 0,
             ReviewCount = 0,
             CreatedAt = DateTime.UtcNow

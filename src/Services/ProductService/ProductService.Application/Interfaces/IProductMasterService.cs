@@ -15,4 +15,8 @@ public interface IProductMasterService
     Task<ServiceResult<ProductMasterDto>> CreateAsync(CreateProductMasterDto dto);
     Task<ServiceResult<ProductMasterDto>> UpdateAsync(Guid id, UpdateProductMasterDto dto);
     Task<ServiceResult> DeleteAsync(Guid id);
+    Task<ServiceResult<ProductMasterDto>> ArchiveProductAsync(Guid id);
+    Task<ServiceResult<IEnumerable<ProductMasterDto>>> GetArchivedProductsAsync();
+    Task<ServiceResult<ProductMasterDto>> PublishProductAsync(Guid id);
+    Task<ServiceResult<IEnumerable<ProductMasterDto>>> GetPublishedProductsAsync();
 }

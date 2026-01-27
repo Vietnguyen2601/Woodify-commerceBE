@@ -2,6 +2,7 @@ using ProductService.Application.DTOs;
 using ProductService.Application.Interfaces;
 using ProductService.Application.Mappers;
 using ProductService.Infrastructure.Repositories.IRepositories;
+using ProductService.Infrastructure.Persistence;
 using Shared.Results;
 
 namespace ProductService.Application.Services;
@@ -10,13 +11,16 @@ public class ProductVersionService : IProductVersionService
 {
     private readonly IProductVersionRepository _productVersionRepository;
     private readonly IProductMasterRepository _productMasterRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
     public ProductVersionService(
         IProductVersionRepository productVersionRepository,
-        IProductMasterRepository productMasterRepository)
+        IProductMasterRepository productMasterRepository,
+        IUnitOfWork unitOfWork)
     {
         _productVersionRepository = productVersionRepository;
         _productMasterRepository = productMasterRepository;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<ServiceResult<ProductVersionDto>> GetByIdAsync(Guid id)
@@ -67,12 +71,23 @@ public class ProductVersionService : IProductVersionService
         try
         {
             // Validate that ProductId exists
-            var productExists = await _productMasterRepository.ExistsAsync(dto.ProductId);
-            if (!productExists)
+            var product = await _productMasterRepository.GetByIdAsync(dto.ProductId);
+            if (product == null)
                 return ServiceResult<ProductVersionDto>.NotFound($"Product with ID {dto.ProductId} not found");
+
+            // Check if product is archived
+            if (product.Status == Domain.Entities.ProductStatus.ARCHIVED)
+                return ServiceResult<ProductVersionDto>.BadRequest("Cannot create new version for archived product");
 
             var version = dto.ToModel();
             await _productVersionRepository.CreateAsync(version);
+
+            // Generate and update GlobalSku for ProductMaster
+            var globalSku = await GenerateGlobalSkuAsync(product.ProductId, version.VersionId, product.CategoryId);
+            product.GlobalSku = globalSku;
+            product.CurrentVersionId = version.VersionId;
+            product.UpdatedAt = DateTime.UtcNow;
+            await _productMasterRepository.UpdateAsync(product);
 
             return ServiceResult<ProductVersionDto>.Created(version.ToDto(), "Product version created successfully");
         }
@@ -80,6 +95,49 @@ public class ProductVersionService : IProductVersionService
         {
             return ServiceResult<ProductVersionDto>.InternalServerError($"Error creating product version: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Tạo Global SKU theo format: EWM-<CAT>-<PID>-<VID>
+    /// </summary>
+    private async Task<string> GenerateGlobalSkuAsync(Guid productId, Guid versionId, Guid categoryId)
+    {
+        // Prefix hệ thống
+        const string prefix = "EWM";
+
+        // Lấy Category để rút gọn tên
+        var category = await _unitOfWork.Categories.GetByIdAsync(categoryId);
+        string categoryCode = "XX"; // Default nếu không tìm thấy category
+        
+        if (category != null && !string.IsNullOrEmpty(category.Name))
+        {
+            // Rút gọn category name thành 2-3 ký tự viết hoa
+            // Lấy các chữ cái đầu hoặc 2 ký tự đầu
+            var nameParts = category.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (nameParts.Length > 1)
+            {
+                // Nếu có nhiều từ, lấy chữ cái đầu của mỗi từ (tối đa 3 ký tự)
+                categoryCode = string.Concat(nameParts.Take(3).Select(p => p[0])).ToUpper();
+            }
+            else
+            {
+                // Nếu chỉ 1 từ, lấy 2-3 ký tự đầu
+                categoryCode = category.Name.Length >= 3 
+                    ? category.Name.Substring(0, 3).ToUpper() 
+                    : category.Name.ToUpper();
+            }
+        }
+
+        // Rút gọn ProductId (lấy 4 ký tự đầu)
+        string productCode = productId.ToString("N").Substring(0, 4).ToUpper();
+
+        // Đếm số lượng version hiện có của product để tạo version number
+        var existingVersions = await _productVersionRepository.GetByProductIdAsync(productId);
+        int versionNumber = existingVersions.Count();
+        string versionCode = $"V{versionNumber:D2}"; // V01, V02, V03...
+
+        // Tạo Global SKU
+        return $"{prefix}-{categoryCode}-{productCode}-{versionCode}";
     }
 
     public async Task<ServiceResult<ProductVersionDto>> UpdateAsync(Guid id, UpdateProductVersionDto dto)
