@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Shared.Messaging;
+using OrderService.Infrastructure.Data.Context;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +10,8 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "Order Service API", Version = "v1" });
 });
+
+builder.Services.AddDbContext<OrderDbContext>();
 
 var rabbitMQSettings = new RabbitMQSettings
 {
@@ -30,6 +33,21 @@ catch (Exception ex)
 }
 
 var app = builder.Build();
+
+// Auto-migrate database on startup
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
+    try
+    {
+        dbContext.Database.Migrate();
+        Console.WriteLine("Database migration applied successfully");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Database migration failed: {ex.Message}");
+    }
+}
 
 app.UseSwagger();
 app.UseSwaggerUI();
