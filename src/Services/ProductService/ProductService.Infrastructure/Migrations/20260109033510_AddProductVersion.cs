@@ -52,7 +52,7 @@ namespace ProductService.Infrastructure.Migrations
                 name: "IX_product_version_sku",
                 table: "product_version",
                 column: "sku",
-                unique: true);
+                unique: false);
         }
 
         /// <inheritdoc />

@@ -37,7 +37,7 @@ public static class ProductMasterMapper
         {
             ShopId = dto.ShopId,
             CategoryId = dto.CategoryId,
-            GlobalSku = null,
+            GlobalSku = string.Empty, // Empty string to avoid unique constraint issues with null
             Status = ProductStatus.DRAFT,
             Certified = dto.Certified,
             CurrentVersionId = null,

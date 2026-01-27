@@ -79,15 +79,37 @@ public class ProductVersionService : IProductVersionService
             if (product.Status == Domain.Entities.ProductStatus.ARCHIVED)
                 return ServiceResult<ProductVersionDto>.BadRequest("Cannot create new version for archived product");
 
+            // Create version
             var version = dto.ToModel();
             await _productVersionRepository.CreateAsync(version);
 
-            // Generate and update GlobalSku for ProductMaster
-            var globalSku = await GenerateGlobalSkuAsync(product.ProductId, version.VersionId, product.CategoryId);
-            product.GlobalSku = globalSku;
-            product.CurrentVersionId = version.VersionId;
-            product.UpdatedAt = DateTime.UtcNow;
-            await _productMasterRepository.UpdateAsync(product);
+            // Check if this is the first version (GlobalSku is empty or null)
+            bool isFirstVersion = string.IsNullOrEmpty(product.GlobalSku);
+            
+            // Create a new tracked instance for update
+            var productToUpdate = new Domain.Entities.ProductMaster
+            {
+                ProductId = product.ProductId,
+                ShopId = product.ShopId,
+                CategoryId = product.CategoryId,
+                GlobalSku = product.GlobalSku, // Keep existing GlobalSku by default
+                Status = product.Status,
+                Certified = product.Certified,
+                CurrentVersionId = version.VersionId,
+                AvgRating = product.AvgRating,
+                ReviewCount = product.ReviewCount,
+                CreatedAt = product.CreatedAt,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            // Only generate and set GlobalSku for the first version
+            if (isFirstVersion)
+            {
+                var globalSku = await GenerateGlobalSkuAsync(product.ProductId, product.CategoryId);
+                productToUpdate.GlobalSku = globalSku;
+            }
+            
+            await _productMasterRepository.UpdateAsync(productToUpdate);
 
             return ServiceResult<ProductVersionDto>.Created(version.ToDto(), "Product version created successfully");
         }
@@ -98,9 +120,14 @@ public class ProductVersionService : IProductVersionService
     }
 
     /// <summary>
-    /// Tạo Global SKU theo format: EWM-<CAT>-<PID>-<VID>
+    /// Tạo Global SKU theo format: EWM-<CAT>-<PID>
+    /// Trong đó:
+    /// - EWM: Prefix hệ thống (Economy Wood Market)
+    /// - CAT: Mã category rút gọn (VD: TB cho Table, WD cho Wood Decor)
+    /// - PID: Product_Master ID rút gọn (4 ký tự đầu, VD: 8F3A)
+    /// Ví dụ: EWM-TB-8F3A
     /// </summary>
-    private async Task<string> GenerateGlobalSkuAsync(Guid productId, Guid versionId, Guid categoryId)
+    private async Task<string> GenerateGlobalSkuAsync(Guid productId, Guid categoryId)
     {
         // Prefix hệ thống
         const string prefix = "EWM";
@@ -131,13 +158,9 @@ public class ProductVersionService : IProductVersionService
         // Rút gọn ProductId (lấy 4 ký tự đầu)
         string productCode = productId.ToString("N").Substring(0, 4).ToUpper();
 
-        // Đếm số lượng version hiện có của product để tạo version number
-        var existingVersions = await _productVersionRepository.GetByProductIdAsync(productId);
-        int versionNumber = existingVersions.Count();
-        string versionCode = $"V{versionNumber:D2}"; // V01, V02, V03...
 
         // Tạo Global SKU
-        return $"{prefix}-{categoryCode}-{productCode}-{versionCode}";
+        return $"{prefix}-{categoryCode}-{productCode}";
     }
 
     public async Task<ServiceResult<ProductVersionDto>> UpdateAsync(Guid id, UpdateProductVersionDto dto)

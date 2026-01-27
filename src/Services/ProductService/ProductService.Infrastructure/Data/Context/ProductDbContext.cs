@@ -115,7 +115,9 @@ public class ProductDbContext : DbContext
             // Indexes
             entity.HasIndex(e => e.ShopId);
             entity.HasIndex(e => e.CategoryId);
-            entity.HasIndex(e => e.GlobalSku).IsUnique();
+            // Remove unique constraint to allow multiple null values during product creation
+            // GlobalSku will be generated when first version is created
+            entity.HasIndex(e => e.GlobalSku); 
             entity.HasIndex(e => e.Status);
         });
 
@@ -147,7 +149,8 @@ public class ProductDbContext : DbContext
 
             // Indexes
             entity.HasIndex(e => e.ProductId);
-            entity.HasIndex(e => e.Sku).IsUnique();
+            // Bỏ unique constraint cho SKU vì có thể nhiều versions có cùng SKU hoặc null
+            entity.HasIndex(e => e.Sku); 
             entity.HasIndex(e => e.CreatedAt);
         });
 
