@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "PaymentService.APIService": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:54432;http://localhost:5015"
+    }
+  }
+}

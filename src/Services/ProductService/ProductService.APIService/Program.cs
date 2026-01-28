@@ -4,7 +4,6 @@ using ProductService.Application.Services;
 using Microsoft.EntityFrameworkCore;
 using Shared.Messaging;
 using ProductService.Infrastructure.Repositories;
-using ProductService.APIService.Extensions;
 using ProductService.APIService.Middlewares;
 using ProductService.APIService.Filters;
 using ProductService.APIService.Converters;
@@ -64,7 +63,7 @@ builder.Services.AddValidators();
 
 var app = builder.Build();
 
-// Auto-migrate database on startup (Development only)
+// Auto-migrate database on startup
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ProductDbContext>();
