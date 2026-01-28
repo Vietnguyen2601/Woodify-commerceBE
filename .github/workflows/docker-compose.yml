@@ -20,9 +20,12 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
     - name: Validate docker-compose.yml syntax
       run: |
-        docker-compose config --quiet
+        docker compose config --quiet
         if [ $? -eq 0 ]; then
           echo "✅ docker-compose.yml syntax is valid"
         else
@@ -33,6 +36,6 @@ jobs:
     - name: Check required services
       run: |
         echo "Checking required services..."
-        docker-compose config | grep -q "postgres" && echo "✅ PostgreSQL service found"
-        docker-compose config | grep -q "rabbitmq" && echo "✅ RabbitMQ service found"
-        docker-compose config | grep -q "api-gateway" && echo "✅ API Gateway service found"
+        docker compose config | grep -q "postgres" && echo "✅ PostgreSQL service found"
+        docker compose config | grep -q "rabbitmq" && echo "✅ RabbitMQ service found"
+        docker compose config | grep -q "api-gateway" && echo "✅ API Gateway service found"
