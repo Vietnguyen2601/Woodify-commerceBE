@@ -8,12 +8,6 @@ public abstract class GenericRepository<T> : IGenericRepository<T> where T : cla
     protected AccountDbContext _context;
     protected readonly DbSet<T> _dbSet;
 
-    public GenericRepository()
-    {
-        _context ??= new AccountDbContext();
-        _dbSet = _context.Set<T>();
-    }
-
     public GenericRepository(AccountDbContext context)
     {
         _context = context;

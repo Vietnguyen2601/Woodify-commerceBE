@@ -65,6 +65,29 @@ services:
       retries: 5
 
   # ==============================================================
+  # REDIS CACHE
+  # ==============================================================
+  # In-memory data store for caching, sessions, and messaging
+  # Port: 6379
+  # CLI: redis-cli -p 6379
+  redis:
+    image: redis:7.2-alpine
+    container_name: woodify-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - woodify-network
+    command: redis-server --appendonly yes --requirepass woodify2024
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==============================================================
   # ADMINER - DATABASE MANAGEMENT UI
   # ==============================================================
   # Web UI để quản lý PostgreSQL
@@ -131,6 +154,8 @@ services:
       postgres:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - woodify-network
@@ -288,3 +313,5 @@ volumes:
     name: woodify-postgres-data
   rabbitmq_data:
     name: woodify-rabbitmq-data
+  redis_data:
+    name: woodify-redis-data

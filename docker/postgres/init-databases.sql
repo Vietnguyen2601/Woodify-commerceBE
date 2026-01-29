@@ -6,22 +6,22 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ================================================================
 
 -- Identity Service Database (User, Account)
-CREATE DATABASE identity_db;
+CREATE DATABASE identity_db ENCODING 'UTF8' LC_COLLATE 'en_US.utf8' LC_CTYPE 'en_US.utf8';
 
 -- Shop Service Database (Shop, Follow)
-CREATE DATABASE shop_db;
+CREATE DATABASE shop_db ENCODING 'UTF8' LC_COLLATE 'en_US.utf8' LC_CTYPE 'en_US.utf8';
 
 -- Product Service Database (Product, Certificate)
-CREATE DATABASE product_db;
+CREATE DATABASE product_db ENCODING 'UTF8' LC_COLLATE 'en_US.utf8' LC_CTYPE 'en_US.utf8';
 
 -- Inventory Service Database (Stock)
-CREATE DATABASE inventory_db;
+CREATE DATABASE inventory_db ENCODING 'UTF8' LC_COLLATE 'en_US.utf8' LC_CTYPE 'en_US.utf8';
 
 -- Order Service Database (Cart, Order)
-CREATE DATABASE order_db;
+CREATE DATABASE order_db ENCODING 'UTF8' LC_COLLATE 'en_US.utf8' LC_CTYPE 'en_US.utf8';
 
 -- Payment Service Database (Payment, Wallet)
-CREATE DATABASE payment_db;
+CREATE DATABASE payment_db ENCODING 'UTF8' LC_COLLATE 'en_US.utf8' LC_CTYPE 'en_US.utf8';
 
 -- ================================================================
 -- CẤP QUYỀN CHO USER
