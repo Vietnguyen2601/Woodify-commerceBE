@@ -5,6 +5,8 @@ using ProductService.Infrastructure.Repositories.IRepositories;
 using ProductService.Infrastructure.Persistence;
 using ProductService.Domain.Parameters;
 using Shared.Results;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Text.Json;
 
 namespace ProductService.Application.Services;
 
@@ -12,11 +14,15 @@ public class ProductMasterService : IProductMasterService
 {
     private readonly IProductMasterRepository _productMasterRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IDistributedCache _cache;
+    private const string AllProductsCacheKey = "all_products";
+    private readonly TimeSpan _cacheExpiration = TimeSpan.FromMinutes(30);
 
-    public ProductMasterService(IProductMasterRepository productMasterRepository, IUnitOfWork unitOfWork)
+    public ProductMasterService(IProductMasterRepository productMasterRepository, IUnitOfWork unitOfWork, IDistributedCache cache)
     {
         _productMasterRepository = productMasterRepository;
         _unitOfWork = unitOfWork;
+        _cache = cache;
     }
 
     public async Task<ServiceResult<ProductMasterDto>> GetByIdAsync(Guid id)
@@ -39,8 +45,28 @@ public class ProductMasterService : IProductMasterService
 
     public async Task<ServiceResult<IEnumerable<ProductMasterDto>>> GetAllAsync()
     {
+        // Try to get from cache first
+        var cachedData = await _cache.GetStringAsync(AllProductsCacheKey);
+        if (!string.IsNullOrEmpty(cachedData))
+        {
+            var cachedProducts = JsonSerializer.Deserialize<IEnumerable<ProductMasterDto>>(cachedData);
+            if (cachedProducts != null)
+            {
+                return ServiceResult<IEnumerable<ProductMasterDto>>.Success(cachedProducts);
+            }
+        }
+
+        // Get from database if not in cache
         var products = await _productMasterRepository.GetAllAsync();
-        var productDtos = products.Select(p => p.ToDto());
+        var productDtos = products.Select(p => p.ToDto()).ToList();
+        
+        // Store in cache
+        var serializedData = JsonSerializer.Serialize(productDtos);
+        var cacheOptions = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = _cacheExpiration
+        };
+        await _cache.SetStringAsync(AllProductsCacheKey, serializedData, cacheOptions);
         
         return ServiceResult<IEnumerable<ProductMasterDto>>.Success(productDtos);
     }
@@ -64,6 +90,9 @@ public class ProductMasterService : IProductMasterService
 
             var product = dto.ToModel();
             await _productMasterRepository.CreateAsync(product);
+
+            // Invalidate cache
+            await _cache.RemoveAsync(AllProductsCacheKey);
 
             return ServiceResult<ProductMasterDto>.Created(product.ToDto(), "Product created successfully");
         }
@@ -92,6 +121,9 @@ public class ProductMasterService : IProductMasterService
             dto.MapToUpdate(product);
             await _productMasterRepository.UpdateAsync(product);
             
+            // Invalidate cache
+            await _cache.RemoveAsync(AllProductsCacheKey);
+            
             var updatedProduct = await _productMasterRepository.GetByIdAsync(id);
             return ServiceResult<ProductMasterDto>.Success(updatedProduct!.ToDto(), "Product updated successfully");
         }
@@ -110,6 +142,10 @@ public class ProductMasterService : IProductMasterService
                 return ServiceResult.NotFound("Product not found");
             
             await _productMasterRepository.RemoveAsync(product);
+            
+            // Invalidate cache
+            await _cache.RemoveAsync(AllProductsCacheKey);
+            
             return ServiceResult.Success("Product deleted successfully");
         }
         catch (Exception ex)
@@ -132,6 +168,9 @@ public class ProductMasterService : IProductMasterService
             product.Status = Domain.Entities.ProductStatus.ARCHIVED;
             product.UpdatedAt = DateTime.UtcNow;
             await _productMasterRepository.UpdateAsync(product);
+
+            // Invalidate cache
+            await _cache.RemoveAsync(AllProductsCacheKey);
 
             return ServiceResult<ProductMasterDto>.Success(product.ToDto(), "Product archived successfully");
         }
@@ -174,6 +213,9 @@ public class ProductMasterService : IProductMasterService
             product.Status = Domain.Entities.ProductStatus.PUBLISHED;
             product.UpdatedAt = DateTime.UtcNow;
             await _productMasterRepository.UpdateAsync(product);
+
+            // Invalidate cache
+            await _cache.RemoveAsync(AllProductsCacheKey);
 
             return ServiceResult<ProductMasterDto>.Success(product.ToDto(), "Product published successfully");
         }

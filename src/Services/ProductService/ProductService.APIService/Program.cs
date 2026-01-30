@@ -7,6 +7,7 @@ using ProductService.Infrastructure.Repositories;
 using ProductService.APIService.Middlewares;
 using ProductService.APIService.Filters;
 using ProductService.APIService.Converters;
+using ProductService.APIService.Extensions;
 using DotNetEnv;
 using System.Text.Json.Serialization;
 
@@ -32,6 +33,16 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddDbContext<ProductDbContext>();
 
+// Configure Redis Caching
+var redisConnectionString = Environment.GetEnvironmentVariable("Redis_ConnectionString") 
+    ?? builder.Configuration["Redis:ConnectionString"] 
+    ?? "localhost:6379";
+
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = redisConnectionString;
+    options.InstanceName = builder.Configuration["Redis:InstanceName"] ?? "ProductService_";
+});
 
 var rabbitMQSettings = new RabbitMQSettings
 {
