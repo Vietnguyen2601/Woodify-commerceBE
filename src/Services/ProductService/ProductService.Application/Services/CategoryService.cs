@@ -3,16 +3,22 @@ using ProductService.Application.Interfaces;
 using ProductService.Application.Mappers;
 using ProductService.Infrastructure.Repositories.IRepositories;
 using Shared.Results;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Text.Json;
 
 namespace ProductService.Application.Services;
 
 public class CategoryService : ICategoryService
 {
     private readonly ICategoryRepository _categoryRepository;
+    private readonly IDistributedCache _cache;
+    private const string AllCategoriesCacheKey = "all_categories";
+    private readonly TimeSpan _cacheExpiration = TimeSpan.FromMinutes(30);
 
-    public CategoryService(ICategoryRepository categoryRepository)
+    public CategoryService(ICategoryRepository categoryRepository, IDistributedCache cache)
     {
         _categoryRepository = categoryRepository;
+        _cache = cache;
     }
 
     public async Task<ServiceResult<CategoryDto>> GetByIdAsync(Guid id)
@@ -35,8 +41,28 @@ public class CategoryService : ICategoryService
 
     public async Task<ServiceResult<IEnumerable<CategoryDto>>> GetAllAsync()
     {
+        // Try to get from cache first
+        var cachedData = await _cache.GetStringAsync(AllCategoriesCacheKey);
+        if (!string.IsNullOrEmpty(cachedData))
+        {
+            var cachedCategories = JsonSerializer.Deserialize<IEnumerable<CategoryDto>>(cachedData);
+            if (cachedCategories != null)
+            {
+                return ServiceResult<IEnumerable<CategoryDto>>.Success(cachedCategories);
+            }
+        }
+
+        // Get from database if not in cache
         var categories = await _categoryRepository.GetAllAsync();
-        var categoryDtos = categories.Select(c => c.ToDto());
+        var categoryDtos = categories.Select(c => c.ToDto()).ToList();
+        
+        // Store in cache
+        var serializedData = JsonSerializer.Serialize(categoryDtos);
+        var cacheOptions = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = _cacheExpiration
+        };
+        await _cache.SetStringAsync(AllCategoriesCacheKey, serializedData, cacheOptions);
         
         return ServiceResult<IEnumerable<CategoryDto>>.Success(categoryDtos);
     }
@@ -80,6 +106,9 @@ public class CategoryService : ICategoryService
             var category = dto.ToModel();
             await _categoryRepository.CreateAsync(category);
 
+            // Invalidate cache
+            await _cache.RemoveAsync(AllCategoriesCacheKey);
+
             var createdCategory = await _categoryRepository.GetByIdAsync(category.CategoryId);
             return ServiceResult<CategoryDto>.Created(createdCategory!.ToDto(), "Category created successfully");
         }
@@ -112,6 +141,9 @@ public class CategoryService : ICategoryService
             dto.MapToUpdate(category);
             await _categoryRepository.UpdateAsync(category);
             
+            // Invalidate cache
+            await _cache.RemoveAsync(AllCategoriesCacheKey);
+            
             var updatedCategory = await _categoryRepository.GetByIdAsync(id);
             return ServiceResult<CategoryDto>.Success(updatedCategory!.ToDto(), "Category updated successfully");
         }
@@ -134,6 +166,10 @@ public class CategoryService : ICategoryService
                 return ServiceResult.BadRequest("Cannot delete category with subcategories. Please delete or reassign subcategories first.");
             
             await _categoryRepository.RemoveAsync(category);
+            
+            // Invalidate cache
+            await _cache.RemoveAsync(AllCategoriesCacheKey);
+            
             return ServiceResult.Success("Category deleted successfully");
         }
         catch (Exception ex)
