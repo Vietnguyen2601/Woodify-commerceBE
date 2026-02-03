@@ -4,6 +4,7 @@ using ProductService.Application.Mappers;
 using ProductService.Infrastructure.Repositories.IRepositories;
 using ProductService.Infrastructure.Persistence;
 using Shared.Results;
+using Shared.Events;
 
 namespace ProductService.Application.Services;
 
@@ -12,15 +13,18 @@ public class ProductVersionService : IProductVersionService
     private readonly IProductVersionRepository _productVersionRepository;
     private readonly IProductMasterRepository _productMasterRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ProductEventPublisher _eventPublisher;
 
     public ProductVersionService(
         IProductVersionRepository productVersionRepository,
         IProductMasterRepository productMasterRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ProductEventPublisher eventPublisher)
     {
         _productVersionRepository = productVersionRepository;
         _productMasterRepository = productMasterRepository;
         _unitOfWork = unitOfWork;
+        _eventPublisher = eventPublisher;
     }
 
     public async Task<ServiceResult<ProductVersionDto>> GetByIdAsync(Guid id)
@@ -82,6 +86,22 @@ public class ProductVersionService : IProductVersionService
             // Create version
             var version = dto.ToModel();
             await _productVersionRepository.CreateAsync(version);
+
+            // Publish event to notify other services
+            var productMaster = await _productMasterRepository.GetByIdAsync(dto.ProductId);
+            _eventPublisher.PublishProductVersionUpdated(new ProductVersionUpdatedEvent
+            {
+                VersionId = version.VersionId,
+                ProductId = version.ProductId,
+                Title = version.Title,
+                Description = version.Description,
+                PriceCents = version.PriceCents,
+                Currency = version.Currency,
+                Sku = version.Sku,
+                ProductStatus = productMaster!.Status.ToString(), // Include actual product status
+                UpdatedAt = DateTime.UtcNow,
+                EventType = "Created"
+            });
 
             // Check if this is the first version (GlobalSku is empty or null)
             bool isFirstVersion = string.IsNullOrEmpty(product.GlobalSku);
@@ -173,6 +193,24 @@ public class ProductVersionService : IProductVersionService
 
             dto.MapToUpdate(version);
             await _productVersionRepository.UpdateAsync(version);
+            
+            // Get product master to include status in event
+            var productMaster = await _productMasterRepository.GetByIdAsync(version.ProductId);
+            
+            // Publish event to notify other services
+            _eventPublisher.PublishProductVersionUpdated(new ProductVersionUpdatedEvent
+            {
+                VersionId = version.VersionId,
+                ProductId = version.ProductId,
+                Title = version.Title,
+                Description = version.Description,
+                PriceCents = version.PriceCents,
+                Currency = version.Currency,
+                Sku = version.Sku,
+                ProductStatus = productMaster!.Status.ToString(), // Include actual product status
+                UpdatedAt = DateTime.UtcNow,
+                EventType = "Updated"
+            });
             
             var updatedVersion = await _productVersionRepository.GetByIdAsync(id);
             return ServiceResult<ProductVersionDto>.Success(updatedVersion!.ToDto(), "Product version updated successfully");

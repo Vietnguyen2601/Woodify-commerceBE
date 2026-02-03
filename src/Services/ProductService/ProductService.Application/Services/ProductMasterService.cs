@@ -5,6 +5,7 @@ using ProductService.Infrastructure.Repositories.IRepositories;
 using ProductService.Infrastructure.Persistence;
 using ProductService.Domain.Parameters;
 using Shared.Results;
+using Shared.Events;
 
 namespace ProductService.Application.Services;
 
@@ -12,11 +13,16 @@ public class ProductMasterService : IProductMasterService
 {
     private readonly IProductMasterRepository _productMasterRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ProductEventPublisher _eventPublisher;
 
-    public ProductMasterService(IProductMasterRepository productMasterRepository, IUnitOfWork unitOfWork)
+    public ProductMasterService(
+        IProductMasterRepository productMasterRepository, 
+        IUnitOfWork unitOfWork,
+        ProductEventPublisher eventPublisher)
     {
         _productMasterRepository = productMasterRepository;
         _unitOfWork = unitOfWork;
+        _eventPublisher = eventPublisher;
     }
 
     public async Task<ServiceResult<ProductMasterDto>> GetByIdAsync(Guid id)
@@ -133,6 +139,14 @@ public class ProductMasterService : IProductMasterService
             product.UpdatedAt = DateTime.UtcNow;
             await _productMasterRepository.UpdateAsync(product);
 
+            // Publish status change event
+            _eventPublisher.PublishProductStatusChanged(new ProductStatusChangedEvent
+            {
+                ProductId = product.ProductId,
+                Status = product.Status.ToString(),
+                ChangedAt = DateTime.UtcNow
+            });
+
             return ServiceResult<ProductMasterDto>.Success(product.ToDto(), "Product archived successfully");
         }
         catch (Exception ex)
@@ -174,6 +188,14 @@ public class ProductMasterService : IProductMasterService
             product.Status = Domain.Entities.ProductStatus.PUBLISHED;
             product.UpdatedAt = DateTime.UtcNow;
             await _productMasterRepository.UpdateAsync(product);
+
+            // Publish status change event
+            _eventPublisher.PublishProductStatusChanged(new ProductStatusChangedEvent
+            {
+                ProductId = product.ProductId,
+                Status = product.Status.ToString(),
+                ChangedAt = DateTime.UtcNow
+            });
 
             return ServiceResult<ProductMasterDto>.Success(product.ToDto(), "Product published successfully");
         }

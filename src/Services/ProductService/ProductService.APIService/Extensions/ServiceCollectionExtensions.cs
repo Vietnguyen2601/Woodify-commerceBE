@@ -33,6 +33,9 @@ namespace ProductService.APIService.Extensions
             services.AddScoped<IProductVersionService, ProductVersionService>();
             services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<IProductReviewService, ProductReviewService>();
+            
+            // Event Publisher
+            services.AddSingleton<ProductEventPublisher>();
 
             return services;
         }
