@@ -42,8 +42,24 @@ public class ProductEventConsumer
             handler: async (message) => await HandleProductStatusChanged(message)
         );
 
+        // Subscribe to ProductVersion Deleted events
+        _rabbitMQConsumer.Subscribe<ProductVersionDeletedEvent>(
+            queueName: "orderservice.product.version.deleted",
+            exchange: "product.events",
+            routingKey: "product.version.deleted",
+            handler: async (message) => await HandleProductVersionDeleted(message)
+        );
+
+        // Subscribe to ProductVersion Restored events
+        _rabbitMQConsumer.Subscribe<ProductVersionRestoredEvent>(
+            queueName: "orderservice.product.version.restored",
+            exchange: "product.events",
+            routingKey: "product.version.restored",
+            handler: async (message) => await HandleProductVersionRestored(message)
+        );
+
         Console.WriteLine("ProductEventConsumer started listening for Product events");
-        Console.WriteLine("Subscribed to: product.events exchange with routing keys: product.version.updated, product.status.changed");
+        Console.WriteLine("Subscribed to: product.events exchange with routing keys: product.version.updated, product.status.changed, product.version.deleted, product.version.restored");
     }
 
     private async Task HandleProductVersionUpdated(ProductVersionUpdatedEvent evt)
@@ -104,6 +120,68 @@ public class ProductEventConsumer
         catch (Exception ex)
         {
             Console.WriteLine($"[OrderService] Error handling ProductStatusChanged: {ex.Message}");
+        }
+    }
+
+    private async Task HandleProductVersionDeleted(ProductVersionDeletedEvent evt)
+    {
+        try
+        {
+            Console.WriteLine($"[OrderService] Received ProductVersionDeleted event: VersionId={evt.VersionId}, ProductId={evt.ProductId}");
+
+            using var scope = _scopeFactory.CreateScope();
+            var cacheRepository = scope.ServiceProvider.GetRequiredService<IProductVersionCacheRepository>();
+
+            var existing = await cacheRepository.GetByIdAsync(evt.VersionId);
+            if (existing != null)
+            {
+                // Soft delete in cache
+                existing.IsDeleted = true;
+                existing.DeletedAt = evt.DeletedAt;
+                existing.LastUpdated = DateTime.UtcNow;
+                
+                await cacheRepository.UpdateAsync(existing);
+                Console.WriteLine($"[OrderService] Product version marked as deleted in cache: {evt.VersionId}");
+            }
+            else
+            {
+                Console.WriteLine($"[OrderService] Product version not found in cache: {evt.VersionId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[OrderService] Error handling ProductVersionDeleted: {ex.Message}");
+        }
+    }
+
+    private async Task HandleProductVersionRestored(ProductVersionRestoredEvent evt)
+    {
+        try
+        {
+            Console.WriteLine($"[OrderService] Received ProductVersionRestored event: VersionId={evt.VersionId}, ProductId={evt.ProductId}");
+
+            using var scope = _scopeFactory.CreateScope();
+            var cacheRepository = scope.ServiceProvider.GetRequiredService<IProductVersionCacheRepository>();
+
+            var existing = await cacheRepository.GetByIdAsync(evt.VersionId);
+            if (existing != null)
+            {
+                // Restore in cache
+                existing.IsDeleted = false;
+                existing.DeletedAt = null;
+                existing.LastUpdated = DateTime.UtcNow;
+                
+                await cacheRepository.UpdateAsync(existing);
+                Console.WriteLine($"[OrderService] Product version restored in cache: {evt.VersionId}");
+            }
+            else
+            {
+                Console.WriteLine($"[OrderService] Product version not found in cache: {evt.VersionId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[OrderService] Error handling ProductVersionRestored: {ex.Message}");
         }
     }
 }

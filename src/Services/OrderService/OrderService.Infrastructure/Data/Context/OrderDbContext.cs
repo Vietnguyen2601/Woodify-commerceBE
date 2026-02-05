@@ -141,6 +141,8 @@ public class OrderDbContext : DbContext
             entity.Property(e => e.Currency).HasColumnName("currency").HasMaxLength(10);
             entity.Property(e => e.Sku).HasColumnName("sku").HasMaxLength(255);
             entity.Property(e => e.ProductStatus).HasColumnName("product_status").HasMaxLength(50);
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted").IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.DeletedAt).HasColumnName("deleted_at");
             entity.Property(e => e.LastUpdated).HasColumnName("last_updated").IsRequired();
 
             // Indexes for faster lookups

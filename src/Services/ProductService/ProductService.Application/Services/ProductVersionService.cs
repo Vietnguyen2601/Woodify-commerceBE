@@ -70,6 +70,22 @@ public class ProductVersionService : IProductVersionService
         return ServiceResult<ProductVersionDto>.Success(version.ToDto());
     }
 
+    public async Task<ServiceResult<IEnumerable<ProductVersionDto>>> GetDeletedVersionsAsync()
+    {
+        var versions = await _productVersionRepository.GetDeletedVersionsAsync();
+        var versionDtos = versions.Select(v => v.ToDto());
+        
+        return ServiceResult<IEnumerable<ProductVersionDto>>.Success(versionDtos);
+    }
+
+    public async Task<ServiceResult<IEnumerable<ProductVersionDto>>> GetActiveVersionsAsync()
+    {
+        var versions = await _productVersionRepository.GetActiveVersionsAsync();
+        var versionDtos = versions.Select(v => v.ToDto());
+        
+        return ServiceResult<IEnumerable<ProductVersionDto>>.Success(versionDtos);
+    }
+
     public async Task<ServiceResult<ProductVersionDto>> CreateAsync(CreateProductVersionDto dto)
     {
         try
@@ -229,12 +245,63 @@ public class ProductVersionService : IProductVersionService
             if (version == null)
                 return ServiceResult.NotFound("Product version not found");
             
-            await _productVersionRepository.RemoveAsync(version);
+            if (version.IsDeleted)
+                return ServiceResult.BadRequest("Product version already deleted");
+            
+            // Soft delete
+            version.IsDeleted = true;
+            version.DeletedAt = DateTime.UtcNow;
+            version.UpdatedAt = DateTime.UtcNow;
+            
+            await _productVersionRepository.UpdateAsync(version);
+            
+            // Publish ProductVersionDeleted event
+            _eventPublisher.PublishProductVersionDeleted(new ProductVersionDeletedEvent
+            {
+                VersionId = version.VersionId,
+                ProductId = version.ProductId,
+                DeletedAt = version.DeletedAt.Value
+            });
+            
             return ServiceResult.Success("Product version deleted successfully");
         }
         catch (Exception ex)
         {
             return ServiceResult.InternalServerError($"Error deleting product version: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult> RestoreAsync(Guid id)
+    {
+        try
+        {
+            var version = await _productVersionRepository.GetByIdAsync(id);
+            if (version == null)
+                return ServiceResult.NotFound("Product version not found");
+            
+            if (!version.IsDeleted)
+                return ServiceResult.BadRequest("Product version is not deleted");
+            
+            // Restore from soft delete
+            version.IsDeleted = false;
+            version.DeletedAt = null;
+            version.UpdatedAt = DateTime.UtcNow;
+            
+            await _productVersionRepository.UpdateAsync(version);
+            
+            // Publish ProductVersionRestored event
+            _eventPublisher.PublishProductVersionRestored(new ProductVersionRestoredEvent
+            {
+                VersionId = version.VersionId,
+                ProductId = version.ProductId,
+                RestoredAt = DateTime.UtcNow
+            });
+            
+            return ServiceResult.Success("Product version restored successfully");
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult.InternalServerError($"Error restoring product version: {ex.Message}");
         }
     }
 }

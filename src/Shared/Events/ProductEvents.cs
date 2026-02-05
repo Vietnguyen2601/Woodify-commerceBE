@@ -27,3 +27,25 @@ public class ProductStatusChangedEvent
     public DateTime ChangedAt { get; set; }
     public string EventType { get; set; } = "ProductStatusChanged";
 }
+
+/// <summary>
+/// Event được publish khi ProductVersion bị xóa
+/// </summary>
+public class ProductVersionDeletedEvent
+{
+    public Guid VersionId { get; set; }
+    public Guid ProductId { get; set; }
+    public DateTime DeletedAt { get; set; }
+    public string EventType { get; set; } = "ProductVersionDeleted";
+}
+
+/// <summary>
+/// Event được publish khi ProductVersion được khôi phục
+/// </summary>
+public class ProductVersionRestoredEvent
+{
+    public Guid VersionId { get; set; }
+    public Guid ProductId { get; set; }
+    public DateTime RestoredAt { get; set; }
+    public string EventType { get; set; } = "ProductVersionRestored";
+}

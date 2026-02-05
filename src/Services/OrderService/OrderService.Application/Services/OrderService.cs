@@ -36,57 +36,52 @@ public class OrderService : IOrderService
                 return ServiceResult<OrderDto>.NotFound("Cart is empty or not found");
             }
 
-            // 2. Validate all cart items against product cache
-            var invalidItems = new List<string>();
-            var validItems = new List<CartItem>();
-            Guid? shopId = null;
-
-            foreach (var cartItem in cart.CartItems)
+            // 2. Validate all cart items comprehensively
+            var validationResult = await ValidateCartItemsForCheckoutAsync(cart.CartItems.ToList());
+            
+            if (!validationResult.IsValid)
             {
-                var productCache = await _productCacheRepository.GetByIdAsync(cartItem.ProductVersionId);
+                var errorDetails = validationResult.InvalidItems.Select(item => 
+                    $"{item.Title}: {item.Reason} - {item.Details}").ToList();
                 
-                if (productCache == null)
-                {
-                    invalidItems.Add($"Product version {cartItem.ProductVersionId} not found in cache");
-                    continue;
-                }
-
-                if (productCache.ProductStatus != "PUBLISHED")
-                {
-                    invalidItems.Add($"Product '{cartItem.Title}' is not published (status: {productCache.ProductStatus})");
-                    continue;
-                }
-
-                // For now, assume all products belong to the same shop
-                // In real scenario, might need to split orders by shop
-                if (shopId == null)
-                {
-                    shopId = productCache.ProductId; // Using ProductId as ShopId temporarily
-                }
-
-                validItems.Add(cartItem);
+                return ServiceResult<OrderDto>.BadRequest(
+                    errorDetails,
+                    $"Cannot create order. {validationResult.InvalidItemsCount} of {validationResult.TotalItems} item(s) invalid."
+                );
             }
 
+            // 3. Get valid cart items
+            var validCartItemIds = cart.CartItems
+                .Select(ci => ci.CartItemId)
+                .Except(validationResult.InvalidItems.Select(ii => ii.CartItemId))
+                .ToHashSet();
+            
+            var validItems = cart.CartItems.Where(ci => validCartItemIds.Contains(ci.CartItemId)).ToList();
+            
             if (!validItems.Any())
             {
-                return ServiceResult<OrderDto>.BadRequest($"No valid items in cart. Issues: {string.Join(", ", invalidItems)}");
+                return ServiceResult<OrderDto>.BadRequest("No valid items to create order");
             }
 
-            // 3. Generate unique order code
+            // 4. Get shop ID from first valid item
+            var firstProductCache = await _productCacheRepository.GetByIdAsync(validItems.First().ProductVersionId);
+            Guid shopId = firstProductCache?.ProductId ?? Guid.Empty;
+
+            // 5. Generate unique order code
             var orderCode = await GenerateUniqueOrderCodeAsync();
 
-            // 4. Calculate totals
+            // 6. Calculate totals
             long subtotalCents = validItems.Sum(item => item.UnitPriceCents * item.Qty);
             long shippingFeeCents = 0; // TODO: Calculate shipping fee
             long totalAmountCents = subtotalCents + shippingFeeCents;
 
-            // 5. Create Order entity
+            // 7. Create Order entity
             var order = new Order
             {
                 OrderId = Guid.NewGuid(),
                 OrderCode = orderCode,
                 AccountId = dto.AccountId,
-                ShopId = shopId ?? Guid.Empty,
+                ShopId = shopId,
                 Currency = "VND",
                 SubtotalCents = subtotalCents,
                 ShippingFeeCents = shippingFeeCents,
@@ -99,7 +94,7 @@ public class OrderService : IOrderService
                 CreatedAt = DateTime.UtcNow
             };
 
-            // 6. Create Order Items (snapshot from cart items)
+            // 8. Create Order Items (snapshot from cart items)
             foreach (var cartItem in validItems)
             {
                 var productCache = await _productCacheRepository.GetByIdAsync(cartItem.ProductVersionId);
@@ -124,17 +119,17 @@ public class OrderService : IOrderService
                 order.OrderItems.Add(orderItem);
             }
 
-            // 7. Save order to database
+            // 9. Save order to database
             await _orderRepository.CreateAsync(order);
 
-            // 8. Clear cart after successful order creation
+            // 10. Clear cart after successful order creation
             var cartItemsToRemove = cart.CartItems.ToList();
             foreach (var cartItem in cartItemsToRemove)
             {
                 await _cartItemRepository.RemoveAsync(cartItem);
             }
 
-            // 9. Map to DTO and return
+            // 11. Map to DTO and return
             var orderDto = MapToOrderDto(order);
             
             return ServiceResult<OrderDto>.Success(orderDto, "Order created successfully");
@@ -238,6 +233,104 @@ public class OrderService : IOrderService
                 CreatedAt = oi.CreatedAt
             }).ToList()
         };
+    }
+
+    /// <summary>
+    /// Validate cart items cho checkout với các điều kiện:
+    /// 1. Product vẫn PUBLISHED
+    /// 2. Version chưa bị lock (kiểm tra status)
+    /// 3. Giá hiện tại = giá snapshot (cảnh báo nếu khác)
+    /// </summary>
+    private async Task<CheckoutValidationDto> ValidateCartItemsForCheckoutAsync(List<CartItem> cartItems)
+    {
+        var result = new CheckoutValidationDto
+        {
+            TotalItems = cartItems.Count
+        };
+
+        foreach (var cartItem in cartItems)
+        {
+            var productCache = await _productCacheRepository.GetByIdAsync(cartItem.ProductVersionId);
+            
+            // Validate 1: Product version exists in cache
+            if (productCache == null)
+            {
+                result.InvalidItems.Add(new InvalidCartItemDto
+                {
+                    CartItemId = cartItem.CartItemId,
+                    ProductVersionId = cartItem.ProductVersionId,
+                    Title = cartItem.Title,
+                    Reason = "Product not found",
+                    Details = "Product version no longer exists or has been removed"
+                });
+                continue;
+            }
+
+            // Validate 1b: Product version not deleted
+            if (productCache.IsDeleted)
+            {
+                result.InvalidItems.Add(new InvalidCartItemDto
+                {
+                    CartItemId = cartItem.CartItemId,
+                    ProductVersionId = cartItem.ProductVersionId,
+                    Title = cartItem.Title,
+                    Reason = "Product deleted",
+                    Details = $"Product version was deleted on {productCache.DeletedAt?.ToString("yyyy-MM-dd HH:mm")}"
+                });
+                continue;
+            }
+
+            // Validate 2: Product status is PUBLISHED
+            if (productCache.ProductStatus != "PUBLISHED")
+            {
+                result.InvalidItems.Add(new InvalidCartItemDto
+                {
+                    CartItemId = cartItem.CartItemId,
+                    ProductVersionId = cartItem.ProductVersionId,
+                    Title = cartItem.Title,
+                    Reason = "Product unavailable",
+                    Details = $"Product status is {productCache.ProductStatus}. Only PUBLISHED products can be ordered"
+                });
+                continue;
+            }
+
+            // Validate 3: Version not locked (assuming ARCHIVED status means locked)
+            if (productCache.ProductStatus == "ARCHIVED")
+            {
+                result.InvalidItems.Add(new InvalidCartItemDto
+                {
+                    CartItemId = cartItem.CartItemId,
+                    ProductVersionId = cartItem.ProductVersionId,
+                    Title = cartItem.Title,
+                    Reason = "Version locked",
+                    Details = "This product version has been archived and is no longer available"
+                });
+                continue;
+            }
+
+            // Validate 4: Price comparison (current vs snapshot)
+            if (productCache.PriceCents.HasValue && productCache.PriceCents.Value != cartItem.UnitPriceCents)
+            {
+                var priceDifference = productCache.PriceCents.Value - cartItem.UnitPriceCents;
+                var percentageChange = Math.Abs((decimal)priceDifference / cartItem.UnitPriceCents * 100);
+                
+                result.InvalidItems.Add(new InvalidCartItemDto
+                {
+                    CartItemId = cartItem.CartItemId,
+                    ProductVersionId = cartItem.ProductVersionId,
+                    Title = cartItem.Title,
+                    Reason = "Price changed",
+                    Details = $"Price changed by {percentageChange:F1}%. Cart price: {cartItem.UnitPriceCents}, Current price: {productCache.PriceCents.Value}"
+                });
+                continue;
+            }
+        }
+
+        result.InvalidItemsCount = result.InvalidItems.Count;
+        result.ValidItemsCount = result.TotalItems - result.InvalidItemsCount;
+        result.IsValid = result.InvalidItemsCount == 0;
+
+        return result;
     }
 
     /// <summary>

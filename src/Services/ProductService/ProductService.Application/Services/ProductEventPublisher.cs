@@ -52,4 +52,42 @@ public class ProductEventPublisher
             Console.WriteLine($"[ProductService] Failed to publish ProductStatusChanged event: {ex.Message}");
         }
     }
+
+    public void PublishProductVersionDeleted(ProductVersionDeletedEvent evt)
+    {
+        if (_publisher == null)
+        {
+            Console.WriteLine($"[ProductService] WARNING: RabbitMQ publisher is not available. Skipping ProductVersionDeleted event.");
+            return;
+        }
+
+        try
+        {
+            _publisher.Publish("product.events", "product.version.deleted", evt);
+            Console.WriteLine($"[ProductService] Published ProductVersionDeleted event: VersionId={evt.VersionId}, ProductId={evt.ProductId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ProductService] Failed to publish ProductVersionDeleted event: {ex.Message}");
+        }
+    }
+
+    public void PublishProductVersionRestored(ProductVersionRestoredEvent evt)
+    {
+        if (_publisher == null)
+        {
+            Console.WriteLine($"[ProductService] WARNING: RabbitMQ publisher is not available. Skipping ProductVersionRestored event.");
+            return;
+        }
+
+        try
+        {
+            _publisher.Publish("product.events", "product.version.restored", evt);
+            Console.WriteLine($"[ProductService] Published ProductVersionRestored event: VersionId={evt.VersionId}, ProductId={evt.ProductId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ProductService] Failed to publish ProductVersionRestored event: {ex.Message}");
+        }
+    }
 }

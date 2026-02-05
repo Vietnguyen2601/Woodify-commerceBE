@@ -16,5 +16,7 @@ public class ProductVersionCache
     public string Currency { get; set; } = "VND";
     public string? Sku { get; set; }
     public string ProductStatus { get; set; } = "DRAFT"; // Status của ProductMaster
+    public bool IsDeleted { get; set; } = false;
+    public DateTime? DeletedAt { get; set; }
     public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
 }

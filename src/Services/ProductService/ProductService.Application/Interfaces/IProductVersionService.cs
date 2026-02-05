@@ -13,7 +13,10 @@ public interface IProductVersionService
     Task<ServiceResult<IEnumerable<ProductVersionDto>>> GetAllAsync();
     Task<ServiceResult<IEnumerable<ProductVersionDto>>> GetByProductIdAsync(Guid productId);
     Task<ServiceResult<ProductVersionDto>> GetLatestVersionByProductIdAsync(Guid productId);
+    Task<ServiceResult<IEnumerable<ProductVersionDto>>> GetDeletedVersionsAsync();
+    Task<ServiceResult<IEnumerable<ProductVersionDto>>> GetActiveVersionsAsync();
     Task<ServiceResult<ProductVersionDto>> CreateAsync(CreateProductVersionDto dto);
     Task<ServiceResult<ProductVersionDto>> UpdateAsync(Guid id, UpdateProductVersionDto dto);
     Task<ServiceResult> DeleteAsync(Guid id);
+    Task<ServiceResult> RestoreAsync(Guid id);
 }

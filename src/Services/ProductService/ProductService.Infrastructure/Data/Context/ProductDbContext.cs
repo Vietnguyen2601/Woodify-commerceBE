@@ -137,6 +137,8 @@ public class ProductDbContext : DbContext
             entity.Property(e => e.Currency).HasColumnName("currency").IsRequired().HasMaxLength(10);
             entity.Property(e => e.Sku).HasColumnName("sku").HasMaxLength(255);
             entity.Property(e => e.ArAvailable).HasColumnName("ar_available").IsRequired();
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted").IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.DeletedAt).HasColumnName("deleted_at");
             entity.Property(e => e.CreatedBy).HasColumnName("created_by");
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");

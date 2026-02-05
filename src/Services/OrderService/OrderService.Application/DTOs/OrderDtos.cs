@@ -65,3 +65,27 @@ public class OrderItemDto
     
     public DateTime CreatedAt { get; set; }
 }
+
+/// <summary>
+/// DTO trả về kết quả validation cho checkout
+/// </summary>
+public class CheckoutValidationDto
+{
+    public bool IsValid { get; set; }
+    public List<InvalidCartItemDto> InvalidItems { get; set; } = new List<InvalidCartItemDto>();
+    public int TotalItems { get; set; }
+    public int ValidItemsCount { get; set; }
+    public int InvalidItemsCount { get; set; }
+}
+
+/// <summary>
+/// DTO cho cart item không hợp lệ
+/// </summary>
+public class InvalidCartItemDto
+{
+    public Guid CartItemId { get; set; }
+    public Guid ProductVersionId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Reason { get; set; } = string.Empty;
+    public string? Details { get; set; }
+}

@@ -51,6 +51,24 @@ public class ProductVersionRepository : GenericRepository<ProductVersion>, IProd
             .ToListAsync();
     }
 
+    public async Task<List<ProductVersion>> GetDeletedVersionsAsync()
+    {
+        return await _dbSet
+            .Include(v => v.Product)
+            .Where(v => v.IsDeleted)
+            .OrderByDescending(v => v.DeletedAt)
+            .ToListAsync();
+    }
+
+    public async Task<List<ProductVersion>> GetActiveVersionsAsync()
+    {
+        return await _dbSet
+            .Include(v => v.Product)
+            .Where(v => !v.IsDeleted)
+            .OrderByDescending(v => v.CreatedAt)
+            .ToListAsync();
+    }
+
     public override async Task<bool> ExistsAsync(Guid id)
     {
         return await _dbSet.AnyAsync(v => v.VersionId == id);
