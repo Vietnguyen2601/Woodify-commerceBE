@@ -4,6 +4,7 @@ using IdentityService.Application.Interfaces;
 using IdentityService.Application.Services;
 using Microsoft.EntityFrameworkCore;
 using Shared.Messaging;
+using Shared.Extensions;
 using IdentityService.Infrastructure.Repositories;
 using IdentityService.APIService.Extensions;
 using IdentityService.APIService.Middlewares;
@@ -26,7 +27,6 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "Identity Service API", Version = "v1" });
 
-    // JWT Bearer token support in Swagger
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -55,6 +55,19 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddDbContext<AccountDbContext>();
 
+try
+{
+    var redisConnectionString = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
+    Console.WriteLine($"Attempting to connect to Redis at: {redisConnectionString}");
+    
+    builder.Services.AddRedisCache(builder.Configuration);
+    Console.WriteLine("Redis Cache connected successfully");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Redis Cache connection failed: {ex.GetType().Name} - {ex.Message}");
+    Console.WriteLine("Running without caching.");
+}
 
 var rabbitMQSettings = new RabbitMQSettings
 {
@@ -109,7 +122,6 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Auto-migrate database on startup
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AccountDbContext>();
