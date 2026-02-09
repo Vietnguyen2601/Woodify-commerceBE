@@ -28,8 +28,8 @@ services:
       - postgres_data:/var/lib/postgresql/data
       # Script khởi tạo databases - chạy tự động khi container start lần đầu
       - ./docker/postgres/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql
-      # Script seed data
-      - ./docker/postgres/data.sql:/docker-entrypoint-initdb.d/02-data.sql
+      # Script seed data - DISABLED: Seed data is now handled by EF Core in each service
+      # - ./docker/postgres/data.sql:/docker-entrypoint-initdb.d/02-data.sql
     networks:
       - woodify-network
     healthcheck:
@@ -141,26 +141,26 @@ services:
   # Quản lý: Shop, Follow
   # Database: shop_db
   # Port: 5011
-  # ⚠️ COMMENTED OUT - Dockerfile chưa có
-  # shop-service:
-  #   build:
-  #     context: .
-  #     dockerfile: src/Services/ShopService/ShopService.APIService/Dockerfile
-  #   container_name: woodify-shop-service
-  #   restart: unless-stopped
-  #   ports:
-  #     - "5011:8080"
-  #   environment:
-  #     - ASPNETCORE_ENVIRONMENT=Development
-  #   volumes:
-  #     - ./.env:/app/.env
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     rabbitmq:
-  #       condition: service_healthy
-  #   networks:
-  #     - woodify-network
+  shop-service:
+    build:
+      context: .
+      dockerfile: src/Services/ShopService/ShopService.APIService/Dockerfile
+    container_name: woodify-shop-service
+    restart: unless-stopped
+    ports:
+      - "5011:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+    volumes:
+      - ./.env:/app/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - woodify-network
 
   # ==============================================================
   # PRODUCT SERVICE

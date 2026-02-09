@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PaymentService.Application.Interfaces;
 using PaymentService.Application.Services;
 using PaymentService.Infrastructure.Data;
+using PaymentService.Infrastructure.Data.Seeders;
 using PaymentService.Infrastructure.PayOs;
 using PaymentService.Infrastructure.Repositories;
 using Shared.Messaging;
@@ -122,10 +123,14 @@ using (var scope = app.Services.CreateScope())
     {
         dbContext.Database.Migrate();
         Console.WriteLine("Database migration applied successfully");
+        
+        // Seed initial data
+        await PaymentDbSeeder.SeedAsync(dbContext);
+        Console.WriteLine("Database seeding completed successfully");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Database migration failed: {ex.Message}");
+        Console.WriteLine($"Database migration/seeding failed: {ex.Message}");
     }
 }
 
