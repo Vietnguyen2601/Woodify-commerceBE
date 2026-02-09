@@ -180,6 +180,10 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5012
       - PRODUCT_SERVICE_PORT=5012
+      - RabbitMQ_Host=woodify-rabbitmq
+      - RabbitMQ_Port=5672
+      - RabbitMQ_Username=${RABBITMQ_USER}
+      - RabbitMQ_Password=${RABBITMQ_PASSWORD}
     volumes:
       - ./.env:/app/.env
     depends_on:
@@ -223,26 +227,32 @@ services:
   # Quản lý: Cart, Order
   # Database: order_db
   # Port: 5014
-  # ⚠️ COMMENTED OUT - Dockerfile chưa có
-  # order-service:
-  #   build:
-  #     context: .
-  #     dockerfile: src/Services/OrderService/OrderService.APIService/Dockerfile
-  #   container_name: woodify-order-service
-  #   restart: unless-stopped
-  #   ports:
-  #     - "5014:8080"
-  #   environment:
-  #     - ASPNETCORE_ENVIRONMENT=Development
-  #   volumes:
-  #     - ./.env:/app/.env
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     rabbitmq:
-  #       condition: service_healthy
-  #   networks:
-  #     - woodify-network
+  order-service:
+    build:
+      context: .
+      dockerfile: src/Services/OrderService/OrderService.APIService/Dockerfile
+    container_name: woodify-order-service
+    restart: unless-stopped
+    ports:
+      - "5014:5014"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5014
+      - ORDER_SERVICE_PORT=5014
+      - ProductService_Url=http://woodify-product-service:5012
+      - RabbitMQ_Host=woodify-rabbitmq
+      - RabbitMQ_Port=5672
+      - RabbitMQ_Username=${RABBITMQ_USER}
+      - RabbitMQ_Password=${RABBITMQ_PASSWORD}
+    volumes:
+      - ./.env:/app/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - woodify-network
 
   # ==============================================================
   # PAYMENT SERVICE

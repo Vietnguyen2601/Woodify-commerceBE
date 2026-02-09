@@ -11,4 +11,6 @@ public interface IProductVersionRepository : IGenericRepository<ProductVersion>
     Task<List<ProductVersion>> GetByProductIdAsync(Guid productId);
     Task<ProductVersion?> GetBySkuAsync(string sku);
     Task<ProductVersion?> GetLatestVersionByProductIdAsync(Guid productId);
+    Task<List<ProductVersion>> GetDeletedVersionsAsync();
+    Task<List<ProductVersion>> GetActiveVersionsAsync();
 }

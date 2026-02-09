@@ -14,6 +14,8 @@ public class ProductVersion
     public string Currency { get; set; } = "VND";
     public string? Sku { get; set; }
     public bool ArAvailable { get; set; } = false;
+    public bool IsDeleted { get; set; } = false;
+    public DateTime? DeletedAt { get; set; }
     public Guid? CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }

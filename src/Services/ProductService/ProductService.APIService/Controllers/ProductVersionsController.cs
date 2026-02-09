@@ -63,6 +63,20 @@ public class ProductVersionsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("GetDeletedVersions")]
+    public async Task<ActionResult<ServiceResult<IEnumerable<ProductVersionDto>>>> GetDeletedVersions()
+    {
+        var result = await _productVersionService.GetDeletedVersionsAsync();
+        return Ok(result);
+    }
+
+    [HttpGet("GetActiveVersions")]
+    public async Task<ActionResult<ServiceResult<IEnumerable<ProductVersionDto>>>> GetActiveVersions()
+    {
+        var result = await _productVersionService.GetActiveVersionsAsync();
+        return Ok(result);
+    }
+
     [HttpPost("CreateVersion")]
     public async Task<ActionResult<ServiceResult<ProductVersionDto>>> Create([FromBody] CreateProductVersionDto dto)
     {
@@ -92,6 +106,20 @@ public class ProductVersionsController : ControllerBase
     public async Task<ActionResult<ServiceResult>> Delete(Guid id)
     {
         var result = await _productVersionService.DeleteAsync(id);
+        
+        if (result.Status == 404)
+            return NotFound(result);
+        
+        if (result.Status != 200)
+            return BadRequest(result);
+        
+        return Ok(result);
+    }
+
+    [HttpPatch("RestoreVersion/{id:guid}")]
+    public async Task<ActionResult<ServiceResult>> Restore(Guid id)
+    {
+        var result = await _productVersionService.RestoreAsync(id);
         
         if (result.Status == 404)
             return NotFound(result);
