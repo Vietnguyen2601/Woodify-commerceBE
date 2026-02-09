@@ -5,6 +5,7 @@ using ShopService.APIService.Extensions;
 using ShopService.APIService.Middlewares;
 using ShopService.APIService.Filters;
 using ShopService.Infrastructure.Data.Context;
+using ShopService.Infrastructure.Data.Seeders;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -62,10 +63,14 @@ using (var scope = app.Services.CreateScope())
     {
         dbContext.Database.Migrate();
         Console.WriteLine("Database migration applied successfully");
+        
+        // Seed initial data
+        await ShopDbSeeder.SeedAsync(dbContext);
+        Console.WriteLine("Database seeding completed successfully");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Database migration failed: {ex.Message}");
+        Console.WriteLine($"Database migration/seeding failed: {ex.Message}");
     }
 }
 

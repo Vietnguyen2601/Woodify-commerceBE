@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Shared.Messaging;
 using OrderService.Infrastructure.Data.Context;
+using OrderService.Infrastructure.Data.Seeders;
 using OrderService.APIService.Extensions;
 using OrderService.Application.Consumers;
 
@@ -68,10 +69,14 @@ using (var scope = app.Services.CreateScope())
     {
         dbContext.Database.Migrate();
         Console.WriteLine("Database migration applied successfully");
+        
+        // Seed initial data
+        await OrderDbSeeder.SeedAsync(dbContext);
+        Console.WriteLine("Database seeding completed successfully");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Database migration failed: {ex.Message}");
+        Console.WriteLine($"Database migration/seeding failed: {ex.Message}");
     }
 }
 
