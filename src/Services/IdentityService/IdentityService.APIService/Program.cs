@@ -108,6 +108,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
 
 // Auto-migrate database on startup
@@ -118,7 +128,7 @@ using (var scope = app.Services.CreateScope())
     {
         dbContext.Database.Migrate();
         Console.WriteLine("Database migration applied successfully");
-        
+
         // Seed initial data
         await AccountDbSeeder.SeedAsync(dbContext);
         Console.WriteLine("Database seeding completed successfully");
@@ -137,6 +147,8 @@ try
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Identity Service API v1");
         c.RoutePrefix = "";
     });
+
+    app.UseCors("AllowFrontend");
 
     app.UseValidationExceptionMiddleware();
 
