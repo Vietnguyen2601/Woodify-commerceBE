@@ -14,6 +14,16 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add CORS configuration
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 
 builder.Services.AddControllers(options =>
 {
@@ -119,6 +129,9 @@ try
     });
 
     app.UseValidationExceptionMiddleware();
+
+    // Enable CORS
+    app.UseCors("AllowAll");
 
     app.UseAuthorization();
 
