@@ -21,6 +21,17 @@ Env.Load(envPath);
 // ==========================================
 // 1. Controllers & Swagger
 // ==========================================
+// Add CORS configuration
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -158,6 +169,9 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Payment Service API v1");
     c.RoutePrefix = "";
 });
+
+// Enable CORS
+app.UseCors("AllowAll");
 
 // Map Controllers
 app.MapControllers();

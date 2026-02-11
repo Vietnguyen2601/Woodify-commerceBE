@@ -10,6 +10,17 @@ using ShopService.Infrastructure.Data.Seeders;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add CORS configuration
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationFilter>();
@@ -86,6 +97,9 @@ app.UseSwaggerUI(c =>
 });
 
 app.UseValidationExceptionMiddleware();
+
+// Enable CORS
+app.UseCors("AllowAll");
 
 app.UseAuthorization();
 
