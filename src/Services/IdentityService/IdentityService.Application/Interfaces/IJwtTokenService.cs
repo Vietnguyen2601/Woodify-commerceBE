@@ -14,5 +14,7 @@ namespace IdentityService.Application.Interfaces
     public interface IJwtTokenService
     {
         string GenerateJSONWebToken(Account user);
+        string GenerateRefreshToken(Account user);
+        ClaimsPrincipal? ValidateRefreshToken(string refreshToken);
     }
 }

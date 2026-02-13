@@ -53,6 +53,11 @@ public record ResetPasswordRequest(
     string NewPassword
 );
 
+public record RefreshTokenRequest(
+    [Required(ErrorMessage = "Refresh token là bắt buộc")]
+    string RefreshToken
+);
+
 // Response DTOs
 public record OtpSentResponse(
     bool Success,
@@ -77,7 +82,15 @@ public record LoginResponse(
     Guid? AccountId = null,
     string? Email = null,
     string? Username = null,
-    string? Token = null
+    string? Token = null,
+    string? RefreshToken = null
+);
+
+public record RefreshTokenResponse(
+    bool Success,
+    string Message,
+    string? Token = null,
+    string? RefreshToken = null
 );
 
 public record ResetPasswordResponse(

@@ -36,4 +36,8 @@ public static class AuthMessages
     public const string ResetTokenInvalidOrExpired = "Reset token không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu OTP mới.";
     public const string OtpNotVerified = "Vui lòng xác minh OTP trước khi đặt lại mật khẩu";
     public const string AccountNotFound = "Không tìm thấy tài khoản với email này";
+
+    // Refresh Token
+    public const string RefreshTokenSuccess = "Làm mới token thành công.";
+    public const string RefreshTokenInvalid = "Refresh token không hợp lệ hoặc đã hết hạn.";
 }

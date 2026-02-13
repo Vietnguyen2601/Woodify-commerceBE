@@ -9,16 +9,16 @@ namespace IdentityService.Application.Services
     public class AuthenService : IAuthenService
     {
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IEmailService _emailService;
+        private readonly IEmailBackgroundQueue _emailBackgroundQueue;
         private readonly IPasswordHasher _passwordHasher;
         private static readonly ConcurrentDictionary<string, (string Otp, DateTime Expiry)> _otpStorage = new();
         private static readonly ConcurrentDictionary<string, bool> _verifiedEmails = new();
         private static readonly ConcurrentDictionary<string, (string Email, DateTime Expiry)> _resetTokens = new();
 
-        public AuthenService(IUnitOfWork unitOfWork, IEmailService emailService, IPasswordHasher passwordHasher)
+        public AuthenService(IUnitOfWork unitOfWork, IEmailBackgroundQueue emailBackgroundQueue, IPasswordHasher passwordHasher)
         {
             _unitOfWork = unitOfWork;
-            _emailService = emailService;
+            _emailBackgroundQueue = emailBackgroundQueue;
             _passwordHasher = passwordHasher;
         }
 
@@ -54,7 +54,7 @@ namespace IdentityService.Application.Services
                         + "</div>"
                         + "</div></body></html>";
 
-            await _emailService.SendEmailAsync(email, subject, body);
+            await _emailBackgroundQueue.QueueEmailAsync(new EmailMessage(email, subject, body));
             return true;
         }
 
@@ -192,7 +192,7 @@ namespace IdentityService.Application.Services
                         + "</div>"
                         + "</div></body></html>";
 
-            await _emailService.SendEmailAsync(email, subject, body);
+            await _emailBackgroundQueue.QueueEmailAsync(new EmailMessage(email, subject, body));
             return true;
         }
 

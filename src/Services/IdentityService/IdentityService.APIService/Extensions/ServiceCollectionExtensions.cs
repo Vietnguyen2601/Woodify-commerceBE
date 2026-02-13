@@ -31,6 +31,10 @@ namespace IdentityService.APIService.Extensions
             services.AddScoped<IJwtTokenService, JWTTokenService>();
             services.AddScoped<IAuthenService, AuthenService>();
 
+            // Email Background Queue
+            services.AddSingleton<IEmailBackgroundQueue, EmailBackgroundQueue>();
+            services.AddHostedService<EmailBackgroundService>();
+
             return services;
         }
 
