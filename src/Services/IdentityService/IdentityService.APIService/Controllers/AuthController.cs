@@ -1,6 +1,8 @@
+using System.Security.Claims;
 using IdentityService.Application.Constants;
 using IdentityService.Application.DTOs;
 using IdentityService.Application.Interfaces;
+using IdentityService.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Results;
 
@@ -12,11 +14,13 @@ public class AuthController : ControllerBase
 {
     private readonly IAuthenService _authenService;
     private readonly IJwtTokenService _jwtTokenService;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public AuthController(IAuthenService authenService, IJwtTokenService jwtTokenService)
+    public AuthController(IAuthenService authenService, IJwtTokenService jwtTokenService, IUnitOfWork unitOfWork)
     {
         _authenService = authenService;
         _jwtTokenService = jwtTokenService;
+        _unitOfWork = unitOfWork;
     }
 
     #region OTP Endpoints
@@ -134,12 +138,60 @@ public class AuthController : ControllerBase
             return Unauthorized(ServiceResult<LoginResponse>.Unauthorized(errorMessage ?? AuthMessages.InvalidCredentials));
         }
 
-        // Generate JWT token
+        // Generate JWT tokens
         var token = _jwtTokenService.GenerateJSONWebToken(account);
+        var refreshToken = _jwtTokenService.GenerateRefreshToken(account);
 
         return Ok(ServiceResult<LoginResponse>.Success(
-            new LoginResponse(true, AuthMessages.LoginSuccess, account.AccountId, account.Email, account.Username, token),
+            new LoginResponse(true, AuthMessages.LoginSuccess, account.AccountId, account.Email, account.Username, token, refreshToken),
             AuthMessages.LoginSuccess
+        ));
+    }
+    /// <summary>
+    /// Làm mới access token bằng refresh token
+    /// </summary>
+    [HttpPost("refresh-token")]
+    public async Task<ActionResult<ServiceResult<RefreshTokenResponse>>> RefreshToken([FromBody] RefreshTokenRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ServiceResult<RefreshTokenResponse>.BadRequest(AuthMessages.InvalidData));
+        }
+
+        // Validate refresh token
+        var principal = _jwtTokenService.ValidateRefreshToken(request.RefreshToken);
+        if (principal == null)
+        {
+            return Unauthorized(ServiceResult<RefreshTokenResponse>.Unauthorized(AuthMessages.RefreshTokenInvalid));
+        }
+
+        // Get AccountId from refresh token claims
+        var accountIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier);
+        if (accountIdClaim == null || !Guid.TryParse(accountIdClaim.Value, out var accountId))
+        {
+            return Unauthorized(ServiceResult<RefreshTokenResponse>.Unauthorized(AuthMessages.RefreshTokenInvalid));
+        }
+
+        // Lookup account
+        var account = await _unitOfWork.Accounts.GetByIdAsync(accountId);
+        if (account == null || !account.IsActive)
+        {
+            return Unauthorized(ServiceResult<RefreshTokenResponse>.Unauthorized(AuthMessages.RefreshTokenInvalid));
+        }
+
+        // Load Role for JWT claims
+        if (account.RoleId.HasValue)
+        {
+            account.Role = await _unitOfWork.Roles.GetByIdAsync(account.RoleId.Value);
+        }
+
+        // Generate new token pair
+        var newAccessToken = _jwtTokenService.GenerateJSONWebToken(account);
+        var newRefreshToken = _jwtTokenService.GenerateRefreshToken(account);
+
+        return Ok(ServiceResult<RefreshTokenResponse>.Success(
+            new RefreshTokenResponse(true, AuthMessages.RefreshTokenSuccess, newAccessToken, newRefreshToken),
+            AuthMessages.RefreshTokenSuccess
         ));
     }
     #endregion
