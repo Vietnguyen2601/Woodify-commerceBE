@@ -86,9 +86,6 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
-var port = Environment.GetEnvironmentVariable("SHOP_SERVICE_PORT");
-app.Urls.Add($"http://localhost:{port}");
-
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
