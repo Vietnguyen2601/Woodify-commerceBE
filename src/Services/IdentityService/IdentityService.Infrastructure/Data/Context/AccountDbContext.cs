@@ -106,6 +106,8 @@ public class AccountDbContext : DbContext
             entity.Property(e => e.Email).HasColumnName("email").IsRequired();
             entity.Property(e => e.Name).HasColumnName("name");
             entity.Property(e => e.PhoneNumber).HasColumnName("phone_number");
+            entity.Property(e => e.Dob).HasColumnName("dob");
+            entity.Property(e => e.Gender).HasColumnName("gender");
             entity.Property(e => e.RoleId).HasColumnName("role_id");
             entity.Property(e => e.CreatedAt).HasColumnName("createdat");
             entity.Property(e => e.UpdatedAt).HasColumnName("updatedat");
@@ -125,16 +127,34 @@ public class AccountDbContext : DbContext
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        // Tự động cập nhật UpdatedAt khi save
+        // Tự động cập nhật UpdatedAt khi save và đảm bảo DateTimeKind.Utc
         var entries = ChangeTracker.Entries()
-            .Where(e => e.State == EntityState.Modified);
+            .Where(e => e.State == EntityState.Modified || e.State == EntityState.Added);
 
         foreach (var entry in entries)
         {
             if (entry.Entity is Account account)
+            {
                 account.UpdatedAt = DateTime.UtcNow;
+                
+                // Ensure all DateTime properties are UTC
+                if (account.CreatedAt.Kind != DateTimeKind.Utc)
+                    account.CreatedAt = DateTime.SpecifyKind(account.CreatedAt, DateTimeKind.Utc);
+                if (account.UpdatedAt.Kind != DateTimeKind.Utc)
+                    account.UpdatedAt = DateTime.SpecifyKind(account.UpdatedAt, DateTimeKind.Utc);
+                if (account.Dob.HasValue && account.Dob.Value.Kind != DateTimeKind.Utc)
+                    account.Dob = DateTime.SpecifyKind(account.Dob.Value, DateTimeKind.Utc);
+            }
             else if (entry.Entity is Role role)
+            {
                 role.UpdatedAt = DateTime.UtcNow;
+                
+                // Ensure all DateTime properties are UTC
+                if (role.CreatedAt.Kind != DateTimeKind.Utc)
+                    role.CreatedAt = DateTime.SpecifyKind(role.CreatedAt, DateTimeKind.Utc);
+                if (role.UpdatedAt.Kind != DateTimeKind.Utc)
+                    role.UpdatedAt = DateTime.SpecifyKind(role.UpdatedAt, DateTimeKind.Utc);
+            }
         }
 
         return base.SaveChangesAsync(cancellationToken);
