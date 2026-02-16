@@ -33,13 +33,15 @@ public class CustomDateTimeConverter : JsonConverter<DateTime>
             return DateTime.MinValue;
 
         // Try parsing with each accepted format
-        foreach (var format in AcceptedFormats)
+        var selectedFormat = AcceptedFormats
+            .Where(format => DateTime.TryParseExact(dateString, format, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out _))
+            .FirstOrDefault();
+
+        if (selectedFormat != null)
         {
-            if (DateTime.TryParseExact(dateString, format, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var result))
-            {
-                // Ensure Kind is Utc for PostgreSQL compatibility
-                return new DateTime(result.Ticks, DateTimeKind.Utc);
-            }
+            DateTime.TryParseExact(dateString, selectedFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var result);
+            // Ensure Kind is Utc for PostgreSQL compatibility
+            return new DateTime(result.Ticks, DateTimeKind.Utc);
         }
 
         // Try using the default parser as fallback
