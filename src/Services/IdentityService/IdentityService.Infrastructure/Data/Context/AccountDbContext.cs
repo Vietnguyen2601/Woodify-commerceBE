@@ -106,6 +106,7 @@ public class AccountDbContext : DbContext
             entity.Property(e => e.Email).HasColumnName("email").IsRequired();
             entity.Property(e => e.Name).HasColumnName("name");
             entity.Property(e => e.PhoneNumber).HasColumnName("phone_number");
+            entity.Property(e => e.Address).HasColumnName("address");
             entity.Property(e => e.Dob).HasColumnName("dob");
             entity.Property(e => e.Gender).HasColumnName("gender");
             entity.Property(e => e.RoleId).HasColumnName("role_id");

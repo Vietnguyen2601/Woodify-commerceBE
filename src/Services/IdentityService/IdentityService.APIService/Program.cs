@@ -18,7 +18,15 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add CORS configuration
+// Add Cookie Policy
+builder.Services.Configure<CookiePolicyOptions>(options =>
+{
+    options.CheckConsentNeeded = context => false;
+    options.MinimumSameSitePolicy = SameSiteMode.Strict;
+    options.Secure = CookieSecurePolicy.Always; // HTTPS only in production
+});
+
+// Add CORS configuration with credential support
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -26,6 +34,8 @@ builder.Services.AddCors(options =>
         policy.AllowAnyOrigin()
               .AllowAnyMethod()
               .AllowAnyHeader();
+        // Note: Cannot use AllowCredentials() with AllowAnyOrigin()
+        // Will configure properly later with specific origins
     });
 });
 
@@ -158,6 +168,12 @@ try
     });
 
     app.UseValidationExceptionMiddleware();
+
+    // Use JWT Cookie Middleware - Extract token from cookie and add to Authorization header
+    app.UseJwtCookieMiddleware();
+
+    // Use Cookie Policy
+    app.UseCookiePolicy();
 
     // Enable CORS
     app.UseCors("AllowAll");

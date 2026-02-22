@@ -16,6 +16,7 @@ public static class AccountMapper
             Email = account.Email,
             Name = account.Name,
             PhoneNumber = account.PhoneNumber,
+            Address = account.Address,
             Dob = account.Dob,
             Gender = account.Gender,
             RoleId = account.RoleId,
@@ -46,6 +47,7 @@ public static class AccountMapper
             Email = dto.Email,
             Name = dto.Name,
             PhoneNumber = dto.PhoneNumber,
+            Address = dto.Address ?? string.Empty,
             Dob = dto.Dob,
             Gender = dto.Gender,
             RoleId = dto.RoleId
@@ -65,6 +67,11 @@ public static class AccountMapper
         if (!string.IsNullOrEmpty(dto.PhoneNumber))
         {
             account.PhoneNumber = dto.PhoneNumber;
+        }
+
+        if (!string.IsNullOrEmpty(dto.Address))
+        {
+            account.Address = dto.Address;
         }
 
         if (dto.Dob.HasValue)

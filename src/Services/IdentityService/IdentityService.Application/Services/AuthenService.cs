@@ -85,7 +85,7 @@ namespace IdentityService.Application.Services
         #endregion
 
         #region Register & Login
-        public async Task<(bool Success, Guid? AccountId, string? ErrorMessage)> RegisterAsync(string email, string password, string username)
+        public async Task<(bool Success, Guid? AccountId, string? ErrorMessage)> RegisterAsync(string email, string password, string username, string? address = null)
         {
             // Kiểm tra email đã xác minh OTP chưa
             if (!_verifiedEmails.TryGetValue(email, out var isVerified) || !isVerified)
@@ -115,6 +115,7 @@ namespace IdentityService.Application.Services
                 Email = email,
                 Username = username,
                 Password = _passwordHasher.HashPassword(password),
+                Address = address ?? string.Empty,
                 RoleId = customerRole?.RoleId,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,

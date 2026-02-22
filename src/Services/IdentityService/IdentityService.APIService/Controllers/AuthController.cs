@@ -3,6 +3,7 @@ using IdentityService.Application.Constants;
 using IdentityService.Application.DTOs;
 using IdentityService.Application.Interfaces;
 using IdentityService.Infrastructure.Persistence;
+using IdentityService.APIService.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Results;
 
@@ -107,7 +108,7 @@ public class AuthController : ControllerBase
             return BadRequest(ServiceResult<RegisterResponse>.BadRequest(AuthMessages.PasswordMismatch));
         }
 
-        var (success, accountId, errorMessage) = await _authenService.RegisterAsync(request.Email, request.Password, request.Username);
+        var (success, accountId, errorMessage) = await _authenService.RegisterAsync(request.Email, request.Password, request.Username, request.Address);
 
         if (!success)
         {
@@ -142,24 +143,29 @@ public class AuthController : ControllerBase
         var token = _jwtTokenService.GenerateJSONWebToken(account);
         var refreshToken = _jwtTokenService.GenerateRefreshToken(account);
 
+        // Set JWT tokens as HttpOnly Cookies
+        Response.SetJwtCookies(token, refreshToken);
+
+        // Return response without tokens (they are now in secure cookies)
         return Ok(ServiceResult<LoginResponse>.Success(
-            new LoginResponse(true, AuthMessages.LoginSuccess, account.AccountId, account.Email, account.Username, token, refreshToken),
+            new LoginResponse(true, AuthMessages.LoginSuccess, account.AccountId, account.Email, account.Username, null, null),
             AuthMessages.LoginSuccess
         ));
     }
     /// <summary>
-    /// Làm mới access token bằng refresh token
+    /// Làm mới access token bằng refresh token (cookie-based)
     /// </summary>
     [HttpPost("refresh-token")]
-    public async Task<ActionResult<ServiceResult<RefreshTokenResponse>>> RefreshToken([FromBody] RefreshTokenRequest request)
+    public async Task<ActionResult<ServiceResult<RefreshTokenResponse>>> RefreshToken()
     {
-        if (!ModelState.IsValid)
+        // Get refresh token from HttpOnly cookie
+        if (!Request.Cookies.TryGetValue("RefreshToken", out var refreshToken) || string.IsNullOrEmpty(refreshToken))
         {
-            return BadRequest(ServiceResult<RefreshTokenResponse>.BadRequest(AuthMessages.InvalidData));
+            return Unauthorized(ServiceResult<RefreshTokenResponse>.Unauthorized(AuthMessages.RefreshTokenInvalid));
         }
 
         // Validate refresh token
-        var principal = _jwtTokenService.ValidateRefreshToken(request.RefreshToken);
+        var principal = _jwtTokenService.ValidateRefreshToken(refreshToken);
         if (principal == null)
         {
             return Unauthorized(ServiceResult<RefreshTokenResponse>.Unauthorized(AuthMessages.RefreshTokenInvalid));
@@ -189,8 +195,12 @@ public class AuthController : ControllerBase
         var newAccessToken = _jwtTokenService.GenerateJSONWebToken(account);
         var newRefreshToken = _jwtTokenService.GenerateRefreshToken(account);
 
+        // Set new JWT tokens as HttpOnly Cookies
+        Response.SetJwtCookies(newAccessToken, newRefreshToken);
+
+        // Return response without tokens (they are now in secure cookies)
         return Ok(ServiceResult<RefreshTokenResponse>.Success(
-            new RefreshTokenResponse(true, AuthMessages.RefreshTokenSuccess, newAccessToken, newRefreshToken),
+            new RefreshTokenResponse(true, AuthMessages.RefreshTokenSuccess, null, null),
             AuthMessages.RefreshTokenSuccess
         ));
     }
@@ -266,6 +276,21 @@ public class AuthController : ControllerBase
         return Ok(ServiceResult<ResetPasswordResponse>.Success(
             new ResetPasswordResponse(true, AuthMessages.ResetPasswordSuccess),
             AuthMessages.ResetPasswordSuccess
+        ));
+    }
+
+    /// <summary>
+    /// Đăng xuất - Xóa JWT Cookies
+    /// </summary>
+    [HttpPost("logout")]
+    public ActionResult<ServiceResult<object>> Logout()
+    {
+        // Clear JWT cookies
+        Response.ClearJwtCookies();
+
+        return Ok(ServiceResult<object>.Success(
+            null,
+            "Logout successful"
         ));
     }
     #endregion
