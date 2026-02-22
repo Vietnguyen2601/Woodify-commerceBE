@@ -178,14 +178,15 @@ public class ProductMasterService : IProductMasterService
             if (product == null)
                 return ServiceResult<ProductMasterDto>.NotFound("Product not found");
 
-            // Chỉ cho phép chuyển từ DRAFT hoặc ARCHIVED sang PUBLISHED
-            if (product.Status == Domain.Entities.ProductStatus.DELETED)
-                return ServiceResult<ProductMasterDto>.BadRequest("Cannot publish a deleted product");
+            // Chỉ cho phép publish nếu đã được approved
+            if (product.Status != Domain.Entities.ProductStatus.APPROVED)
+                return ServiceResult<ProductMasterDto>.BadRequest("Product must be approved before publishing");
 
-            if (product.Status == Domain.Entities.ProductStatus.PUBLISHED)
-                return ServiceResult<ProductMasterDto>.BadRequest("Product is already published");
+            if (product.ModerationStatus != Domain.Entities.ModerationStatus.APPROVED)
+                return ServiceResult<ProductMasterDto>.BadRequest("Product must be moderated and approved first");
 
             product.Status = Domain.Entities.ProductStatus.PUBLISHED;
+            product.PublishedAt = DateTime.UtcNow;
             product.UpdatedAt = DateTime.UtcNow;
             await _productMasterRepository.UpdateAsync(product);
 
@@ -239,26 +240,7 @@ public class ProductMasterService : IProductMasterService
             };
 
             var (products, totalCount) = await _productMasterRepository.SearchAsync(searchParams);
-            
-            // Get current version info for each product
-            var productDtos = new List<ProductMasterDto>();
-            foreach (var product in products)
-            {
-                var dto = product.ToDto();
-                
-                // Get current version details if available
-                if (product.CurrentVersionId.HasValue)
-                {
-                    var version = await _unitOfWork.ProductVersions.GetByIdAsync(product.CurrentVersionId.Value);
-                    if (version != null)
-                    {
-                        dto.CurrentVersionTitle = version.Title;
-                        dto.CurrentVersionDescription = version.Description;
-                    }
-                }
-                
-                productDtos.Add(dto);
-            }
+            var productDtos = products.Select(p => p.ToDto()).ToList();
             
             var result = new ProductSearchResultDto
             {
@@ -273,6 +255,71 @@ public class ProductMasterService : IProductMasterService
         catch (Exception ex)
         {
             return ServiceResult<ProductSearchResultDto>.InternalServerError($"Error searching products: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<ProductMasterDto>> SubmitForApprovalAsync(Guid id)
+    {
+        try
+        {
+            var product = await _productMasterRepository.GetByIdAsync(id);
+            if (product == null)
+                return ServiceResult<ProductMasterDto>.NotFound("Product not found");
+
+            if (product.Status != Domain.Entities.ProductStatus.DRAFT)
+                return ServiceResult<ProductMasterDto>.BadRequest("Only draft products can be submitted for approval");
+
+            product.Status = Domain.Entities.ProductStatus.PENDING_APPROVAL;
+            product.ModerationStatus = Domain.Entities.ModerationStatus.PENDING;
+            product.UpdatedAt = DateTime.UtcNow;
+            await _productMasterRepository.UpdateAsync(product);
+
+            return ServiceResult<ProductMasterDto>.Success(product.ToDto(), "Product submitted for approval successfully");
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<ProductMasterDto>.InternalServerError($"Error submitting product for approval: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<ProductMasterDto>> ModerateProductAsync(Guid id, ModerateProductDto dto)
+    {
+        try
+        {
+            var product = await _productMasterRepository.GetByIdAsync(id);
+            if (product == null)
+                return ServiceResult<ProductMasterDto>.NotFound("Product not found");
+
+            if (product.Status != Domain.Entities.ProductStatus.PENDING_APPROVAL)
+                return ServiceResult<ProductMasterDto>.BadRequest("Only products pending approval can be moderated");
+
+            dto.MapToModerate(product);
+            await _productMasterRepository.UpdateAsync(product);
+
+            var message = dto.ModerationStatus == Domain.Entities.ModerationStatus.APPROVED 
+                ? "Product approved successfully" 
+                : "Product rejected";
+
+            return ServiceResult<ProductMasterDto>.Success(product.ToDto(), message);
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<ProductMasterDto>.InternalServerError($"Error moderating product: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<IEnumerable<ProductMasterDto>>> GetPendingApprovalProductsAsync()
+    {
+        try
+        {
+            var pendingProducts = await _productMasterRepository.GetByStatusAsync(Domain.Entities.ProductStatus.PENDING_APPROVAL);
+            var productDtos = pendingProducts.Select(p => p.ToDto());
+            
+            return ServiceResult<IEnumerable<ProductMasterDto>>.Success(productDtos);
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<IEnumerable<ProductMasterDto>>.InternalServerError($"Error retrieving pending approval products: {ex.Message}");
         }
     }
 }

@@ -20,4 +20,9 @@ public interface IProductMasterService
     Task<ServiceResult<ProductMasterDto>> PublishProductAsync(Guid id);
     Task<ServiceResult<IEnumerable<ProductMasterDto>>> GetPublishedProductsAsync();
     Task<ServiceResult<ProductSearchResultDto>> SearchProductsAsync(ProductSearchDto searchDto);
+    
+    // Moderation methods
+    Task<ServiceResult<ProductMasterDto>> SubmitForApprovalAsync(Guid id);
+    Task<ServiceResult<ProductMasterDto>> ModerateProductAsync(Guid id, ModerateProductDto dto);
+    Task<ServiceResult<IEnumerable<ProductMasterDto>>> GetPendingApprovalProductsAsync();
 }
