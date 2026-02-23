@@ -5,6 +5,7 @@ using IdentityService.Domain.Entities;
 using IdentityService.Infrastructure.Persistence;
 using Shared.Events;
 using Shared.Messaging;
+using Microsoft.Extensions.Logging;
 
 namespace IdentityService.Application.Services
 {
@@ -14,16 +15,18 @@ namespace IdentityService.Application.Services
         private readonly IEmailBackgroundQueue _emailBackgroundQueue;
         private readonly IPasswordHasher _passwordHasher;
         private readonly RabbitMQPublisher? _publisher;
+        private readonly ILogger<AuthenService>? _logger;
         private static readonly ConcurrentDictionary<string, (string Otp, DateTime Expiry)> _otpStorage = new();
         private static readonly ConcurrentDictionary<string, bool> _verifiedEmails = new();
         private static readonly ConcurrentDictionary<string, (string Email, DateTime Expiry)> _resetTokens = new();
 
-        public AuthenService(IUnitOfWork unitOfWork, IEmailBackgroundQueue emailBackgroundQueue, IPasswordHasher passwordHasher, RabbitMQPublisher? publisher = null)
+        public AuthenService(IUnitOfWork unitOfWork, IEmailBackgroundQueue emailBackgroundQueue, IPasswordHasher passwordHasher, RabbitMQPublisher? publisher = null, ILogger<AuthenService>? logger = null)
         {
             _unitOfWork = unitOfWork;
             _emailBackgroundQueue = emailBackgroundQueue;
             _passwordHasher = passwordHasher;
             _publisher = publisher;
+            _logger = logger;
         }
 
         #region OTP Methods
@@ -149,10 +152,11 @@ namespace IdentityService.Application.Services
                     _publisher.PublishToQueue("account.created", accountCreatedEvent);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Log error but don't fail the registration
-                // Event publishing failed silently - registration still succeeds
+                _logger?.LogError("Failed to publish AccountCreatedEvent for account {AccountId}. Registration succeeded but event was not published.", account.AccountId);
+                // Event publishing failed - registration still succeeds
             }
 
             return (true, account.AccountId, null);

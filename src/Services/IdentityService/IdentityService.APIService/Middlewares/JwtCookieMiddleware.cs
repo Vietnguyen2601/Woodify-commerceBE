@@ -18,15 +18,12 @@ namespace IdentityService.APIService.Middlewares
 
         public async Task InvokeAsync(HttpContext context)
         {
-            // Check if Authorization header is not set
-            if (string.IsNullOrEmpty(context.Request.Headers["Authorization"]))
+            // Check if Authorization header is not set and try to get access token from HttpOnly cookie
+            if (string.IsNullOrEmpty(context.Request.Headers["Authorization"])
+                && context.Request.Cookies.TryGetValue("AccessToken", out var accessToken))
             {
-                // Try to get access token from HttpOnly cookie
-                if (context.Request.Cookies.TryGetValue("AccessToken", out var accessToken))
-                {
-                    // Add token to Authorization header as Bearer token
-                    context.Request.Headers["Authorization"] = $"Bearer {accessToken}";
-                }
+                // Add token to Authorization header as Bearer token
+                context.Request.Headers["Authorization"] = $"Bearer {accessToken}";
             }
 
             await _next(context);

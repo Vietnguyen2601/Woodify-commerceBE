@@ -110,8 +110,17 @@ for (int attempt = 1; attempt <= 5; attempt++)
         builder.Services.AddHostedService<ShopCreatedConsumer>();
         break;
     }
+    catch (IOException ex)
+    {
+        Console.Error.WriteLine($"Failed to initialize RabbitMQ on attempt {attempt}: {ex.Message}");
+        if (attempt < 5)
+        {
+            System.Threading.Thread.Sleep(5000);
+        }
+    }
     catch (Exception ex)
     {
+        Console.Error.WriteLine($"Unexpected error initializing RabbitMQ on attempt {attempt}: {ex.Message}");
         if (attempt < 5)
         {
             System.Threading.Thread.Sleep(5000);
@@ -202,4 +211,5 @@ try
 }
 catch (Exception ex)
 {
+    // Log startup error for debugging
 }

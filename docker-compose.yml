@@ -6,8 +6,6 @@
 # Xem logs: docker-compose logs -f [service-name]
 # ================================================================
 
-version: '3.8'
-
 services:
   # ==============================================================
   # POSTGRESQL DATABASE
