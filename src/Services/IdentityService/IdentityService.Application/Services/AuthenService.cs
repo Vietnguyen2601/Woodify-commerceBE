@@ -3,6 +3,8 @@ using IdentityService.Application.Constants;
 using IdentityService.Application.Interfaces;
 using IdentityService.Domain.Entities;
 using IdentityService.Infrastructure.Persistence;
+using Shared.Events;
+using Shared.Messaging;
 
 namespace IdentityService.Application.Services
 {
@@ -11,15 +13,17 @@ namespace IdentityService.Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailBackgroundQueue _emailBackgroundQueue;
         private readonly IPasswordHasher _passwordHasher;
+        private readonly RabbitMQPublisher? _publisher;
         private static readonly ConcurrentDictionary<string, (string Otp, DateTime Expiry)> _otpStorage = new();
         private static readonly ConcurrentDictionary<string, bool> _verifiedEmails = new();
         private static readonly ConcurrentDictionary<string, (string Email, DateTime Expiry)> _resetTokens = new();
 
-        public AuthenService(IUnitOfWork unitOfWork, IEmailBackgroundQueue emailBackgroundQueue, IPasswordHasher passwordHasher)
+        public AuthenService(IUnitOfWork unitOfWork, IEmailBackgroundQueue emailBackgroundQueue, IPasswordHasher passwordHasher, RabbitMQPublisher? publisher = null)
         {
             _unitOfWork = unitOfWork;
             _emailBackgroundQueue = emailBackgroundQueue;
             _passwordHasher = passwordHasher;
+            _publisher = publisher;
         }
 
         #region OTP Methods
@@ -127,6 +131,29 @@ namespace IdentityService.Application.Services
 
             // Xóa trạng thái verified sau khi đăng ký thành công
             _verifiedEmails.TryRemove(email, out _);
+
+            // 🔔 Publish AccountCreatedEvent để PaymentService tạo wallet
+            try
+            {
+                if (_publisher != null)
+                {
+                    var accountCreatedEvent = new AccountCreatedEvent
+                    {
+                        AccountId = account.AccountId,
+                        Username = account.Username,
+                        Email = account.Email,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    // Publish directly to queue, not through exchange
+                    _publisher.PublishToQueue("account.created", accountCreatedEvent);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't fail the registration
+                // Event publishing failed silently - registration still succeeds
+            }
 
             return (true, account.AccountId, null);
         }

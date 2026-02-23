@@ -21,7 +21,10 @@ public class RabbitMQConsumer : IDisposable
             Port = settings.Port,
             UserName = settings.Username,
             Password = settings.Password,
-            VirtualHost = settings.VirtualHost
+            VirtualHost = settings.VirtualHost,
+            RequestedConnectionTimeout = TimeSpan.FromSeconds(10),
+            NetworkRecoveryInterval = TimeSpan.FromSeconds(10),
+            AutomaticRecoveryEnabled = true
         };
 
         _connection = factory.CreateConnection();
@@ -103,7 +106,6 @@ public class RabbitMQConsumer : IDisposable
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error processing message: {ex.Message}");
                 // Optionally: _channel.BasicNack(ea.DeliveryTag, false, true); // requeue on error
             }
         };

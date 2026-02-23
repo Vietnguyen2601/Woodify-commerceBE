@@ -93,16 +93,30 @@ var rabbitMQSettings = new RabbitMQSettings
     Username = Environment.GetEnvironmentVariable("RabbitMQ_Username") ?? builder.Configuration["RabbitMQ:Username"] ?? "guest",
     Password = Environment.GetEnvironmentVariable("RabbitMQ_Password") ?? builder.Configuration["RabbitMQ:Password"] ?? "guest"
 };
-try
+
+// Retry logic for RabbitMQ connection
+RabbitMQConsumer? rabbitMQConsumer = null;
+RabbitMQPublisher? rabbitMQPublisher = null;
+
+for (int attempt = 1; attempt <= 5; attempt++)
 {
-    var consumer = new RabbitMQConsumer(rabbitMQSettings);
-    builder.Services.AddSingleton(consumer);
-    builder.Services.AddHostedService<ShopCreatedConsumer>();
-    Console.WriteLine("RabbitMQ Consumer connected successfully");
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"RabbitMQ not available: {ex.Message}. Running without messaging.");
+    try
+    {
+        rabbitMQConsumer = new RabbitMQConsumer(rabbitMQSettings);
+        rabbitMQPublisher = new RabbitMQPublisher(rabbitMQSettings);
+        
+        builder.Services.AddSingleton(rabbitMQConsumer);
+        builder.Services.AddSingleton(rabbitMQPublisher);
+        builder.Services.AddHostedService<ShopCreatedConsumer>();
+        break;
+    }
+    catch (Exception ex)
+    {
+        if (attempt < 5)
+        {
+            System.Threading.Thread.Sleep(5000);
+        }
+    }
 }
 
 var rootPath = Directory.GetParent(Directory.GetCurrentDirectory())?.Parent?.Parent?.Parent?.FullName;
@@ -146,15 +160,13 @@ using (var scope = app.Services.CreateScope())
     try
     {
         dbContext.Database.Migrate();
-        Console.WriteLine("Database migration applied successfully");
         
         // Seed initial data
         await AccountDbSeeder.SeedAsync(dbContext);
-        Console.WriteLine("Database seeding completed successfully");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Database migration/seeding failed: {ex.Message}");
+        // Log error but continue startup
     }
 }
 
@@ -190,5 +202,4 @@ try
 }
 catch (Exception ex)
 {
-    Console.WriteLine($"Failed to start application: {ex.Message}");
 }

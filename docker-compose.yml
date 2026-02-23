@@ -122,9 +122,8 @@ services:
     restart: unless-stopped
     ports:
       - "5010:5010"
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - IDENTITY_SERVICE_PORT=5010
+    env_file:
+      - .env
     volumes:
       - ./.env:/app/.env
     depends_on:
@@ -176,14 +175,8 @@ services:
     restart: unless-stopped
     ports:
       - "5012:5012"
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:5012
-      - PRODUCT_SERVICE_PORT=5012
-      - RabbitMQ_Host=woodify-rabbitmq
-      - RabbitMQ_Port=5672
-      - RabbitMQ_Username=${RABBITMQ_USER}
-      - RabbitMQ_Password=${RABBITMQ_PASSWORD}
+    env_file:
+      - .env
     volumes:
       - ./.env:/app/.env
     depends_on:
@@ -235,15 +228,10 @@ services:
     restart: unless-stopped
     ports:
       - "5014:5014"
+    env_file:
+      - .env
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:5014
-      - ORDER_SERVICE_PORT=5014
       - ProductService_Url=http://woodify-product-service:5012
-      - RabbitMQ_Host=woodify-rabbitmq
-      - RabbitMQ_Port=5672
-      - RabbitMQ_Username=${RABBITMQ_USER}
-      - RabbitMQ_Password=${RABBITMQ_PASSWORD}
     volumes:
       - ./.env:/app/.env
     depends_on:
@@ -268,8 +256,8 @@ services:
     restart: unless-stopped
     ports:
       - "5015:5015"
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+    env_file:
+      - .env
     volumes:
       - ./.env:/app/.env
     depends_on:
