@@ -128,7 +128,15 @@ for (int attempt = 1; attempt <= 5; attempt++)
             System.Threading.Thread.Sleep(5000);
         }
     }
-    catch (Exception ex)
+    catch (InvalidOperationException ex)
+    {
+        Console.Error.WriteLine($"Unexpected error initializing RabbitMQ on attempt {attempt}: {ex.Message}");
+        if (attempt < 5)
+        {
+            System.Threading.Thread.Sleep(5000);
+        }
+    }
+    catch (ArgumentException ex)
     {
         Console.Error.WriteLine($"Unexpected error initializing RabbitMQ on attempt {attempt}: {ex.Message}");
         if (attempt < 5)

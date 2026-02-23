@@ -152,11 +152,27 @@ namespace IdentityService.Application.Services
                     _publisher.PublishToQueue("account.created", accountCreatedEvent);
                 }
             }
-            catch (Exception)
+            catch (InvalidOperationException ex)
             {
-                // Log error but don't fail the registration
-                _logger?.LogError("Failed to publish AccountCreatedEvent for account {AccountId}. Registration succeeded but event was not published.", account.AccountId);
+                // Log error but don't fail the registration for expected publishing issues
+                _logger?.LogError(ex, "Failed to publish AccountCreatedEvent for account {AccountId} due to an invalid operation. Registration succeeded but event was not published.", account.AccountId);
                 // Event publishing failed - registration still succeeds
+            }
+            catch (TimeoutException ex)
+            {
+                // Log timeout but don't fail the registration
+                _logger?.LogError(ex, "Timed out while publishing AccountCreatedEvent for account {AccountId}. Registration succeeded but event may not have been processed.", account.AccountId);
+            }
+            catch (IOException ex)
+            {
+                // Log I/O error but don't fail the registration
+                _logger?.LogError(ex, "Failed to publish AccountCreatedEvent for account {AccountId} due to a network error. Registration succeeded but event was not published.", account.AccountId);
+            }
+            catch (Exception ex)
+            {
+                // Log unexpected errors and rethrow to avoid silently swallowing programming or critical errors
+                _logger?.LogError(ex, "Unexpected error while publishing AccountCreatedEvent for account {AccountId}.", account.AccountId);
+                throw;
             }
 
             return (true, account.AccountId, null);
