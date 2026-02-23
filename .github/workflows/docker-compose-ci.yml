@@ -51,10 +51,10 @@ jobs:
     - name: Validate .env file
       run: |
         if [ -f .env ]; then
-          echo "✅ .env file exists"
+          echo ".env file exists"
           wc -l .env
         else
-          echo "❌ .env file not found"
+          echo ".env file not found"
           exit 1
         fi
 
