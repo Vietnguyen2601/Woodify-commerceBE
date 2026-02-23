@@ -50,13 +50,24 @@ jobs:
 
     - name: Validate .env file
       run: |
-        if [ -f .env ]; then
-          echo ".env file exists"
-          wc -l .env
-        else
-          echo ".env file not found"
+        if [ ! -f .env ]; then
+          echo "❌ .env file not found"
           exit 1
         fi
+        
+        if [ ! -s .env ]; then
+          echo "❌ .env file is empty"
+          exit 1
+        fi
+        
+        # Check for empty values (secret not set)
+        if grep -q "=\s*$" .env; then
+          echo "❌ Found empty environment variables!"
+          grep "=\s*$" .env
+          exit 1
+        fi
+        
+        echo "✅ .env file is valid with $(grep -c '=' .env) variables"
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
