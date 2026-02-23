@@ -20,12 +20,23 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+    - name: Create .env file from secrets
+      run: |
+        cat > .env << EOF
+        POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+        POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+        POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+        RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}
+        RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}
+        RabbitMQ_Host=${{ secrets.RABBITMQ_HOST }}
+        RabbitMQ_Port=${{ secrets.RABBITMQ_PORT }}
+        RabbitMQ_Username=${{ secrets.RABBITMQ_USER }}
+        RabbitMQ_Password=${{ secrets.RABBITMQ_PASSWORD }}
+        EOF
 
     - name: Validate docker-compose.yml syntax
       run: |
-        docker compose config --quiet
+        docker compose config --quiet 2>/dev/null
         if [ $? -eq 0 ]; then
           echo "✅ docker-compose.yml syntax is valid"
         else
