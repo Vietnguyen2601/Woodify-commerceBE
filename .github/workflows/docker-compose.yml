@@ -36,7 +36,7 @@ jobs:
 
     - name: Validate docker-compose.yml syntax
       run: |
-        docker compose config --quiet 2>/dev/null
+        docker compose config --quiet
         if [ $? -eq 0 ]; then
           echo "✅ docker-compose.yml syntax is valid"
         else
