@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PaymentService.Application.Interfaces;
 using PaymentService.Application.Services;
+using PaymentService.Application.Consumers;
 using PaymentService.Infrastructure.Data;
 using PaymentService.Infrastructure.Data.Seeders;
 using PaymentService.Infrastructure.PayOs;
@@ -50,8 +51,6 @@ builder.Services.AddSwaggerGen(c =>
 // ==========================================
 var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__PaymentService")
     ?? builder.Configuration.GetConnectionString("PaymentService");
-
-Console.WriteLine($"Connection String loaded: {!string.IsNullOrEmpty(connectionString)}");
 
 builder.Services.AddDbContext<PaymentDbContext>(options =>
     options.UseNpgsql(connectionString));
@@ -104,21 +103,47 @@ builder.Services.AddScoped<IWalletService, WalletService>();
 // ==========================================
 var rabbitMQSettings = new RabbitMQSettings
 {
-    Host = builder.Configuration["RabbitMQ:Host"] ?? "localhost",
-    Port = int.Parse(builder.Configuration["RabbitMQ:Port"] ?? "5672"),
-    Username = builder.Configuration["RabbitMQ:Username"] ?? "guest",
-    Password = builder.Configuration["RabbitMQ:Password"] ?? "guest"
+    Host = Environment.GetEnvironmentVariable("RabbitMQ_Host") ?? builder.Configuration["RabbitMQ:Host"] ?? "localhost",
+    Port = int.Parse(Environment.GetEnvironmentVariable("RabbitMQ_Port") ?? builder.Configuration["RabbitMQ:Port"] ?? "5672"),
+    Username = Environment.GetEnvironmentVariable("RabbitMQ_Username") ?? builder.Configuration["RabbitMQ:Username"] ?? "guest",
+    Password = Environment.GetEnvironmentVariable("RabbitMQ_Password") ?? builder.Configuration["RabbitMQ:Password"] ?? "guest"
 };
 
-try
+// Retry logic for RabbitMQ connection
+RabbitMQConsumer? rabbitMQConsumer = null;
+for (int attempt = 1; attempt <= 5; attempt++)
 {
-    var consumer = new RabbitMQConsumer(rabbitMQSettings);
-    builder.Services.AddSingleton(consumer);
-    Console.WriteLine("RabbitMQ Consumer connected successfully");
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"RabbitMQ not available: {ex.Message}. Running without messaging.");
+    try
+    {
+        rabbitMQConsumer = new RabbitMQConsumer(rabbitMQSettings);
+        builder.Services.AddSingleton(rabbitMQConsumer);
+        builder.Services.AddHostedService<AccountCreatedConsumer>();
+        break;
+    }
+    catch (IOException ex)
+    {
+        Console.Error.WriteLine($"Failed to initialize RabbitMQ on attempt {attempt}: {ex.Message}");
+        if (attempt < 5)
+        {
+            System.Threading.Thread.Sleep(5000);
+        }
+    }
+    catch (InvalidOperationException ex)
+    {
+        Console.Error.WriteLine($"Unexpected error initializing RabbitMQ on attempt {attempt}: {ex.Message}");
+        if (attempt < 5)
+        {
+            System.Threading.Thread.Sleep(5000);
+        }
+    }
+    catch (ArgumentException ex)
+    {
+        Console.Error.WriteLine($"Unexpected error initializing RabbitMQ on attempt {attempt}: {ex.Message}");
+        if (attempt < 5)
+        {
+            System.Threading.Thread.Sleep(5000);
+        }
+    }
 }
 
 // ==========================================
@@ -133,15 +158,13 @@ using (var scope = app.Services.CreateScope())
     try
     {
         dbContext.Database.Migrate();
-        Console.WriteLine("Database migration applied successfully");
         
         // Seed initial data
         await PaymentDbSeeder.SeedAsync(dbContext);
-        Console.WriteLine("Database seeding completed successfully");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Database migration/seeding failed: {ex.Message}");
+        // Log error but continue startup
     }
 }
 
@@ -182,8 +205,5 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "paym
 // ==========================================
 // 10. Log Configuration
 // ==========================================
-var payOsClientId = builder.Configuration["PAYOS_CLIENT_ID"] ?? builder.Configuration["PayOs:ClientId"];
-Console.WriteLine($"PayOS ClientId configured: {!string.IsNullOrEmpty(payOsClientId)}");
-Console.WriteLine($"Connection String configured: {!string.IsNullOrEmpty(connectionString)}");
 
 app.Run();

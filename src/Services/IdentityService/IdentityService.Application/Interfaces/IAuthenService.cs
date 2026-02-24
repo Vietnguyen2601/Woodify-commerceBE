@@ -13,7 +13,7 @@ public interface IAuthenService
     Task MarkOtpVerified(string email);
 
     // Register & Login
-    Task<(bool Success, Guid? AccountId, string? ErrorMessage)> RegisterAsync(string email, string password, string username);
+    Task<(bool Success, Guid? AccountId, string? ErrorMessage)> RegisterAsync(string email, string password, string username, string? address = null);
     Task<(bool Success, Account? Account, string? ErrorMessage)> LoginAsync(string email, string password);
 
     // Forgot Password

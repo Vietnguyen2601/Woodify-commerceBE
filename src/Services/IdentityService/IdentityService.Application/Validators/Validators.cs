@@ -47,6 +47,16 @@ public class CreateAccountValidator : AbstractValidator<CreateAccountDto>
             .WithMessage("Phone number is not valid")
             .When(x => !string.IsNullOrEmpty(x.PhoneNumber));
 
+        RuleFor(x => x.Dob)
+            .LessThanOrEqualTo(DateTime.UtcNow)
+            .WithMessage("Date of birth cannot be in the future")
+            .When(x => x.Dob.HasValue);
+
+        RuleFor(x => x.Gender)
+            .Must(g => g == null || new[] { "Male", "Female", "Other" }.Contains(g))
+            .WithMessage("Gender must be 'Male', 'Female', or 'Other'")
+            .When(x => !string.IsNullOrEmpty(x.Gender));
+
         RuleFor(x => x.RoleId)
             .NotEmpty()
             .WithMessage("RoleId is required")
@@ -68,17 +78,15 @@ public class UpdateAccountValidator : AbstractValidator<UpdateAccountDto>
             .WithMessage("Phone number is not valid")
             .When(x => !string.IsNullOrEmpty(x.PhoneNumber));
 
-        RuleFor(x => x.Email)
-            .EmailAddress()
-            .WithMessage("Email is not valid")
-            .MaximumLength(255)
-            .WithMessage("Email cannot exceed 255 characters")
-            .When(x => !string.IsNullOrEmpty(x.Email));
+        RuleFor(x => x.Dob)
+            .LessThanOrEqualTo(DateTime.UtcNow)
+            .WithMessage("Date of birth cannot be in the future")
+            .When(x => x.Dob.HasValue);
 
-        RuleFor(x => x.RoleId)
-            .NotEmpty()
-            .WithMessage("RoleId is required")
-            .When(x => x.RoleId.HasValue);
+        RuleFor(x => x.Gender)
+            .Must(g => g == null || new[] { "Male", "Female", "Other" }.Contains(g))
+            .WithMessage("Gender must be 'Male', 'Female', or 'Other'")
+            .When(x => !string.IsNullOrEmpty(x.Gender));
     }
 }
 

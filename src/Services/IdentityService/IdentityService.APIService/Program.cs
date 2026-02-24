@@ -13,10 +13,20 @@ using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add CORS configuration
+// Add Cookie Policy
+builder.Services.Configure<CookiePolicyOptions>(options =>
+{
+    options.CheckConsentNeeded = context => false;
+    options.MinimumSameSitePolicy = SameSiteMode.Strict;
+    options.Secure = CookieSecurePolicy.Always; // HTTPS only in production
+});
+
+// Add CORS configuration with credential support
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -24,12 +34,21 @@ builder.Services.AddCors(options =>
         policy.AllowAnyOrigin()
               .AllowAnyMethod()
               .AllowAnyHeader();
+        // Note: Cannot use AllowCredentials() with AllowAnyOrigin()
+        // Will configure properly later with specific origins
     });
 });
 
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationFilter>();
+}).AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.WriteIndented = true;
+    options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    options.JsonSerializerOptions.Converters.Add(new CustomDateTimeConverter());
+    options.JsonSerializerOptions.Converters.Add(new CustomNullableDateTimeConverter());
 });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -74,16 +93,47 @@ var rabbitMQSettings = new RabbitMQSettings
     Username = Environment.GetEnvironmentVariable("RabbitMQ_Username") ?? builder.Configuration["RabbitMQ:Username"] ?? "guest",
     Password = Environment.GetEnvironmentVariable("RabbitMQ_Password") ?? builder.Configuration["RabbitMQ:Password"] ?? "guest"
 };
-try
+
+// Retry logic for RabbitMQ connection
+RabbitMQConsumer? rabbitMQConsumer = null;
+RabbitMQPublisher? rabbitMQPublisher = null;
+
+for (int attempt = 1; attempt <= 5; attempt++)
 {
-    var consumer = new RabbitMQConsumer(rabbitMQSettings);
-    builder.Services.AddSingleton(consumer);
-    builder.Services.AddHostedService<ShopCreatedConsumer>();
-    Console.WriteLine("RabbitMQ Consumer connected successfully");
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"RabbitMQ not available: {ex.Message}. Running without messaging.");
+    try
+    {
+        rabbitMQConsumer = new RabbitMQConsumer(rabbitMQSettings);
+        rabbitMQPublisher = new RabbitMQPublisher(rabbitMQSettings);
+        
+        builder.Services.AddSingleton(rabbitMQConsumer);
+        builder.Services.AddSingleton(rabbitMQPublisher);
+        builder.Services.AddHostedService<ShopCreatedConsumer>();
+        break;
+    }
+    catch (IOException ex)
+    {
+        Console.Error.WriteLine($"Failed to initialize RabbitMQ on attempt {attempt}: {ex.Message}");
+        if (attempt < 5)
+        {
+            System.Threading.Thread.Sleep(5000);
+        }
+    }
+    catch (InvalidOperationException ex)
+    {
+        Console.Error.WriteLine($"Unexpected error initializing RabbitMQ on attempt {attempt}: {ex.Message}");
+        if (attempt < 5)
+        {
+            System.Threading.Thread.Sleep(5000);
+        }
+    }
+    catch (ArgumentException ex)
+    {
+        Console.Error.WriteLine($"Unexpected error initializing RabbitMQ on attempt {attempt}: {ex.Message}");
+        if (attempt < 5)
+        {
+            System.Threading.Thread.Sleep(5000);
+        }
+    }
 }
 
 var rootPath = Directory.GetParent(Directory.GetCurrentDirectory())?.Parent?.Parent?.Parent?.FullName;
@@ -127,15 +177,13 @@ using (var scope = app.Services.CreateScope())
     try
     {
         dbContext.Database.Migrate();
-        Console.WriteLine("Database migration applied successfully");
         
         // Seed initial data
         await AccountDbSeeder.SeedAsync(dbContext);
-        Console.WriteLine("Database seeding completed successfully");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Database migration/seeding failed: {ex.Message}");
+        // Log error but continue startup
     }
 }
 
@@ -149,6 +197,12 @@ try
     });
 
     app.UseValidationExceptionMiddleware();
+
+    // Use JWT Cookie Middleware - Extract token from cookie and add to Authorization header
+    app.UseJwtCookieMiddleware();
+
+    // Use Cookie Policy
+    app.UseCookiePolicy();
 
     // Enable CORS
     app.UseCors("AllowAll");
@@ -165,5 +219,5 @@ try
 }
 catch (Exception ex)
 {
-    Console.WriteLine($"Failed to start application: {ex.Message}");
+    // Log startup error for debugging
 }

@@ -16,6 +16,9 @@ public static class AccountMapper
             Email = account.Email,
             Name = account.Name,
             PhoneNumber = account.PhoneNumber,
+            Address = account.Address,
+            Dob = account.Dob,
+            Gender = account.Gender,
             RoleId = account.RoleId,
             RoleName = account.Role?.RoleName,
             CreatedAt = account.CreatedAt,
@@ -44,6 +47,9 @@ public static class AccountMapper
             Email = dto.Email,
             Name = dto.Name,
             PhoneNumber = dto.PhoneNumber,
+            Address = dto.Address ?? string.Empty,
+            Dob = dto.Dob,
+            Gender = dto.Gender,
             RoleId = dto.RoleId
         };
     }
@@ -63,19 +69,19 @@ public static class AccountMapper
             account.PhoneNumber = dto.PhoneNumber;
         }
 
-        if (!string.IsNullOrEmpty(dto.Email))
+        if (!string.IsNullOrEmpty(dto.Address))
         {
-            account.Email = dto.Email;
+            account.Address = dto.Address;
         }
 
-        if (dto.RoleId.HasValue)
+        if (dto.Dob.HasValue)
         {
-            account.RoleId = dto.RoleId;
+            account.Dob = dto.Dob;
         }
 
-        if (dto.IsActive.HasValue)
+        if (!string.IsNullOrEmpty(dto.Gender))
         {
-            account.IsActive = dto.IsActive.Value;
+            account.Gender = dto.Gender;
         }
     }
 }

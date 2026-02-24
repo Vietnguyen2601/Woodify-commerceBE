@@ -84,7 +84,6 @@ public class ShopService : IShopService
                 };
                 
                 _rabbitPublisher.PublishToQueue("shop.created", shopCreatedEvent);
-                Console.WriteLine($"[RabbitMQ] Published shop.created event for ShopId: {shop.ShopId}");
             }
 
             return ServiceResult<ShopDto>.Created(shop.ToDto(), "Shop created successfully");

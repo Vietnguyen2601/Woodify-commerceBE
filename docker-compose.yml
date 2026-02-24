@@ -6,8 +6,6 @@
 # Xem logs: docker-compose logs -f [service-name]
 # ================================================================
 
-version: '3.8'
-
 services:
   # ==============================================================
   # POSTGRESQL DATABASE
@@ -17,6 +15,8 @@ services:
     image: postgres:16-alpine
     container_name: woodify-postgres
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -24,16 +24,12 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      # Volume lưu trữ data - dữ liệu sẽ persist khi restart container
       - postgres_data:/var/lib/postgresql/data
-      # Script khởi tạo databases - chạy tự động khi container start lần đầu
       - ./docker/postgres/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql
-      # Script seed data - DISABLED: Seed data is now handled by EF Core in each service
-      # - ./docker/postgres/data.sql:/docker-entrypoint-initdb.d/02-data.sql
     networks:
       - woodify-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U woodify -d woodify_main"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -48,6 +44,8 @@ services:
     image: rabbitmq:3.13-management-alpine
     container_name: woodify-rabbitmq
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
@@ -122,11 +120,14 @@ services:
     restart: unless-stopped
     ports:
       - "5010:5010"
+    env_file:
+      - .env
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - IDENTITY_SERVICE_PORT=5010
-    volumes:
-      - ./.env:/app/.env
+      - RabbitMQ_Host=${RabbitMQ_Host}
+      - RabbitMQ_Port=${RabbitMQ_Port}
+      - RabbitMQ_Username=${RabbitMQ_Username}
+      - RabbitMQ_Password=${RabbitMQ_Password}
     depends_on:
       postgres:
         condition: service_healthy
@@ -149,6 +150,8 @@ services:
     restart: unless-stopped
     ports:
       - "5011:8080"
+    env_file:
+      - .env
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
@@ -176,16 +179,14 @@ services:
     restart: unless-stopped
     ports:
       - "5012:5012"
+    env_file:
+      - .env
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:5012
-      - PRODUCT_SERVICE_PORT=5012
-      - RabbitMQ_Host=woodify-rabbitmq
-      - RabbitMQ_Port=5672
-      - RabbitMQ_Username=${RABBITMQ_USER}
-      - RabbitMQ_Password=${RABBITMQ_PASSWORD}
-    volumes:
-      - ./.env:/app/.env
+      - RabbitMQ_Host=${RabbitMQ_Host}
+      - RabbitMQ_Port=${RabbitMQ_Port}
+      - RabbitMQ_Username=${RabbitMQ_Username}
+      - RabbitMQ_Password=${RabbitMQ_Password}
     depends_on:
       postgres:
         condition: service_healthy
@@ -235,17 +236,15 @@ services:
     restart: unless-stopped
     ports:
       - "5014:5014"
+    env_file:
+      - .env
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:5014
-      - ORDER_SERVICE_PORT=5014
+      - RabbitMQ_Host=${RabbitMQ_Host}
+      - RabbitMQ_Port=${RabbitMQ_Port}
+      - RabbitMQ_Username=${RabbitMQ_Username}
+      - RabbitMQ_Password=${RabbitMQ_Password}
       - ProductService_Url=http://woodify-product-service:5012
-      - RabbitMQ_Host=woodify-rabbitmq
-      - RabbitMQ_Port=5672
-      - RabbitMQ_Username=${RABBITMQ_USER}
-      - RabbitMQ_Password=${RABBITMQ_PASSWORD}
-    volumes:
-      - ./.env:/app/.env
     depends_on:
       postgres:
         condition: service_healthy
@@ -268,10 +267,14 @@ services:
     restart: unless-stopped
     ports:
       - "5015:5015"
+    env_file:
+      - .env
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-    volumes:
-      - ./.env:/app/.env
+      - RabbitMQ_Host=${RabbitMQ_Host}
+      - RabbitMQ_Port=${RabbitMQ_Port}
+      - RabbitMQ_Username=${RabbitMQ_Username}
+      - RabbitMQ_Password=${RabbitMQ_Password}
     depends_on:
       postgres:
         condition: service_healthy

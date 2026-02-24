@@ -3,6 +3,9 @@ using IdentityService.Application.Constants;
 using IdentityService.Application.Interfaces;
 using IdentityService.Domain.Entities;
 using IdentityService.Infrastructure.Persistence;
+using Shared.Events;
+using Shared.Messaging;
+using Microsoft.Extensions.Logging;
 
 namespace IdentityService.Application.Services
 {
@@ -11,15 +14,19 @@ namespace IdentityService.Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailBackgroundQueue _emailBackgroundQueue;
         private readonly IPasswordHasher _passwordHasher;
+        private readonly RabbitMQPublisher? _publisher;
+        private readonly ILogger<AuthenService>? _logger;
         private static readonly ConcurrentDictionary<string, (string Otp, DateTime Expiry)> _otpStorage = new();
         private static readonly ConcurrentDictionary<string, bool> _verifiedEmails = new();
         private static readonly ConcurrentDictionary<string, (string Email, DateTime Expiry)> _resetTokens = new();
 
-        public AuthenService(IUnitOfWork unitOfWork, IEmailBackgroundQueue emailBackgroundQueue, IPasswordHasher passwordHasher)
+        public AuthenService(IUnitOfWork unitOfWork, IEmailBackgroundQueue emailBackgroundQueue, IPasswordHasher passwordHasher, RabbitMQPublisher? publisher = null, ILogger<AuthenService>? logger = null)
         {
             _unitOfWork = unitOfWork;
             _emailBackgroundQueue = emailBackgroundQueue;
             _passwordHasher = passwordHasher;
+            _publisher = publisher;
+            _logger = logger;
         }
 
         #region OTP Methods
@@ -85,7 +92,7 @@ namespace IdentityService.Application.Services
         #endregion
 
         #region Register & Login
-        public async Task<(bool Success, Guid? AccountId, string? ErrorMessage)> RegisterAsync(string email, string password, string username)
+        public async Task<(bool Success, Guid? AccountId, string? ErrorMessage)> RegisterAsync(string email, string password, string username, string? address = null)
         {
             // Kiểm tra email đã xác minh OTP chưa
             if (!_verifiedEmails.TryGetValue(email, out var isVerified) || !isVerified)
@@ -115,6 +122,7 @@ namespace IdentityService.Application.Services
                 Email = email,
                 Username = username,
                 Password = _passwordHasher.HashPassword(password),
+                Address = address ?? string.Empty,
                 RoleId = customerRole?.RoleId,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
@@ -126,6 +134,46 @@ namespace IdentityService.Application.Services
 
             // Xóa trạng thái verified sau khi đăng ký thành công
             _verifiedEmails.TryRemove(email, out _);
+
+            // 🔔 Publish AccountCreatedEvent để PaymentService tạo wallet
+            try
+            {
+                if (_publisher != null)
+                {
+                    var accountCreatedEvent = new AccountCreatedEvent
+                    {
+                        AccountId = account.AccountId,
+                        Username = account.Username,
+                        Email = account.Email,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    // Publish directly to queue, not through exchange
+                    _publisher.PublishToQueue("account.created", accountCreatedEvent);
+                }
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Log error but don't fail the registration for expected publishing issues
+                _logger?.LogError(ex, "Failed to publish AccountCreatedEvent for account {AccountId} due to an invalid operation. Registration succeeded but event was not published.", account.AccountId);
+                // Event publishing failed - registration still succeeds
+            }
+            catch (TimeoutException ex)
+            {
+                // Log timeout but don't fail the registration
+                _logger?.LogError(ex, "Timed out while publishing AccountCreatedEvent for account {AccountId}. Registration succeeded but event may not have been processed.", account.AccountId);
+            }
+            catch (IOException ex)
+            {
+                // Log I/O error but don't fail the registration
+                _logger?.LogError(ex, "Failed to publish AccountCreatedEvent for account {AccountId} due to a network error. Registration succeeded but event was not published.", account.AccountId);
+            }
+            catch (Exception ex)
+            {
+                // Log unexpected errors and rethrow to avoid silently swallowing programming or critical errors
+                _logger?.LogError(ex, "Unexpected error while publishing AccountCreatedEvent for account {AccountId}.", account.AccountId);
+                throw;
+            }
 
             return (true, account.AccountId, null);
         }

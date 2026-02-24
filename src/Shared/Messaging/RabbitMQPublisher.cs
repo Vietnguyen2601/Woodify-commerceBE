@@ -21,7 +21,10 @@ public class RabbitMQPublisher : IDisposable
             Port = settings.Port,
             UserName = settings.Username,
             Password = settings.Password,
-            VirtualHost = settings.VirtualHost
+            VirtualHost = settings.VirtualHost,
+            RequestedConnectionTimeout = TimeSpan.FromSeconds(10),
+            NetworkRecoveryInterval = TimeSpan.FromSeconds(10),
+            AutomaticRecoveryEnabled = true
         };
 
         _connection = factory.CreateConnection();

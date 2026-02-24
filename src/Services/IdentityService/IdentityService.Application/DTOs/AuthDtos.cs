@@ -32,7 +32,9 @@ public record RegisterRequest(
     string ConfirmPassword,
 
     [Required(ErrorMessage = "Tên người dùng là bắt buộc")]
-    string Username
+    string Username,
+
+    string? Address = null
 );
 
 public record LoginRequest(

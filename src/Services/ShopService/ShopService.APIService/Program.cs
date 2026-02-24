@@ -47,11 +47,10 @@ try
 {
     var publisher = new RabbitMQPublisher(rabbitMQSettings);
     builder.Services.AddSingleton(publisher);
-    Console.WriteLine("RabbitMQ Publisher connected successfully");
 }
 catch (Exception ex)
 {
-    Console.WriteLine($"RabbitMQ not available: {ex.Message}. Running without messaging.");
+    // RabbitMQ not available - continue without messaging
 }
 
 builder.Services.AddShopServices(builder.Configuration);
@@ -73,15 +72,13 @@ using (var scope = app.Services.CreateScope())
     try
     {
         dbContext.Database.Migrate();
-        Console.WriteLine("Database migration applied successfully");
         
         // Seed initial data
         await ShopDbSeeder.SeedAsync(dbContext);
-        Console.WriteLine("Database seeding completed successfully");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Database migration/seeding failed: {ex.Message}");
+        // Log error but continue startup
     }
 }
 
