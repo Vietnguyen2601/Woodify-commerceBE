@@ -8,19 +8,28 @@ public class OrderItem
 {
     public Guid OrderItemId { get; set; } = Guid.NewGuid();
     public Guid OrderId { get; set; }
+    public Guid VersionId { get; set; }
     
-    public Guid? ProductId { get; set; }
-    public Guid? ProductVersionId { get; set; }
-    public string? SkuCode { get; set; }
-    public string Title { get; set; } = string.Empty;
+    public string ProductName { get; set; } = string.Empty;
+    public string? VariantName { get; set; }
+    public string SellerSku { get; set; } = string.Empty;
     
     public long UnitPriceCents { get; set; }
-    public int Qty { get; set; } = 1;
+    public int Quantity { get; set; } = 1;
+    
+    public long DiscountCents { get; set; } = 0;
     public long TaxCents { get; set; } = 0;
+    
+    public Guid? ShipmentId { get; set; }
+    
     public long LineTotalCents { get; set; }
     
-    public FulfillmentStatus FulfillmentStatus { get; set; } = FulfillmentStatus.UNFULFILLED;
-    public int ReturnedQty { get; set; } = 0;
+    public FulfillmentStatus Status { get; set; } = FulfillmentStatus.UNFULFILLED;
+    
+    public int ReturnedQuantity { get; set; } = 0;
+    public long RefundedAmountCents { get; set; } = 0;
+    
+    public string? ShippingInfo { get; set; }
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     
@@ -32,6 +41,9 @@ public enum FulfillmentStatus
 {
     UNFULFILLED,
     PICKED,
+    PACKED,
     SHIPPED,
-    RETURNED
+    DELIVERED,
+    RETURNED,
+    CANCELLED
 }

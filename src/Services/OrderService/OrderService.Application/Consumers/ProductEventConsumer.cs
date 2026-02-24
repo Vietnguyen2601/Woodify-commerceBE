@@ -86,12 +86,55 @@ public class ProductEventConsumer
                 {
                     VersionId = evt.VersionId,
                     ProductId = evt.ProductId,
-                    Title = evt.Title,
-                    Description = evt.Description,
+                    ShopId = evt.ShopId,
+                    
+                    // Product Master Info
+                    ProductName = evt.ProductName,
+                    ProductDescription = evt.ProductDescription,
+                    ProductStatus = evt.ProductStatus,
+                    
+                    // Version Info
+                    SellerSku = evt.SellerSku,
+                    VersionNumber = evt.VersionNumber,
+                    VersionName = evt.VersionName,
+                    
+                    // Pricing
                     PriceCents = evt.PriceCents,
+                    BasePriceCents = evt.BasePriceCents,
                     Currency = evt.Currency,
-                    Sku = evt.Sku,
-                    ProductStatus = evt.ProductStatus, // Use actual status from event
+                    
+                    // Stock
+                    StockQuantity = evt.StockQuantity,
+                    LowStockThreshold = evt.LowStockThreshold,
+                    AllowBackorder = evt.AllowBackorder,
+                    
+                    // Shipping Dimensions
+                    WeightGrams = evt.WeightGrams,
+                    LengthCm = evt.LengthCm,
+                    WidthCm = evt.WidthCm,
+                    HeightCm = evt.HeightCm,
+                    VolumeCm3 = evt.VolumeCm3,
+                    
+                    // Shipping Properties
+                    BulkyType = evt.BulkyType,
+                    IsFragile = evt.IsFragile,
+                    RequiresSpecialHandling = evt.RequiresSpecialHandling,
+                    
+                    // Warranty
+                    WarrantyMonths = evt.WarrantyMonths,
+                    WarrantyTerms = evt.WarrantyTerms,
+                    
+                    // Bundle
+                    IsBundle = evt.IsBundle,
+                    BundleDiscountCents = evt.BundleDiscountCents,
+                    
+                    // Images
+                    PrimaryImageUrl = evt.PrimaryImageUrl,
+                    
+                    // Status
+                    IsActive = evt.IsActive,
+                    IsDefault = evt.IsDefault,
+                    
                     LastUpdated = evt.UpdatedAt
                 };
 
@@ -132,7 +175,7 @@ public class ProductEventConsumer
             using var scope = _scopeFactory.CreateScope();
             var cacheRepository = scope.ServiceProvider.GetRequiredService<IProductVersionCacheRepository>();
 
-            var existing = await cacheRepository.GetByIdAsync(evt.VersionId);
+            var existing = await cacheRepository.GetByVersionIdAsync(evt.VersionId);
             if (existing != null)
             {
                 // Soft delete in cache
@@ -163,7 +206,7 @@ public class ProductEventConsumer
             using var scope = _scopeFactory.CreateScope();
             var cacheRepository = scope.ServiceProvider.GetRequiredService<IProductVersionCacheRepository>();
 
-            var existing = await cacheRepository.GetByIdAsync(evt.VersionId);
+            var existing = await cacheRepository.GetByVersionIdAsync(evt.VersionId);
             if (existing != null)
             {
                 // Restore in cache

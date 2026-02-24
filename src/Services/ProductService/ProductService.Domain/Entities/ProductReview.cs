@@ -8,16 +8,25 @@ public class ProductReview
 {
     public Guid ReviewId { get; set; } = Guid.NewGuid();
     public Guid ProductId { get; set; }
+    public Guid? VersionId { get; set; }
     public Guid OrderId { get; set; }
     public Guid AccountId { get; set; }
-    public int Rating { get; set; }
-    public string? Title { get; set; }
+
+    public int Rating { get; set; } // 1-5
     public string? Content { get; set; }
-    public bool IsVerified { get; set; } = false;
-    public int HelpfulCount { get; set; } = 0;
+
+    public bool IsVisible { get; set; } = true;  // false = bị ẩn khỏi public
+    public Guid? HiddenBy { get; set; }          // admin/seller
+    public DateTime? HiddenAt { get; set; }
+
+    // Shop reply
+    public string? ShopResponse { get; set; }
+    public DateTime? ShopResponseAt { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 
-    // Navigation property
+    // Navigation properties
     public virtual ProductMaster? Product { get; set; }
+    public virtual ProductVersion? Version { get; set; }
 }

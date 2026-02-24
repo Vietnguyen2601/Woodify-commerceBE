@@ -59,9 +59,17 @@ public class ProductReviewService : IProductReviewService
         return ServiceResult<IEnumerable<ProductReviewDto>>.Success(reviewDtos);
     }
 
-    public async Task<ServiceResult<IEnumerable<ProductReviewDto>>> GetVerifiedReviewsAsync(Guid productId)
+    public async Task<ServiceResult<IEnumerable<ProductReviewDto>>> GetVisibleReviewsAsync(Guid productId)
     {
-        var reviews = await _productReviewRepository.GetVerifiedReviewsAsync(productId);
+        var reviews = await _productReviewRepository.GetVisibleReviewsAsync(productId);
+        var reviewDtos = reviews.Select(r => r.ToDto());
+        
+        return ServiceResult<IEnumerable<ProductReviewDto>>.Success(reviewDtos);
+    }
+
+    public async Task<ServiceResult<IEnumerable<ProductReviewDto>>> GetByVersionIdAsync(Guid versionId)
+    {
+        var reviews = await _productReviewRepository.GetByVersionIdAsync(versionId);
         var reviewDtos = reviews.Select(r => r.ToDto());
         
         return ServiceResult<IEnumerable<ProductReviewDto>>.Success(reviewDtos);
@@ -129,7 +137,7 @@ public class ProductReviewService : IProductReviewService
         }
     }
 
-    public async Task<ServiceResult<ProductReviewDto>> IncrementHelpfulCountAsync(Guid id)
+    public async Task<ServiceResult<ProductReviewDto>> HideReviewAsync(Guid id, Guid hiddenBy)
     {
         try
         {
@@ -137,16 +145,66 @@ public class ProductReviewService : IProductReviewService
             if (review == null)
                 return ServiceResult<ProductReviewDto>.NotFound("Review not found");
 
-            review.HelpfulCount++;
+            review.IsVisible = false;
+            review.HiddenBy = hiddenBy;
+            review.HiddenAt = DateTime.UtcNow;
             review.UpdatedAt = DateTime.UtcNow;
+            
             await _productReviewRepository.UpdateAsync(review);
             
             var updatedReview = await _productReviewRepository.GetByIdAsync(id);
-            return ServiceResult<ProductReviewDto>.Success(updatedReview!.ToDto(), "Helpful count incremented");
+            return ServiceResult<ProductReviewDto>.Success(updatedReview!.ToDto(), "Review hidden successfully");
         }
         catch (Exception ex)
         {
-            return ServiceResult<ProductReviewDto>.InternalServerError($"Error incrementing helpful count: {ex.Message}");
+            return ServiceResult<ProductReviewDto>.InternalServerError($"Error hiding review: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<ProductReviewDto>> UnhideReviewAsync(Guid id)
+    {
+        try
+        {
+            var review = await _productReviewRepository.GetByIdAsync(id);
+            if (review == null)
+                return ServiceResult<ProductReviewDto>.NotFound("Review not found");
+
+            review.IsVisible = true;
+            review.HiddenBy = null;
+            review.HiddenAt = null;
+            review.UpdatedAt = DateTime.UtcNow;
+            
+            await _productReviewRepository.UpdateAsync(review);
+            
+            var updatedReview = await _productReviewRepository.GetByIdAsync(id);
+            return ServiceResult<ProductReviewDto>.Success(updatedReview!.ToDto(), "Review unhidden successfully");
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<ProductReviewDto>.InternalServerError($"Error unhiding review: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<ProductReviewDto>> AddShopResponseAsync(Guid id, ShopResponseDto dto)
+    {
+        try
+        {
+            var review = await _productReviewRepository.GetByIdAsync(id);
+            if (review == null)
+                return ServiceResult<ProductReviewDto>.NotFound("Review not found");
+
+            review.ShopResponse = dto.ShopResponse;
+            review.ShopResponseAt = DateTime.UtcNow;
+            review.UpdatedAt = DateTime.UtcNow;
+            
+            await _productReviewRepository.UpdateAsync(review);
+            
+            var updatedReview = await _productReviewRepository.GetByIdAsync(id);
+            return ServiceResult<ProductReviewDto>.Success(updatedReview!.ToDto(), "Shop response added successfully");
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<ProductReviewDto>.InternalServerError($"Error adding shop response: {ex.Message}");
         }
     }
 }

@@ -8,6 +8,6 @@ namespace OrderService.Infrastructure.Repositories.IRepositories;
 /// </summary>
 public interface ICartItemRepository : IGenericRepository<CartItem>
 {
-    Task<CartItem?> GetByCartIdAndProductVersionIdAsync(Guid cartId, Guid productVersionId);
+    Task<CartItem?> GetByCartIdAndVersionIdAsync(Guid cartId, Guid versionId);
     Task<List<CartItem>> GetItemsByCartIdAsync(Guid cartId);
 }

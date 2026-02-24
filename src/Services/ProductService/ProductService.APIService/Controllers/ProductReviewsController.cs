@@ -55,10 +55,17 @@ public class ProductReviewsController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("GetVerifiedReviews/{productId:guid}")]
-    public async Task<ActionResult<ServiceResult<IEnumerable<ProductReviewDto>>>> GetVerifiedReviews(Guid productId)
+    [HttpGet("GetVisibleReviews/{productId:guid}")]
+    public async Task<ActionResult<ServiceResult<IEnumerable<ProductReviewDto>>>> GetVisibleReviews(Guid productId)
     {
-        var result = await _productReviewService.GetVerifiedReviewsAsync(productId);
+        var result = await _productReviewService.GetVisibleReviewsAsync(productId);
+        return Ok(result);
+    }
+
+    [HttpGet("GetReviewsByVersionId/{versionId:guid}")]
+    public async Task<ActionResult<ServiceResult<IEnumerable<ProductReviewDto>>>> GetByVersionId(Guid versionId)
+    {
+        var result = await _productReviewService.GetByVersionIdAsync(versionId);
         return Ok(result);
     }
 
@@ -87,10 +94,38 @@ public class ProductReviewsController : ControllerBase
         return Ok(result);
     }
 
-    [HttpPost("IncrementHelpful/{id:guid}")]
-    public async Task<ActionResult<ServiceResult<ProductReviewDto>>> IncrementHelpfulCount(Guid id)
+    [HttpPost("HideReview/{id:guid}")]
+    public async Task<ActionResult<ServiceResult<ProductReviewDto>>> HideReview(Guid id, [FromBody] HideProductReviewDto dto)
     {
-        var result = await _productReviewService.IncrementHelpfulCountAsync(id);
+        var result = await _productReviewService.HideReviewAsync(id, dto.HiddenBy);
+        
+        if (result.Status == 404)
+            return NotFound(result);
+        
+        if (result.Status != 200)
+            return BadRequest(result);
+        
+        return Ok(result);
+    }
+
+    [HttpPost("UnhideReview/{id:guid}")]
+    public async Task<ActionResult<ServiceResult<ProductReviewDto>>> UnhideReview(Guid id)
+    {
+        var result = await _productReviewService.UnhideReviewAsync(id);
+        
+        if (result.Status == 404)
+            return NotFound(result);
+        
+        if (result.Status != 200)
+            return BadRequest(result);
+        
+        return Ok(result);
+    }
+
+    [HttpPost("AddShopResponse/{id:guid}")]
+    public async Task<ActionResult<ServiceResult<ProductReviewDto>>> AddShopResponse(Guid id, [FromBody] ShopResponseDto dto)
+    {
+        var result = await _productReviewService.AddShopResponseAsync(id, dto);
         
         if (result.Status == 404)
             return NotFound(result);

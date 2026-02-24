@@ -36,9 +36,9 @@ public class ProductVersionService : IProductVersionService
         return ServiceResult<ProductVersionDto>.Success(version.ToDto());
     }
 
-    public async Task<ServiceResult<ProductVersionDto>> GetBySkuAsync(string sku)
+    public async Task<ServiceResult<ProductVersionDto>> GetBySellerSkuAsync(string sellerSku)
     {
-        var version = await _productVersionRepository.GetBySkuAsync(sku);
+        var version = await _productVersionRepository.GetBySellerSkuAsync(sellerSku);
         if (version == null)
             return ServiceResult<ProductVersionDto>.NotFound("Product version not found");
         
@@ -70,9 +70,18 @@ public class ProductVersionService : IProductVersionService
         return ServiceResult<ProductVersionDto>.Success(version.ToDto());
     }
 
-    public async Task<ServiceResult<IEnumerable<ProductVersionDto>>> GetDeletedVersionsAsync()
+    public async Task<ServiceResult<ProductVersionDto>> GetDefaultVersionByProductIdAsync(Guid productId)
     {
-        var versions = await _productVersionRepository.GetDeletedVersionsAsync();
+        var version = await _productVersionRepository.GetDefaultVersionByProductIdAsync(productId);
+        if (version == null)
+            return ServiceResult<ProductVersionDto>.NotFound("No default version found for this product");
+        
+        return ServiceResult<ProductVersionDto>.Success(version.ToDto());
+    }
+
+    public async Task<ServiceResult<IEnumerable<ProductVersionDto>>> GetInactiveVersionsAsync()
+    {
+        var versions = await _productVersionRepository.GetInactiveVersionsAsync();
         var versionDtos = versions.Select(v => v.ToDto());
         
         return ServiceResult<IEnumerable<ProductVersionDto>>.Success(versionDtos);
@@ -99,25 +108,20 @@ public class ProductVersionService : IProductVersionService
             if (product.Status == Domain.Entities.ProductStatus.ARCHIVED)
                 return ServiceResult<ProductVersionDto>.BadRequest("Cannot create new version for archived product");
 
+            // Check if SellerSku already exists
+            var existingSku = await _productVersionRepository.GetBySellerSkuAsync(dto.SellerSku);
+            if (existingSku != null)
+                return ServiceResult<ProductVersionDto>.BadRequest($"SellerSku '{dto.SellerSku}' already exists");
+
+            // Calculate volume if not provided
+            if (!dto.VolumeCm3.HasValue)
+            {
+                dto.VolumeCm3 = (long)(dto.LengthCm * dto.WidthCm * dto.HeightCm);
+            }
+
             // Create version
             var version = dto.ToModel();
             await _productVersionRepository.CreateAsync(version);
-
-            // Publish event to notify other services
-            var productMaster = await _productMasterRepository.GetByIdAsync(dto.ProductId);
-            _eventPublisher.PublishProductVersionUpdated(new ProductVersionUpdatedEvent
-            {
-                VersionId = version.VersionId,
-                ProductId = version.ProductId,
-                Title = version.Title,
-                Description = version.Description,
-                PriceCents = version.PriceCents,
-                Currency = version.Currency,
-                Sku = version.Sku,
-                ProductStatus = productMaster!.Status.ToString(), // Include actual product status
-                UpdatedAt = DateTime.UtcNow,
-                EventType = "Created"
-            });
 
             // Check if this is the first version (GlobalSku is empty or null)
             bool isFirstVersion = string.IsNullOrEmpty(product.GlobalSku);
@@ -156,6 +160,43 @@ public class ProductVersionService : IProductVersionService
             }
             
             await _productMasterRepository.UpdateAsync(productToUpdate);
+
+            // Publish event to OrderService
+            _eventPublisher.PublishProductVersionUpdated(new ProductVersionUpdatedEvent
+            {
+                VersionId = version.VersionId,
+                ProductId = version.ProductId,
+                ShopId = product.ShopId,
+                ProductName = product.Name,
+                ProductDescription = product.Description,
+                ProductStatus = product.Status.ToString(),
+                SellerSku = version.SellerSku,
+                VersionNumber = version.VersionNumber,
+                VersionName = version.VersionName,
+                PriceCents = version.PriceCents,
+                BasePriceCents = version.BasePriceCents,
+                Currency = "VND",
+                StockQuantity = version.StockQuantity,
+                LowStockThreshold = version.LowStockThreshold,
+                AllowBackorder = version.AllowBackorder,
+                WeightGrams = version.WeightGrams,
+                LengthCm = version.LengthCm,
+                WidthCm = version.WidthCm,
+                HeightCm = version.HeightCm,
+                VolumeCm3 = version.VolumeCm3,
+                BulkyType = version.BulkyType,
+                IsFragile = version.IsFragile,
+                RequiresSpecialHandling = version.RequiresSpecialHandling,
+                WarrantyMonths = version.WarrantyMonths,
+                WarrantyTerms = version.WarrantyTerms,
+                IsBundle = version.IsBundle,
+                BundleDiscountCents = version.BundleDiscountCents,
+                PrimaryImageUrl = version.PrimaryImageUrl,
+                IsActive = version.IsActive,
+                IsDefault = version.IsDefault,
+                UpdatedAt = DateTime.UtcNow,
+                EventType = "Created"
+            });
 
             return ServiceResult<ProductVersionDto>.Created(version.ToDto(), "Product version created successfully");
         }
@@ -204,7 +245,6 @@ public class ProductVersionService : IProductVersionService
         // Rút gọn ProductId (lấy 4 ký tự đầu)
         string productCode = productId.ToString("N").Substring(0, 4).ToUpper();
 
-
         // Tạo Global SKU
         return $"{prefix}-{categoryCode}-{productCode}";
     }
@@ -217,28 +257,68 @@ public class ProductVersionService : IProductVersionService
             if (version == null)
                 return ServiceResult<ProductVersionDto>.NotFound("Product version not found");
 
+            // Check if SellerSku is being changed and if it already exists
+            if (dto.SellerSku != null && dto.SellerSku != version.SellerSku)
+            {
+                var existingSku = await _productVersionRepository.GetBySellerSkuAsync(dto.SellerSku);
+                if (existingSku != null && existingSku.VersionId != id)
+                    return ServiceResult<ProductVersionDto>.BadRequest($"SellerSku '{dto.SellerSku}' already exists");
+            }
+
             dto.MapToUpdate(version);
+
+            // Recalculate volume if dimensions changed
+            if (dto.LengthCm.HasValue || dto.WidthCm.HasValue || dto.HeightCm.HasValue)
+            {
+                version.VolumeCm3 = (long)(version.LengthCm * version.WidthCm * version.HeightCm);
+            }
+
             await _productVersionRepository.UpdateAsync(version);
             
-            // Get product master to include status in event
-            var productMaster = await _productMasterRepository.GetByIdAsync(version.ProductId);
-            
-            // Publish event to notify other services
-            _eventPublisher.PublishProductVersionUpdated(new ProductVersionUpdatedEvent
-            {
-                VersionId = version.VersionId,
-                ProductId = version.ProductId,
-                Title = version.Title,
-                Description = version.Description,
-                PriceCents = version.PriceCents,
-                Currency = version.Currency,
-                Sku = version.Sku,
-                ProductStatus = productMaster!.Status.ToString(), // Include actual product status
-                UpdatedAt = DateTime.UtcNow,
-                EventType = "Updated"
-            });
-            
             var updatedVersion = await _productVersionRepository.GetByIdAsync(id);
+            
+            // Get product info for event
+            var product = await _productMasterRepository.GetByIdAsync(version.ProductId);
+            if (product != null)
+            {
+                // Publish event to OrderService
+                _eventPublisher.PublishProductVersionUpdated(new ProductVersionUpdatedEvent
+                {
+                    VersionId = updatedVersion!.VersionId,
+                    ProductId = updatedVersion.ProductId,
+                    ShopId = product.ShopId,
+                    ProductName = product.Name,
+                    ProductDescription = product.Description,
+                    ProductStatus = product.Status.ToString(),
+                    SellerSku = updatedVersion.SellerSku,
+                    VersionNumber = updatedVersion.VersionNumber,
+                    VersionName = updatedVersion.VersionName,
+                    PriceCents = updatedVersion.PriceCents,
+                    BasePriceCents = updatedVersion.BasePriceCents,
+                    Currency = "VND",
+                    StockQuantity = updatedVersion.StockQuantity,
+                    LowStockThreshold = updatedVersion.LowStockThreshold,
+                    AllowBackorder = updatedVersion.AllowBackorder,
+                    WeightGrams = updatedVersion.WeightGrams,
+                    LengthCm = updatedVersion.LengthCm,
+                    WidthCm = updatedVersion.WidthCm,
+                    HeightCm = updatedVersion.HeightCm,
+                    VolumeCm3 = updatedVersion.VolumeCm3,
+                    BulkyType = updatedVersion.BulkyType,
+                    IsFragile = updatedVersion.IsFragile,
+                    RequiresSpecialHandling = updatedVersion.RequiresSpecialHandling,
+                    WarrantyMonths = updatedVersion.WarrantyMonths,
+                    WarrantyTerms = updatedVersion.WarrantyTerms,
+                    IsBundle = updatedVersion.IsBundle,
+                    BundleDiscountCents = updatedVersion.BundleDiscountCents,
+                    PrimaryImageUrl = updatedVersion.PrimaryImageUrl,
+                    IsActive = updatedVersion.IsActive,
+                    IsDefault = updatedVersion.IsDefault,
+                    UpdatedAt = updatedVersion.UpdatedAt ?? DateTime.UtcNow,
+                    EventType = "Updated"
+                });
+            }
+            
             return ServiceResult<ProductVersionDto>.Success(updatedVersion!.ToDto(), "Product version updated successfully");
         }
         catch (Exception ex)
@@ -247,7 +327,7 @@ public class ProductVersionService : IProductVersionService
         }
     }
 
-    public async Task<ServiceResult> DeleteAsync(Guid id)
+    public async Task<ServiceResult> DeactivateAsync(Guid id)
     {
         try
         {
@@ -255,33 +335,66 @@ public class ProductVersionService : IProductVersionService
             if (version == null)
                 return ServiceResult.NotFound("Product version not found");
             
-            if (version.IsDeleted)
-                return ServiceResult.BadRequest("Product version already deleted");
+            if (!version.IsActive)
+                return ServiceResult.BadRequest("Product version is already inactive");
             
-            // Soft delete
-            version.IsDeleted = true;
-            version.DeletedAt = DateTime.UtcNow;
+            // Deactivate
+            version.IsActive = false;
             version.UpdatedAt = DateTime.UtcNow;
             
             await _productVersionRepository.UpdateAsync(version);
             
-            // Publish ProductVersionDeleted event
-            _eventPublisher.PublishProductVersionDeleted(new ProductVersionDeletedEvent
+            // Get product info for event
+            var product = await _productMasterRepository.GetByIdAsync(version.ProductId);
+            if (product != null)
             {
-                VersionId = version.VersionId,
-                ProductId = version.ProductId,
-                DeletedAt = version.DeletedAt.Value
-            });
+                // Publish event to OrderService
+                _eventPublisher.PublishProductVersionUpdated(new ProductVersionUpdatedEvent
+                {
+                    VersionId = version.VersionId,
+                    ProductId = version.ProductId,
+                    ShopId = product.ShopId,
+                    ProductName = product.Name,
+                    ProductDescription = product.Description,
+                    ProductStatus = product.Status.ToString(),
+                    SellerSku = version.SellerSku,
+                    VersionNumber = version.VersionNumber,
+                    VersionName = version.VersionName,
+                    PriceCents = version.PriceCents,
+                    BasePriceCents = version.BasePriceCents,
+                    Currency = "VND",
+                    StockQuantity = version.StockQuantity,
+                    LowStockThreshold = version.LowStockThreshold,
+                    AllowBackorder = version.AllowBackorder,
+                    WeightGrams = version.WeightGrams,
+                    LengthCm = version.LengthCm,
+                    WidthCm = version.WidthCm,
+                    HeightCm = version.HeightCm,
+                    VolumeCm3 = version.VolumeCm3,
+                    BulkyType = version.BulkyType,
+                    IsFragile = version.IsFragile,
+                    RequiresSpecialHandling = version.RequiresSpecialHandling,
+                    WarrantyMonths = version.WarrantyMonths,
+                    WarrantyTerms = version.WarrantyTerms,
+                    IsBundle = version.IsBundle,
+                    BundleDiscountCents = version.BundleDiscountCents,
+                    PrimaryImageUrl = version.PrimaryImageUrl,
+                    IsActive = version.IsActive,
+                    IsDefault = version.IsDefault,
+                    UpdatedAt = version.UpdatedAt.Value,
+                    EventType = "Updated"
+                });
+            }
             
-            return ServiceResult.Success("Product version deleted successfully");
+            return ServiceResult.Success("Product version deactivated successfully");
         }
         catch (Exception ex)
         {
-            return ServiceResult.InternalServerError($"Error deleting product version: {ex.Message}");
+            return ServiceResult.InternalServerError($"Error deactivating product version: {ex.Message}");
         }
     }
 
-    public async Task<ServiceResult> RestoreAsync(Guid id)
+    public async Task<ServiceResult> ActivateAsync(Guid id)
     {
         try
         {
@@ -289,29 +402,136 @@ public class ProductVersionService : IProductVersionService
             if (version == null)
                 return ServiceResult.NotFound("Product version not found");
             
-            if (!version.IsDeleted)
-                return ServiceResult.BadRequest("Product version is not deleted");
+            if (version.IsActive)
+                return ServiceResult.BadRequest("Product version is already active");
             
-            // Restore from soft delete
-            version.IsDeleted = false;
-            version.DeletedAt = null;
+            // Activate
+            version.IsActive = true;
             version.UpdatedAt = DateTime.UtcNow;
             
             await _productVersionRepository.UpdateAsync(version);
             
-            // Publish ProductVersionRestored event
-            _eventPublisher.PublishProductVersionRestored(new ProductVersionRestoredEvent
+            // Get product info for event
+            var product = await _productMasterRepository.GetByIdAsync(version.ProductId);
+            if (product != null)
             {
-                VersionId = version.VersionId,
-                ProductId = version.ProductId,
-                RestoredAt = DateTime.UtcNow
-            });
+                // Publish event to OrderService
+                _eventPublisher.PublishProductVersionUpdated(new ProductVersionUpdatedEvent
+                {
+                    VersionId = version.VersionId,
+                    ProductId = version.ProductId,
+                    ShopId = product.ShopId,
+                    ProductName = product.Name,
+                    ProductDescription = product.Description,
+                    ProductStatus = product.Status.ToString(),
+                    SellerSku = version.SellerSku,
+                    VersionNumber = version.VersionNumber,
+                    VersionName = version.VersionName,
+                    PriceCents = version.PriceCents,
+                    BasePriceCents = version.BasePriceCents,
+                    Currency = "VND",
+                    StockQuantity = version.StockQuantity,
+                    LowStockThreshold = version.LowStockThreshold,
+                    AllowBackorder = version.AllowBackorder,
+                    WeightGrams = version.WeightGrams,
+                    LengthCm = version.LengthCm,
+                    WidthCm = version.WidthCm,
+                    HeightCm = version.HeightCm,
+                    VolumeCm3 = version.VolumeCm3,
+                    BulkyType = version.BulkyType,
+                    IsFragile = version.IsFragile,
+                    RequiresSpecialHandling = version.RequiresSpecialHandling,
+                    WarrantyMonths = version.WarrantyMonths,
+                    WarrantyTerms = version.WarrantyTerms,
+                    IsBundle = version.IsBundle,
+                    BundleDiscountCents = version.BundleDiscountCents,
+                    PrimaryImageUrl = version.PrimaryImageUrl,
+                    IsActive = version.IsActive,
+                    IsDefault = version.IsDefault,
+                    UpdatedAt = version.UpdatedAt.Value,
+                    EventType = "Updated"
+                });
+            }
             
-            return ServiceResult.Success("Product version restored successfully");
+            return ServiceResult.Success("Product version activated successfully");
         }
         catch (Exception ex)
         {
-            return ServiceResult.InternalServerError($"Error restoring product version: {ex.Message}");
+            return ServiceResult.InternalServerError($"Error activating product version: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult> SetAsDefaultAsync(Guid id)
+    {
+        try
+        {
+            var version = await _productVersionRepository.GetByIdAsync(id);
+            if (version == null)
+                return ServiceResult.NotFound("Product version not found");
+
+            // Get all versions of the product
+            var allVersions = await _productVersionRepository.GetByProductIdAsync(version.ProductId);
+
+            // Remove default flag from all versions
+            foreach (var v in allVersions)
+            {
+                v.IsDefault = false;
+                v.UpdatedAt = DateTime.UtcNow;
+                await _productVersionRepository.UpdateAsync(v);
+            }
+
+            // Set current version as default
+            version.IsDefault = true;
+            version.UpdatedAt = DateTime.UtcNow;
+            await _productVersionRepository.UpdateAsync(version);
+
+            // Get product info for event
+            var product = await _productMasterRepository.GetByIdAsync(version.ProductId);
+            if (product != null)
+            {
+                // Publish event to OrderService for the new default version
+                _eventPublisher.PublishProductVersionUpdated(new ProductVersionUpdatedEvent
+                {
+                    VersionId = version.VersionId,
+                    ProductId = version.ProductId,
+                    ShopId = product.ShopId,
+                    ProductName = product.Name,
+                    ProductDescription = product.Description,
+                    ProductStatus = product.Status.ToString(),
+                    SellerSku = version.SellerSku,
+                    VersionNumber = version.VersionNumber,
+                    VersionName = version.VersionName,
+                    PriceCents = version.PriceCents,
+                    BasePriceCents = version.BasePriceCents,
+                    Currency = "VND",
+                    StockQuantity = version.StockQuantity,
+                    LowStockThreshold = version.LowStockThreshold,
+                    AllowBackorder = version.AllowBackorder,
+                    WeightGrams = version.WeightGrams,
+                    LengthCm = version.LengthCm,
+                    WidthCm = version.WidthCm,
+                    HeightCm = version.HeightCm,
+                    VolumeCm3 = version.VolumeCm3,
+                    BulkyType = version.BulkyType,
+                    IsFragile = version.IsFragile,
+                    RequiresSpecialHandling = version.RequiresSpecialHandling,
+                    WarrantyMonths = version.WarrantyMonths,
+                    WarrantyTerms = version.WarrantyTerms,
+                    IsBundle = version.IsBundle,
+                    BundleDiscountCents = version.BundleDiscountCents,
+                    PrimaryImageUrl = version.PrimaryImageUrl,
+                    IsActive = version.IsActive,
+                    IsDefault = version.IsDefault,
+                    UpdatedAt = version.UpdatedAt.Value,
+                    EventType = "Updated"
+                });
+            }
+
+            return ServiceResult.Success("Product version set as default successfully");
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult.InternalServerError($"Error setting product version as default: {ex.Message}");
         }
     }
 }

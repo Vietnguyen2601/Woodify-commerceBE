@@ -8,12 +8,15 @@ public class CartItem
 {
     public Guid CartItemId { get; set; } = Guid.NewGuid();
     public Guid CartId { get; set; }
-    public Guid ProductVersionId { get; set; }
-    public string SkuCode { get; set; } = string.Empty;
-    public string Title { get; set; } = string.Empty;
+    public Guid VersionId { get; set; }
+    public Guid ShopId { get; set; }
+    public int Quantity { get; set; } = 1;
     public long UnitPriceCents { get; set; }
-    public int Qty { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public long? CompareAtPriceCents { get; set; }
+    public bool? IsSelected { get; set; }
+    public string? CustomizationNote { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTime AddedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 
     // Navigation property

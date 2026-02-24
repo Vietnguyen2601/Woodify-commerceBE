@@ -27,13 +27,57 @@ public class ProductVersionCacheRepository : GenericRepository<ProductVersionCac
         var existing = await GetByVersionIdAsync(cache.VersionId);
         if (existing != null)
         {
+            // Update all fields
             existing.ProductId = cache.ProductId;
-            existing.Title = cache.Title;
-            existing.Description = cache.Description;
-            existing.PriceCents = cache.PriceCents;
-            existing.Currency = cache.Currency;
-            existing.Sku = cache.Sku;
+            existing.ShopId = cache.ShopId;
+            
+            // Product Master Info
+            existing.ProductName = cache.ProductName;
+            existing.ProductDescription = cache.ProductDescription;
             existing.ProductStatus = cache.ProductStatus;
+            
+            // Version Info
+            existing.SellerSku = cache.SellerSku;
+            existing.VersionNumber = cache.VersionNumber;
+            existing.VersionName = cache.VersionName;
+            
+            // Pricing
+            existing.PriceCents = cache.PriceCents;
+            existing.BasePriceCents = cache.BasePriceCents;
+            existing.Currency = cache.Currency;
+            
+            // Stock
+            existing.StockQuantity = cache.StockQuantity;
+            existing.LowStockThreshold = cache.LowStockThreshold;
+            existing.AllowBackorder = cache.AllowBackorder;
+            
+            // Shipping Dimensions
+            existing.WeightGrams = cache.WeightGrams;
+            existing.LengthCm = cache.LengthCm;
+            existing.WidthCm = cache.WidthCm;
+            existing.HeightCm = cache.HeightCm;
+            existing.VolumeCm3 = cache.VolumeCm3;
+            
+            // Shipping Properties
+            existing.BulkyType = cache.BulkyType;
+            existing.IsFragile = cache.IsFragile;
+            existing.RequiresSpecialHandling = cache.RequiresSpecialHandling;
+            
+            // Warranty
+            existing.WarrantyMonths = cache.WarrantyMonths;
+            existing.WarrantyTerms = cache.WarrantyTerms;
+            
+            // Bundle
+            existing.IsBundle = cache.IsBundle;
+            existing.BundleDiscountCents = cache.BundleDiscountCents;
+            
+            // Images
+            existing.PrimaryImageUrl = cache.PrimaryImageUrl;
+            
+            // Status
+            existing.IsActive = cache.IsActive;
+            existing.IsDefault = cache.IsDefault;
+            
             existing.LastUpdated = DateTime.UtcNow;
             await UpdateAsync(existing);
         }

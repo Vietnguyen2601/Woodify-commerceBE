@@ -9,8 +9,9 @@ namespace ProductService.Infrastructure.Repositories.IRepositories;
 public interface IProductVersionRepository : IGenericRepository<ProductVersion>
 {
     Task<List<ProductVersion>> GetByProductIdAsync(Guid productId);
-    Task<ProductVersion?> GetBySkuAsync(string sku);
+    Task<ProductVersion?> GetBySellerSkuAsync(string sellerSku);
     Task<ProductVersion?> GetLatestVersionByProductIdAsync(Guid productId);
-    Task<List<ProductVersion>> GetDeletedVersionsAsync();
+    Task<List<ProductVersion>> GetInactiveVersionsAsync();
     Task<List<ProductVersion>> GetActiveVersionsAsync();
+    Task<ProductVersion?> GetDefaultVersionByProductIdAsync(Guid productId);
 }

@@ -42,7 +42,7 @@ public class OrderService : IOrderService
             if (!validationResult.IsValid)
             {
                 var errorDetails = validationResult.InvalidItems.Select(item => 
-                    $"{item.Title}: {item.Reason} - {item.Details}").ToList();
+                    $"Version {item.VersionId}: {item.Reason} - {item.Details}").ToList();
                 
                 return ServiceResult<OrderDto>.BadRequest(
                     errorDetails,
@@ -63,73 +63,93 @@ public class OrderService : IOrderService
                 return ServiceResult<OrderDto>.BadRequest("No valid items to create order");
             }
 
-            // 4. Get shop ID from first valid item
-            var firstProductCache = await _productCacheRepository.GetByIdAsync(validItems.First().ProductVersionId);
-            Guid shopId = firstProductCache?.ProductId ?? Guid.Empty;
+            // 4. Get shop ID from first valid item (all items should be from same shop)
+            Guid shopId = validItems.First().ShopId;
+            string shopName = "Shop Name"; // TODO: Get from ShopService
 
-            // 5. Generate unique order code
+            // 5. Parse payment method
+            if (!Enum.TryParse<PaymentMethod>(dto.PaymentMethod, true, out var paymentMethod))
+            {
+                return ServiceResult<OrderDto>.BadRequest("Invalid payment method");
+            }
+
+            // 6. Generate unique order code
             var orderCode = await GenerateUniqueOrderCodeAsync();
 
-            // 6. Calculate totals
-            long subtotalCents = validItems.Sum(item => item.UnitPriceCents * item.Qty);
+            // 7. Calculate totals
+            long subtotalCents = validItems.Sum(item => item.UnitPriceCents * item.Quantity);
             long shippingFeeCents = 0; // TODO: Calculate shipping fee
-            long totalAmountCents = subtotalCents + shippingFeeCents;
+            long discountCents = 0; // TODO: Apply voucher discount
+            long taxCents = 0; // TODO: Calculate tax
+            long totalAmountCents = subtotalCents + shippingFeeCents - discountCents + taxCents;
 
-            // 7. Create Order entity
+            // 8. Create Order entity
             var order = new Order
             {
                 OrderId = Guid.NewGuid(),
                 OrderCode = orderCode,
                 AccountId = dto.AccountId,
+                CustomerName = dto.CustomerName,
+                CustomerPhone = dto.CustomerPhone,
+                CustomerEmail = dto.CustomerEmail,
                 ShopId = shopId,
+                ShopName = shopName,
                 Currency = "VND",
                 SubtotalCents = subtotalCents,
                 ShippingFeeCents = shippingFeeCents,
+                DiscountCents = discountCents,
+                TaxCents = taxCents,
                 TotalAmountCents = totalAmountCents,
+                PaymentMethod = paymentMethod,
+                PaymentStatus = PaymentStatus.PENDING,
                 Status = OrderStatus.PENDING,
+                DeliveryAddressId = dto.DeliveryAddressId,
+                CustomerNote = dto.CustomerNote,
                 PlacedAt = DateTime.UtcNow,
-                CustomerName = dto.CustomerName,
-                CustomerPhone = dto.CustomerPhone,
-                ShippingAddress = dto.ShippingAddress,
                 CreatedAt = DateTime.UtcNow
             };
 
-            // 8. Create Order Items (snapshot from cart items)
+            // 9. Create Order Items (snapshot from cart items)
             foreach (var cartItem in validItems)
             {
-                var productCache = await _productCacheRepository.GetByIdAsync(cartItem.ProductVersionId);
+                var productCache = await _productCacheRepository.GetByVersionIdAsync(cartItem.VersionId);
                 
                 var orderItem = new OrderItem
                 {
                     OrderItemId = Guid.NewGuid(),
                     OrderId = order.OrderId,
-                    ProductId = productCache?.ProductId,
-                    ProductVersionId = cartItem.ProductVersionId,
-                    SkuCode = cartItem.SkuCode,
-                    Title = cartItem.Title,
+                    VersionId = cartItem.VersionId,
+                    ProductName = productCache?.ProductName ?? "Unknown Product",
+                    VariantName = productCache?.VersionName,
+                    SellerSku = productCache?.SellerSku ?? "",
                     UnitPriceCents = cartItem.UnitPriceCents,
-                    Qty = cartItem.Qty,
+                    Quantity = cartItem.Quantity,
+                    DiscountCents = 0,
                     TaxCents = 0,
-                    LineTotalCents = cartItem.UnitPriceCents * cartItem.Qty,
-                    FulfillmentStatus = FulfillmentStatus.UNFULFILLED,
-                    ReturnedQty = 0,
+                    LineTotalCents = cartItem.UnitPriceCents * cartItem.Quantity,
+                    Status = FulfillmentStatus.UNFULFILLED,
+                    ReturnedQuantity = 0,
+                    RefundedAmountCents = 0,
+                    ShippingInfo = productCache != null 
+                        ? $"Weight: {productCache.WeightGrams}g, Dimensions: {productCache.LengthCm}x{productCache.WidthCm}x{productCache.HeightCm}cm, Type: {productCache.BulkyType ?? "NORMAL"}, Fragile: {productCache.IsFragile}"
+                        : null,
                     CreatedAt = DateTime.UtcNow
                 };
 
                 order.OrderItems.Add(orderItem);
             }
 
-            // 9. Save order to database
+            // 10. Save order to database
             await _orderRepository.CreateAsync(order);
 
-            // 10. Clear cart after successful order creation
+            // 11. Clear cart after successful order creation
             var cartItemsToRemove = cart.CartItems.ToList();
             foreach (var cartItem in cartItemsToRemove)
             {
                 await _cartItemRepository.RemoveAsync(cartItem);
             }
 
-            // 11. Map to DTO and return
+            // 12. Map to DTO and return
             var orderDto = MapToOrderDto(order);
             
             return ServiceResult<OrderDto>.Success(orderDto, "Order created successfully");
@@ -203,33 +223,53 @@ public class OrderService : IOrderService
             OrderId = order.OrderId,
             OrderCode = order.OrderCode,
             AccountId = order.AccountId,
+            CustomerName = order.CustomerName,
+            CustomerPhone = order.CustomerPhone,
+            CustomerEmail = order.CustomerEmail,
             ShopId = order.ShopId,
+            ShopName = order.ShopName,
             Currency = order.Currency,
             SubtotalCents = order.SubtotalCents,
             ShippingFeeCents = order.ShippingFeeCents,
+            DiscountCents = order.DiscountCents,
+            TaxCents = order.TaxCents,
             TotalAmountCents = order.TotalAmountCents,
+            VoucherApplied = order.VoucherApplied,
+            PaymentMethod = order.PaymentMethod.ToString(),
+            PaymentStatus = order.PaymentStatus.ToString(),
+            PaymentTransactionId = order.PaymentTransactionId,
             Status = order.Status.ToString(),
+            DeliveryAddressId = order.DeliveryAddressId,
+            CustomerNote = order.CustomerNote,
+            ShopNote = order.ShopNote,
             PlacedAt = order.PlacedAt,
+            ConfirmedAt = order.ConfirmedAt,
+            ShippedAt = order.ShippedAt,
+            DeliveredAt = order.DeliveredAt,
             CompletedAt = order.CompletedAt,
-            CustomerName = order.CustomerName,
-            CustomerPhone = order.CustomerPhone,
-            ShippingAddress = order.ShippingAddress,
+            CancelledAt = order.CancelledAt,
+            CancelReason = order.CancelReason,
+            CancelledBy = order.CancelledBy,
             CreatedAt = order.CreatedAt,
             UpdatedAt = order.UpdatedAt,
             OrderItems = order.OrderItems.Select(oi => new OrderItemDto
             {
                 OrderItemId = oi.OrderItemId,
                 OrderId = oi.OrderId,
-                ProductId = oi.ProductId,
-                ProductVersionId = oi.ProductVersionId,
-                SkuCode = oi.SkuCode,
-                Title = oi.Title,
+                VersionId = oi.VersionId,
+                ProductName = oi.ProductName,
+                VariantName = oi.VariantName,
+                SellerSku = oi.SellerSku,
                 UnitPriceCents = oi.UnitPriceCents,
-                Qty = oi.Qty,
+                Quantity = oi.Quantity,
+                DiscountCents = oi.DiscountCents,
                 TaxCents = oi.TaxCents,
                 LineTotalCents = oi.LineTotalCents,
-                FulfillmentStatus = oi.FulfillmentStatus.ToString(),
-                ReturnedQty = oi.ReturnedQty,
+                ShipmentId = oi.ShipmentId,
+                Status = oi.Status.ToString(),
+                ReturnedQuantity = oi.ReturnedQuantity,
+                RefundedAmountCents = oi.RefundedAmountCents,
+                ShippingInfo = oi.ShippingInfo,
                 CreatedAt = oi.CreatedAt
             }).ToList()
         };
@@ -250,7 +290,7 @@ public class OrderService : IOrderService
 
         foreach (var cartItem in cartItems)
         {
-            var productCache = await _productCacheRepository.GetByIdAsync(cartItem.ProductVersionId);
+            var productCache = await _productCacheRepository.GetByVersionIdAsync(cartItem.VersionId);
             
             // Validate 1: Product version exists in cache
             if (productCache == null)
@@ -258,8 +298,7 @@ public class OrderService : IOrderService
                 result.InvalidItems.Add(new InvalidCartItemDto
                 {
                     CartItemId = cartItem.CartItemId,
-                    ProductVersionId = cartItem.ProductVersionId,
-                    Title = cartItem.Title,
+                    VersionId = cartItem.VersionId,
                     Reason = "Product not found",
                     Details = "Product version no longer exists or has been removed"
                 });
@@ -272,8 +311,7 @@ public class OrderService : IOrderService
                 result.InvalidItems.Add(new InvalidCartItemDto
                 {
                     CartItemId = cartItem.CartItemId,
-                    ProductVersionId = cartItem.ProductVersionId,
-                    Title = cartItem.Title,
+                    VersionId = cartItem.VersionId,
                     Reason = "Product deleted",
                     Details = $"Product version was deleted on {productCache.DeletedAt?.ToString("yyyy-MM-dd HH:mm")}"
                 });
@@ -286,10 +324,35 @@ public class OrderService : IOrderService
                 result.InvalidItems.Add(new InvalidCartItemDto
                 {
                     CartItemId = cartItem.CartItemId,
-                    ProductVersionId = cartItem.ProductVersionId,
-                    Title = cartItem.Title,
+                    VersionId = cartItem.VersionId,
                     Reason = "Product unavailable",
                     Details = $"Product status is {productCache.ProductStatus}. Only PUBLISHED products can be ordered"
+                });
+                continue;
+            }
+            
+            // Validate 2b: Product version is active
+            if (!productCache.IsActive)
+            {
+                result.InvalidItems.Add(new InvalidCartItemDto
+                {
+                    CartItemId = cartItem.CartItemId,
+                    VersionId = cartItem.VersionId,
+                    Reason = "Version inactive",
+                    Details = "This product version is no longer active"
+                });
+                continue;
+            }
+            
+            // Validate 2c: Check stock availability
+            if (productCache.StockQuantity < cartItem.Quantity && !productCache.AllowBackorder)
+            {
+                result.InvalidItems.Add(new InvalidCartItemDto
+                {
+                    CartItemId = cartItem.CartItemId,
+                    VersionId = cartItem.VersionId,
+                    Reason = "Insufficient stock",
+                    Details = $"Available stock: {productCache.StockQuantity}, Requested: {cartItem.Quantity}"
                 });
                 continue;
             }
@@ -300,8 +363,7 @@ public class OrderService : IOrderService
                 result.InvalidItems.Add(new InvalidCartItemDto
                 {
                     CartItemId = cartItem.CartItemId,
-                    ProductVersionId = cartItem.ProductVersionId,
-                    Title = cartItem.Title,
+                    VersionId = cartItem.VersionId,
                     Reason = "Version locked",
                     Details = "This product version has been archived and is no longer available"
                 });
@@ -309,18 +371,17 @@ public class OrderService : IOrderService
             }
 
             // Validate 4: Price comparison (current vs snapshot)
-            if (productCache.PriceCents.HasValue && productCache.PriceCents.Value != cartItem.UnitPriceCents)
+            if (productCache.PriceCents != cartItem.UnitPriceCents)
             {
-                var priceDifference = productCache.PriceCents.Value - cartItem.UnitPriceCents;
+                var priceDifference = productCache.PriceCents - cartItem.UnitPriceCents;
                 var percentageChange = Math.Abs((decimal)priceDifference / cartItem.UnitPriceCents * 100);
                 
                 result.InvalidItems.Add(new InvalidCartItemDto
                 {
                     CartItemId = cartItem.CartItemId,
-                    ProductVersionId = cartItem.ProductVersionId,
-                    Title = cartItem.Title,
+                    VersionId = cartItem.VersionId,
                     Reason = "Price changed",
-                    Details = $"Price changed by {percentageChange:F1}%. Cart price: {cartItem.UnitPriceCents}, Current price: {productCache.PriceCents.Value}"
+                    Details = $"Price changed by {percentageChange:F1}%. Cart price: {cartItem.UnitPriceCents}, Current price: {productCache.PriceCents}"
                 });
                 continue;
             }

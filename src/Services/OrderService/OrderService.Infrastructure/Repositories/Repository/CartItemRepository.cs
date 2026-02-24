@@ -12,10 +12,10 @@ public class CartItemRepository : GenericRepository<CartItem>, ICartItemReposito
     {
     }
 
-    public async Task<CartItem?> GetByCartIdAndProductVersionIdAsync(Guid cartId, Guid productVersionId)
+    public async Task<CartItem?> GetByCartIdAndVersionIdAsync(Guid cartId, Guid versionId)
     {
         return await _dbSet
-            .FirstOrDefaultAsync(ci => ci.CartId == cartId && ci.ProductVersionId == productVersionId);
+            .FirstOrDefaultAsync(ci => ci.CartId == cartId && ci.VersionId == versionId);
     }
 
     public async Task<List<CartItem>> GetItemsByCartIdAsync(Guid cartId)

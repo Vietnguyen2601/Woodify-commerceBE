@@ -9,14 +9,16 @@ namespace ProductService.Application.Interfaces;
 public interface IProductVersionService
 {
     Task<ServiceResult<ProductVersionDto>> GetByIdAsync(Guid id);
-    Task<ServiceResult<ProductVersionDto>> GetBySkuAsync(string sku);
+    Task<ServiceResult<ProductVersionDto>> GetBySellerSkuAsync(string sellerSku);
     Task<ServiceResult<IEnumerable<ProductVersionDto>>> GetAllAsync();
     Task<ServiceResult<IEnumerable<ProductVersionDto>>> GetByProductIdAsync(Guid productId);
     Task<ServiceResult<ProductVersionDto>> GetLatestVersionByProductIdAsync(Guid productId);
-    Task<ServiceResult<IEnumerable<ProductVersionDto>>> GetDeletedVersionsAsync();
+    Task<ServiceResult<ProductVersionDto>> GetDefaultVersionByProductIdAsync(Guid productId);
+    Task<ServiceResult<IEnumerable<ProductVersionDto>>> GetInactiveVersionsAsync();
     Task<ServiceResult<IEnumerable<ProductVersionDto>>> GetActiveVersionsAsync();
     Task<ServiceResult<ProductVersionDto>> CreateAsync(CreateProductVersionDto dto);
     Task<ServiceResult<ProductVersionDto>> UpdateAsync(Guid id, UpdateProductVersionDto dto);
-    Task<ServiceResult> DeleteAsync(Guid id);
-    Task<ServiceResult> RestoreAsync(Guid id);
+    Task<ServiceResult> DeactivateAsync(Guid id);
+    Task<ServiceResult> ActivateAsync(Guid id);
+    Task<ServiceResult> SetAsDefaultAsync(Guid id);
 }

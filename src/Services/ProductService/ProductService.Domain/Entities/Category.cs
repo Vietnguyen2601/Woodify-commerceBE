@@ -10,9 +10,12 @@ public class Category
     public Guid? ParentCategoryId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public string? ImageUrl { get; set; }
+    public int Level { get; set; } = 0;
+    public int DisplayOrder { get; set; } = 0;
+    public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
-    public bool IsActive { get; set; } = true;
 
     // Navigation properties
     public virtual Category? ParentCategory { get; set; }

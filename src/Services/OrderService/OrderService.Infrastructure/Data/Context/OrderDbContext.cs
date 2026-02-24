@@ -90,7 +90,6 @@ public class OrderDbContext : DbContext
             entity.Property(e => e.AccountId).HasColumnName("account_id").IsRequired();
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
-            entity.Property(e => e.ExpiresAt).HasColumnName("expires_at");
 
             // Index for faster lookups
             entity.HasIndex(e => e.AccountId);
@@ -106,12 +105,15 @@ public class OrderDbContext : DbContext
             
             entity.Property(e => e.CartItemId).HasColumnName("cart_item_id");
             entity.Property(e => e.CartId).HasColumnName("cart_id").IsRequired();
-            entity.Property(e => e.ProductVersionId).HasColumnName("product_version_id").IsRequired();
-            entity.Property(e => e.SkuCode).HasColumnName("sku_code").HasMaxLength(255);
-            entity.Property(e => e.Title).HasColumnName("title").HasMaxLength(500);
+            entity.Property(e => e.VersionId).HasColumnName("version_id").IsRequired();
+            entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
+            entity.Property(e => e.Quantity).HasColumnName("quantity").IsRequired().HasDefaultValue(1);
             entity.Property(e => e.UnitPriceCents).HasColumnName("unit_price_cents").IsRequired();
-            entity.Property(e => e.Qty).HasColumnName("qty").IsRequired();
-            entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
+            entity.Property(e => e.CompareAtPriceCents).HasColumnName("compare_at_price_cents");
+            entity.Property(e => e.IsSelected).HasColumnName("is_selected");
+            entity.Property(e => e.CustomizationNote).HasColumnName("customization_note");
+            entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+            entity.Property(e => e.AddedAt).HasColumnName("added_at").IsRequired();
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 
             // Relationship with Cart
@@ -122,7 +124,7 @@ public class OrderDbContext : DbContext
 
             // Indexes for faster lookups
             entity.HasIndex(e => e.CartId);
-            entity.HasIndex(e => e.ProductVersionId);
+            entity.HasIndex(e => e.VersionId);
         });
 
         // ========================================
@@ -135,19 +137,67 @@ public class OrderDbContext : DbContext
             
             entity.Property(e => e.VersionId).HasColumnName("version_id");
             entity.Property(e => e.ProductId).HasColumnName("product_id").IsRequired();
-            entity.Property(e => e.Title).HasColumnName("title").HasMaxLength(500).IsRequired();
-            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(2000);
-            entity.Property(e => e.PriceCents).HasColumnName("price_cents");
-            entity.Property(e => e.Currency).HasColumnName("currency").HasMaxLength(10);
-            entity.Property(e => e.Sku).HasColumnName("sku").HasMaxLength(255);
+            entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
+            
+            // Product Master Info
+            entity.Property(e => e.ProductName).HasColumnName("product_name").HasMaxLength(500).IsRequired();
+            entity.Property(e => e.ProductDescription).HasColumnName("product_description").HasMaxLength(2000);
             entity.Property(e => e.ProductStatus).HasColumnName("product_status").HasMaxLength(50);
+            
+            // Version Info
+            entity.Property(e => e.SellerSku).HasColumnName("seller_sku").HasMaxLength(255).IsRequired();
+            entity.Property(e => e.VersionNumber).HasColumnName("version_number").IsRequired();
+            entity.Property(e => e.VersionName).HasColumnName("version_name").HasMaxLength(255);
+            
+            // Pricing
+            entity.Property(e => e.PriceCents).HasColumnName("price_cents").IsRequired();
+            entity.Property(e => e.BasePriceCents).HasColumnName("base_price_cents");
+            entity.Property(e => e.Currency).HasColumnName("currency").HasMaxLength(10);
+            
+            // Stock
+            entity.Property(e => e.StockQuantity).HasColumnName("stock_quantity").HasDefaultValue(0);
+            entity.Property(e => e.LowStockThreshold).HasColumnName("low_stock_threshold").HasDefaultValue(5);
+            entity.Property(e => e.AllowBackorder).HasColumnName("allow_backorder").HasDefaultValue(false);
+            
+            // Shipping Dimensions
+            entity.Property(e => e.WeightGrams).HasColumnName("weight_grams");
+            entity.Property(e => e.LengthCm).HasColumnName("length_cm").HasColumnType("decimal(10,2)");
+            entity.Property(e => e.WidthCm).HasColumnName("width_cm").HasColumnType("decimal(10,2)");
+            entity.Property(e => e.HeightCm).HasColumnName("height_cm").HasColumnType("decimal(10,2)");
+            entity.Property(e => e.VolumeCm3).HasColumnName("volume_cm3");
+            
+            // Shipping Properties
+            entity.Property(e => e.BulkyType).HasColumnName("bulky_type").HasMaxLength(50);
+            entity.Property(e => e.IsFragile).HasColumnName("is_fragile").HasDefaultValue(false);
+            entity.Property(e => e.RequiresSpecialHandling).HasColumnName("requires_special_handling").HasDefaultValue(false);
+            
+            // Warranty
+            entity.Property(e => e.WarrantyMonths).HasColumnName("warranty_months").HasDefaultValue(12);
+            entity.Property(e => e.WarrantyTerms).HasColumnName("warranty_terms");
+            
+            // Bundle
+            entity.Property(e => e.IsBundle).HasColumnName("is_bundle").HasDefaultValue(false);
+            entity.Property(e => e.BundleDiscountCents).HasColumnName("bundle_discount_cents").HasDefaultValue(0);
+            
+            // Images
+            entity.Property(e => e.PrimaryImageUrl).HasColumnName("primary_image_url").HasMaxLength(1000);
+            
+            // Status
+            entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+            entity.Property(e => e.IsDefault).HasColumnName("is_default").HasDefaultValue(false);
+            
+            // Soft Delete
             entity.Property(e => e.IsDeleted).HasColumnName("is_deleted").IsRequired().HasDefaultValue(false);
             entity.Property(e => e.DeletedAt).HasColumnName("deleted_at");
+            
+            // Sync tracking
             entity.Property(e => e.LastUpdated).HasColumnName("last_updated").IsRequired();
 
             // Indexes for faster lookups
             entity.HasIndex(e => e.ProductId);
-            entity.HasIndex(e => e.Sku);
+            entity.HasIndex(e => e.ShopId);
+            entity.HasIndex(e => e.SellerSku);
+            entity.HasIndex(e => e.IsActive);
         });
 
         // ========================================
@@ -160,21 +210,43 @@ public class OrderDbContext : DbContext
             
             entity.Property(e => e.OrderId).HasColumnName("order_id");
             entity.Property(e => e.OrderCode).HasColumnName("order_code").HasMaxLength(100).IsRequired();
-            entity.Property(e => e.AccountId).HasColumnName("account_id").IsRequired();
-            entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
+            entity.Property(e => e.AccountId).HasColumnName("account_id");
+            entity.Property(e => e.CustomerName).HasColumnName("customer_name").HasMaxLength(255).IsRequired();
+            entity.Property(e => e.CustomerPhone).HasColumnName("customer_phone").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.CustomerEmail).HasColumnName("customer_email").HasMaxLength(255);
+            entity.Property(e => e.ShopId).HasColumnName("shop_id");
+            entity.Property(e => e.ShopName).HasColumnName("shop_name").HasMaxLength(255).IsRequired();
             entity.Property(e => e.Currency).HasColumnName("currency").HasMaxLength(10).HasDefaultValue("VND");
             entity.Property(e => e.SubtotalCents).HasColumnName("subtotal_cents").IsRequired();
             entity.Property(e => e.ShippingFeeCents).HasColumnName("shipping_fee_cents").HasDefaultValue(0);
+            entity.Property(e => e.DiscountCents).HasColumnName("discount_cents").HasDefaultValue(0);
+            entity.Property(e => e.TaxCents).HasColumnName("tax_cents").HasDefaultValue(0);
             entity.Property(e => e.TotalAmountCents).HasColumnName("total_amount_cents").IsRequired();
-            entity.Property(e => e.Status).HasColumnName("status")
+            entity.Property(e => e.VoucherApplied).HasColumnName("voucher_applied");
+            entity.Property(e => e.PaymentMethod).HasColumnName("payment_method")
                 .HasConversion<string>()
                 .HasMaxLength(50)
                 .IsRequired();
+            entity.Property(e => e.PaymentStatus).HasColumnName("payment_status")
+                .HasConversion<string>()
+                .HasMaxLength(50)
+                .HasDefaultValue(PaymentStatus.PENDING);
+            entity.Property(e => e.PaymentTransactionId).HasColumnName("payment_transaction_id");
+            entity.Property(e => e.Status).HasColumnName("status")
+                .HasConversion<string>()
+                .HasMaxLength(50)
+                .HasDefaultValue(OrderStatus.PENDING);
+            entity.Property(e => e.DeliveryAddressId).HasColumnName("delivery_address_id");
+            entity.Property(e => e.CustomerNote).HasColumnName("customer_note");
+            entity.Property(e => e.ShopNote).HasColumnName("shop_note");
             entity.Property(e => e.PlacedAt).HasColumnName("placed_at").IsRequired();
+            entity.Property(e => e.ConfirmedAt).HasColumnName("confirmed_at");
+            entity.Property(e => e.ShippedAt).HasColumnName("shipped_at");
+            entity.Property(e => e.DeliveredAt).HasColumnName("delivered_at");
             entity.Property(e => e.CompletedAt).HasColumnName("completed_at");
-            entity.Property(e => e.CustomerName).HasColumnName("customer_name").HasMaxLength(255);
-            entity.Property(e => e.CustomerPhone).HasColumnName("customer_phone").HasMaxLength(50);
-            entity.Property(e => e.ShippingAddress).HasColumnName("shipping_address").HasMaxLength(1000);
+            entity.Property(e => e.CancelledAt).HasColumnName("cancelled_at");
+            entity.Property(e => e.CancelReason).HasColumnName("cancel_reason");
+            entity.Property(e => e.CancelledBy).HasColumnName("cancelled_by");
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 
@@ -197,19 +269,23 @@ public class OrderDbContext : DbContext
             
             entity.Property(e => e.OrderItemId).HasColumnName("order_item_id");
             entity.Property(e => e.OrderId).HasColumnName("order_id").IsRequired();
-            entity.Property(e => e.ProductId).HasColumnName("product_id");
-            entity.Property(e => e.ProductVersionId).HasColumnName("product_version_id");
-            entity.Property(e => e.SkuCode).HasColumnName("sku_code").HasMaxLength(255);
-            entity.Property(e => e.Title).HasColumnName("title").HasMaxLength(500).IsRequired();
+            entity.Property(e => e.VersionId).HasColumnName("version_id").IsRequired();
+            entity.Property(e => e.ProductName).HasColumnName("product_name").HasMaxLength(500).IsRequired();
+            entity.Property(e => e.VariantName).HasColumnName("variant_name").HasMaxLength(500);
+            entity.Property(e => e.SellerSku).HasColumnName("seller_sku").HasMaxLength(255).IsRequired();
             entity.Property(e => e.UnitPriceCents).HasColumnName("unit_price_cents").IsRequired();
-            entity.Property(e => e.Qty).HasColumnName("qty").IsRequired().HasDefaultValue(1);
+            entity.Property(e => e.Quantity).HasColumnName("quantity").IsRequired().HasDefaultValue(1);
+            entity.Property(e => e.DiscountCents).HasColumnName("discount_cents").HasDefaultValue(0);
             entity.Property(e => e.TaxCents).HasColumnName("tax_cents").HasDefaultValue(0);
+            entity.Property(e => e.ShipmentId).HasColumnName("shipment_id");
             entity.Property(e => e.LineTotalCents).HasColumnName("line_total_cents").IsRequired();
-            entity.Property(e => e.FulfillmentStatus).HasColumnName("fulfillment_status")
+            entity.Property(e => e.Status).HasColumnName("status")
                 .HasConversion<string>()
                 .HasMaxLength(50)
                 .HasDefaultValue(FulfillmentStatus.UNFULFILLED);
-            entity.Property(e => e.ReturnedQty).HasColumnName("returned_qty").HasDefaultValue(0);
+            entity.Property(e => e.ReturnedQuantity).HasColumnName("returned_quantity").HasDefaultValue(0);
+            entity.Property(e => e.RefundedAmountCents).HasColumnName("refunded_amount_cents").HasDefaultValue(0);
+            entity.Property(e => e.ShippingInfo).HasColumnName("shipping_info");
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
 
             // Relationship with Order
@@ -220,7 +296,7 @@ public class OrderDbContext : DbContext
 
             // Indexes for faster lookups
             entity.HasIndex(e => e.OrderId);
-            entity.HasIndex(e => e.ProductVersionId);
+            entity.HasIndex(e => e.VersionId);
         });
     }
 }

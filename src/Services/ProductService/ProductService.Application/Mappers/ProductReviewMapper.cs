@@ -13,13 +13,16 @@ public static class ProductReviewMapper
         {
             ReviewId = review.ReviewId,
             ProductId = review.ProductId,
+            VersionId = review.VersionId,
             OrderId = review.OrderId,
             AccountId = review.AccountId,
             Rating = review.Rating,
-            Title = review.Title,
             Content = review.Content,
-            IsVerified = review.IsVerified,
-            HelpfulCount = review.HelpfulCount,
+            IsVisible = review.IsVisible,
+            HiddenBy = review.HiddenBy,
+            HiddenAt = review.HiddenAt,
+            ShopResponse = review.ShopResponse,
+            ShopResponseAt = review.ShopResponseAt,
             CreatedAt = review.CreatedAt,
             UpdatedAt = review.UpdatedAt
         };
@@ -35,13 +38,12 @@ public static class ProductReviewMapper
         return new ProductReview
         {
             ProductId = dto.ProductId,
+            VersionId = dto.VersionId,
             OrderId = dto.OrderId,
             AccountId = dto.AccountId,
             Rating = dto.Rating,
-            Title = dto.Title,
             Content = dto.Content,
-            IsVerified = dto.IsVerified,
-            HelpfulCount = 0,
+            IsVisible = true,
             CreatedAt = DateTime.UtcNow
         };
     }
@@ -61,17 +63,8 @@ public static class ProductReviewMapper
         if (dto.Rating.HasValue)
             review.Rating = dto.Rating.Value;
 
-        if (dto.Title != null)
-            review.Title = dto.Title;
-
         if (dto.Content != null)
             review.Content = dto.Content;
-
-        if (dto.IsVerified.HasValue)
-            review.IsVerified = dto.IsVerified.Value;
-
-        if (dto.HelpfulCount.HasValue)
-            review.HelpfulCount = dto.HelpfulCount.Value;
 
         review.UpdatedAt = DateTime.UtcNow;
     }

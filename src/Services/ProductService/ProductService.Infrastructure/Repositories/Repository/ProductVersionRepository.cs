@@ -28,11 +28,11 @@ public class ProductVersionRepository : GenericRepository<ProductVersion>, IProd
             .ToListAsync();
     }
 
-    public async Task<ProductVersion?> GetBySkuAsync(string sku)
+    public async Task<ProductVersion?> GetBySellerSkuAsync(string sellerSku)
     {
         return await _dbSet
             .Include(v => v.Product)
-            .FirstOrDefaultAsync(v => v.Sku == sku);
+            .FirstOrDefaultAsync(v => v.SellerSku == sellerSku);
     }
 
     public async Task<ProductVersion?> GetLatestVersionByProductIdAsync(Guid productId)
@@ -51,12 +51,12 @@ public class ProductVersionRepository : GenericRepository<ProductVersion>, IProd
             .ToListAsync();
     }
 
-    public async Task<List<ProductVersion>> GetDeletedVersionsAsync()
+    public async Task<List<ProductVersion>> GetInactiveVersionsAsync()
     {
         return await _dbSet
             .Include(v => v.Product)
-            .Where(v => v.IsDeleted)
-            .OrderByDescending(v => v.DeletedAt)
+            .Where(v => !v.IsActive)
+            .OrderByDescending(v => v.UpdatedAt)
             .ToListAsync();
     }
 
@@ -64,9 +64,17 @@ public class ProductVersionRepository : GenericRepository<ProductVersion>, IProd
     {
         return await _dbSet
             .Include(v => v.Product)
-            .Where(v => !v.IsDeleted)
+            .Where(v => v.IsActive)
             .OrderByDescending(v => v.CreatedAt)
             .ToListAsync();
+    }
+
+    public async Task<ProductVersion?> GetDefaultVersionByProductIdAsync(Guid productId)
+    {
+        return await _dbSet
+            .Include(v => v.Product)
+            .Where(v => v.ProductId == productId && v.IsDefault)
+            .FirstOrDefaultAsync();
     }
 
     public override async Task<bool> ExistsAsync(Guid id)

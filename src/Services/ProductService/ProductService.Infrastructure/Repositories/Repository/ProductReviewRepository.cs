@@ -16,6 +16,7 @@ public class ProductReviewRepository : GenericRepository<ProductReview>, IProduc
     {
         return await _dbSet
             .Include(r => r.Product)
+            .Include(r => r.Version)
             .FirstOrDefaultAsync(r => r.ReviewId == id);
     }
 
@@ -23,6 +24,7 @@ public class ProductReviewRepository : GenericRepository<ProductReview>, IProduc
     {
         return await _dbSet
             .Include(r => r.Product)
+            .Include(r => r.Version)
             .Where(r => r.ProductId == productId)
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync();
@@ -32,6 +34,7 @@ public class ProductReviewRepository : GenericRepository<ProductReview>, IProduc
     {
         return await _dbSet
             .Include(r => r.Product)
+            .Include(r => r.Version)
             .Where(r => r.AccountId == accountId)
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync();
@@ -41,15 +44,27 @@ public class ProductReviewRepository : GenericRepository<ProductReview>, IProduc
     {
         return await _dbSet
             .Include(r => r.Product)
+            .Include(r => r.Version)
             .Where(r => r.OrderId == orderId)
             .ToListAsync();
     }
 
-    public async Task<List<ProductReview>> GetVerifiedReviewsAsync(Guid productId)
+    public async Task<List<ProductReview>> GetVisibleReviewsAsync(Guid productId)
     {
         return await _dbSet
             .Include(r => r.Product)
-            .Where(r => r.ProductId == productId && r.IsVerified)
+            .Include(r => r.Version)
+            .Where(r => r.ProductId == productId && r.IsVisible)
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task<List<ProductReview>> GetByVersionIdAsync(Guid versionId)
+    {
+        return await _dbSet
+            .Include(r => r.Product)
+            .Include(r => r.Version)
+            .Where(r => r.VersionId == versionId)
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync();
     }
@@ -58,6 +73,7 @@ public class ProductReviewRepository : GenericRepository<ProductReview>, IProduc
     {
         return await _dbSet
             .Include(r => r.Product)
+            .Include(r => r.Version)
             .FirstOrDefaultAsync(r => r.OrderId == orderId && r.AccountId == accountId);
     }
 
@@ -65,6 +81,7 @@ public class ProductReviewRepository : GenericRepository<ProductReview>, IProduc
     {
         return await _dbSet
             .Include(r => r.Product)
+            .Include(r => r.Version)
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync();
     }

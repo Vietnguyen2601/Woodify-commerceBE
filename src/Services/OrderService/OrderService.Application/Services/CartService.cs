@@ -54,11 +54,11 @@ public class CartService : ICartService
         try
         {
             // Validate quantity
-            if (dto.Qty <= 0)
+            if (dto.Quantity <= 0)
                 return ServiceResult<CartDto>.BadRequest("Quantity must be greater than 0");
 
             // Validate product version exists in cache (synchronized from ProductService via events)
-            var productCache = await _productCacheRepository.GetByVersionIdAsync(dto.ProductVersionId);
+            var productCache = await _productCacheRepository.GetByVersionIdAsync(dto.VersionId);
             if (productCache == null)
                 return ServiceResult<CartDto>.NotFound("Product version not found or not yet synchronized");
 
@@ -67,8 +67,16 @@ public class CartService : ICartService
                 return ServiceResult<CartDto>.BadRequest($"Product is not available for purchase (Status: {productCache.ProductStatus})");
 
             // Check if product has price
-            if (!productCache.PriceCents.HasValue || productCache.PriceCents.Value <= 0)
+            if (productCache.PriceCents <= 0)
                 return ServiceResult<CartDto>.BadRequest("Product price is not set");
+            
+            // Check if product is active
+            if (!productCache.IsActive)
+                return ServiceResult<CartDto>.BadRequest("Product version is not active");
+                
+            // Check stock availability (unless backorder is allowed)
+            if (productCache.StockQuantity < dto.Quantity && !productCache.AllowBackorder)
+                return ServiceResult<CartDto>.BadRequest($"Insufficient stock. Available: {productCache.StockQuantity}, Requested: {dto.Quantity}");
 
             // Get or create cart
             var cart = await _cartRepository.GetActiveCartByAccountIdAsync(accountId);
@@ -79,20 +87,23 @@ public class CartService : ICartService
                 cart = new Cart
                 {
                     AccountId = accountId,
-                    CreatedAt = DateTime.UtcNow,
-                    ExpiresAt = DateTime.UtcNow.AddDays(30) // Cart expires after 30 days
+                    CreatedAt = DateTime.UtcNow
                 };
                 await _cartRepository.CreateAsync(cart);
             }
 
             // Check if product already in cart
-            var existingItem = await _cartItemRepository.GetByCartIdAndProductVersionIdAsync(cart.CartId, dto.ProductVersionId);
+            var existingItem = await _cartItemRepository.GetByCartIdAndVersionIdAsync(cart.CartId, dto.VersionId);
             
             if (existingItem != null)
             {
                 // Update quantity
-                existingItem.Qty += dto.Qty;
+                existingItem.Quantity += dto.Quantity;
                 existingItem.UpdatedAt = DateTime.UtcNow;
+                if (!string.IsNullOrEmpty(dto.CustomizationNote))
+                {
+                    existingItem.CustomizationNote = dto.CustomizationNote;
+                }
                 await _cartItemRepository.UpdateAsync(existingItem);
             }
             else
@@ -101,12 +112,14 @@ public class CartService : ICartService
                 var cartItem = new CartItem
                 {
                     CartId = cart.CartId,
-                    ProductVersionId = dto.ProductVersionId,
-                    SkuCode = productCache.Sku ?? "",
-                    Title = productCache.Title,
-                    UnitPriceCents = productCache.PriceCents.Value,
-                    Qty = dto.Qty,
-                    CreatedAt = DateTime.UtcNow
+                    VersionId = dto.VersionId,
+                    ShopId = dto.ShopId,
+                    Quantity = dto.Quantity,
+                    UnitPriceCents = productCache.PriceCents,
+                    CompareAtPriceCents = productCache.BasePriceCents,
+                    CustomizationNote = dto.CustomizationNote,
+                    IsActive = true,
+                    AddedAt = DateTime.UtcNow
                 };
                 await _cartItemRepository.CreateAsync(cartItem);
             }
@@ -129,7 +142,7 @@ public class CartService : ICartService
     {
         try
         {
-            if (dto.Qty <= 0)
+            if (dto.Quantity <= 0)
                 return ServiceResult<CartDto>.BadRequest("Quantity must be greater than 0");
 
             var cart = await _cartRepository.GetActiveCartByAccountIdAsync(accountId);
@@ -140,8 +153,19 @@ public class CartService : ICartService
             if (cartItem == null || cartItem.CartId != cart.CartId)
                 return ServiceResult<CartDto>.NotFound("Cart item not found");
 
-            cartItem.Qty = dto.Qty;
+            cartItem.Quantity = dto.Quantity;
             cartItem.UpdatedAt = DateTime.UtcNow;
+            
+            if (dto.IsSelected.HasValue)
+            {
+                cartItem.IsSelected = dto.IsSelected.Value;
+            }
+            
+            if (dto.CustomizationNote != null)
+            {
+                cartItem.CustomizationNote = dto.CustomizationNote;
+            }
+            
             await _cartItemRepository.UpdateAsync(cartItem);
 
             cart.UpdatedAt = DateTime.UtcNow;
@@ -224,7 +248,7 @@ public class CartService : ICartService
             }
 
             // Get all product version IDs to check validity
-            var versionIds = cartItems.Select(item => item.ProductVersionId).ToList();
+            var versionIds = cartItems.Select(item => item.VersionId).ToList();
             var checkoutItems = new List<CheckoutItemDto>();
             long subtotal = 0;
             int validCount = 0;
@@ -235,18 +259,17 @@ public class CartService : ICartService
                 var checkoutItem = new CheckoutItemDto
                 {
                     CartItemId = item.CartItemId,
-                    ProductVersionId = item.ProductVersionId,
-                    SkuCode = item.SkuCode,
-                    Title = item.Title,
+                    VersionId = item.VersionId,
+                    ShopId = item.ShopId,
+                    Quantity = item.Quantity,
                     UnitPriceCents = item.UnitPriceCents,
-                    Qty = item.Qty,
-                    TotalPriceCents = item.UnitPriceCents * item.Qty,
-                    AddedAt = item.CreatedAt,
+                    TotalPriceCents = item.UnitPriceCents * item.Quantity,
+                    AddedAt = item.AddedAt,
                     IsValid = true
                 };
 
                 // Check if product version still exists and is valid in cache
-                var productCache = await _productCacheRepository.GetByVersionIdAsync(item.ProductVersionId);
+                var productCache = await _productCacheRepository.GetByVersionIdAsync(item.VersionId);
                 
                 if (productCache == null)
                 {
