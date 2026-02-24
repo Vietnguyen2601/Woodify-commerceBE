@@ -6,24 +6,40 @@ public class CreateProductMasterDto
 {
     public Guid ShopId { get; set; }
     public Guid CategoryId { get; set; }
-    public bool Certified { get; set; } = false;
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? ImgUrl { get; set; }
+    public bool ArAvailable { get; set; } = false;
+    public string? ArModelUrl { get; set; }
 }
 
 public class UpdateProductMasterDto
 {
     public Guid? CategoryId { get; set; }
+    public string? Name { get; set; }
     public string? GlobalSku { get; set; }
+    public string? ImgUrl { get; set; }
+    public string? Description { get; set; }
+    public bool? ArAvailable { get; set; }
+    public string? ArModelUrl { get; set; }
     public ProductStatus? Status { get; set; }
-    public bool? Certified { get; set; }
-    public Guid? CurrentVersionId { get; set; }
     public decimal? AvgRating { get; set; }
     public int? ReviewCount { get; set; }
+    public int? SoldCount { get; set; }
+}
+
+public class ModerateProductDto
+{
+    public ModerationStatus ModerationStatus { get; set; }
+    public Guid ModeratedBy { get; set; }
+    public string? RejectionReason { get; set; }
+    public string? ModerationNotes { get; set; }
 }
 
 public class ProductSearchDto
 {
     /// <summary>
-    /// Search keyword for product name (from current version title)
+    /// Search keyword for product name
     /// </summary>
     public string? Keyword { get; set; }
     
@@ -48,6 +64,11 @@ public class ProductSearchDto
     public decimal? MaxRating { get; set; }
     
     /// <summary>
+    /// Filter by AR availability
+    /// </summary>
+    public bool? ArAvailable { get; set; }
+    
+    /// <summary>
     /// Page number (starts from 1)
     /// </summary>
     public int Page { get; set; } = 1;
@@ -59,7 +80,7 @@ public class ProductSearchDto
     
     /// <summary>
     /// Sort by field (default: CreatedAt)
-    /// Options: CreatedAt, AvgRating, Name
+    /// Options: CreatedAt, AvgRating, Name, SoldCount
     /// </summary>
     public string SortBy { get; set; } = "CreatedAt";
     
@@ -84,16 +105,30 @@ public class ProductMasterDto
     public Guid ShopId { get; set; }
     public Guid CategoryId { get; set; }
     public string? CategoryName { get; set; }
+    
+    public string Name { get; set; } = string.Empty;
     public string? GlobalSku { get; set; }
-    public ProductStatus Status { get; set; }
-    public bool Certified { get; set; }
-    public Guid? CurrentVersionId { get; set; }
+    
+    public string? ImgUrl { get; set; }
+    public string? Description { get; set; }
+    
+    public bool ArAvailable { get; set; }
+    public string? ArModelUrl { get; set; }
+    
     public decimal AvgRating { get; set; }
     public int ReviewCount { get; set; }
+    public int SoldCount { get; set; }
+    
+    public ProductStatus Status { get; set; }
+    
+    // Moderation info
+    public ModerationStatus ModerationStatus { get; set; }
+    public Guid? ModeratedBy { get; set; }
+    public DateTime? ModeratedAt { get; set; }
+    public string? RejectionReason { get; set; }
+    public string? ModerationNotes { get; set; }
+    
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
-    
-    // Current version info for search
-    public string? CurrentVersionTitle { get; set; }
-    public string? CurrentVersionDescription { get; set; }
+    public DateTime? PublishedAt { get; set; }
 }

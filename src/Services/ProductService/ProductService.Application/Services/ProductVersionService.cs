@@ -128,14 +128,24 @@ public class ProductVersionService : IProductVersionService
                 ProductId = product.ProductId,
                 ShopId = product.ShopId,
                 CategoryId = product.CategoryId,
+                Name = product.Name,
                 GlobalSku = product.GlobalSku, // Keep existing GlobalSku by default
+                ImgUrl = product.ImgUrl,
+                Description = product.Description,
+                ArAvailable = product.ArAvailable,
+                ArModelUrl = product.ArModelUrl,
                 Status = product.Status,
-                Certified = product.Certified,
-                CurrentVersionId = version.VersionId,
+                ModerationStatus = product.ModerationStatus,
+                ModeratedBy = product.ModeratedBy,
+                ModeratedAt = product.ModeratedAt,
+                RejectionReason = product.RejectionReason,
+                ModerationNotes = product.ModerationNotes,
                 AvgRating = product.AvgRating,
                 ReviewCount = product.ReviewCount,
+                SoldCount = product.SoldCount,
                 CreatedAt = product.CreatedAt,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
+                PublishedAt = product.PublishedAt
             };
 
             // Only generate and set GlobalSku for the first version
