@@ -143,4 +143,48 @@ public class ProductMastersController : ControllerBase
         var result = await _productMasterService.SearchProductsAsync(searchDto);
         return Ok(result);
     }
+
+    /// <summary>
+    /// Submit product for approval (DRAFT -> PENDING_APPROVAL)
+    /// </summary>
+    [HttpPatch("SubmitForApproval/{id:guid}")]
+    public async Task<ActionResult<ServiceResult<ProductMasterDto>>> SubmitForApproval(Guid id)
+    {
+        var result = await _productMasterService.SubmitForApprovalAsync(id);
+        
+        if (result.Status == 404)
+            return NotFound(result);
+        
+        if (result.Status != 200)
+            return BadRequest(result);
+        
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Moderate product (Approve or Reject)
+    /// </summary>
+    [HttpPatch("ModerateProduct/{id:guid}")]
+    public async Task<ActionResult<ServiceResult<ProductMasterDto>>> ModerateProduct(Guid id, [FromBody] ModerateProductDto dto)
+    {
+        var result = await _productMasterService.ModerateProductAsync(id, dto);
+        
+        if (result.Status == 404)
+            return NotFound(result);
+        
+        if (result.Status != 200)
+            return BadRequest(result);
+        
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Get products pending approval
+    /// </summary>
+    [HttpGet("GetPendingApprovalProducts")]
+    public async Task<ActionResult<ServiceResult<IEnumerable<ProductMasterDto>>>> GetPendingApprovalProducts()
+    {
+        var result = await _productMasterService.GetPendingApprovalProductsAsync();
+        return Ok(result);
+    }
 }

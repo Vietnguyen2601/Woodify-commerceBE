@@ -89,13 +89,16 @@ public class ProductDbContext : DbContext
             entity.Property(e => e.ProductId).HasColumnName("product_id");
             entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
             entity.Property(e => e.CategoryId).HasColumnName("category_id").IsRequired();
+            
+            entity.Property(e => e.Name).HasColumnName("name").IsRequired();
             entity.Property(e => e.GlobalSku).HasColumnName("global_sku").HasMaxLength(255);
-            entity.Property(e => e.Status)
-                .HasColumnName("status")
-                .HasConversion<string>()
-                .IsRequired();
-            entity.Property(e => e.Certified).HasColumnName("certified").IsRequired();
-            entity.Property(e => e.CurrentVersionId).HasColumnName("current_version_id");
+            
+            entity.Property(e => e.ImgUrl).HasColumnName("img_url");
+            entity.Property(e => e.Description).HasColumnName("description");
+            
+            entity.Property(e => e.ArAvailable).HasColumnName("ar_available").HasDefaultValue(false);
+            entity.Property(e => e.ArModelUrl).HasColumnName("ar_model_url");
+            
             entity.Property(e => e.AvgRating)
                 .HasColumnName("avg_rating")
                 .HasColumnType("decimal(3,2)")
@@ -103,8 +106,30 @@ public class ProductDbContext : DbContext
             entity.Property(e => e.ReviewCount)
                 .HasColumnName("review_count")
                 .HasDefaultValue(0);
+            entity.Property(e => e.SoldCount)
+                .HasColumnName("sold_count")
+                .HasDefaultValue(0);
+            
+            entity.Property(e => e.Status)
+                .HasColumnName("status")
+                .HasConversion<string>()
+                .HasDefaultValue(ProductStatus.DRAFT)
+                .IsRequired();
+            
+            // Moderation fields
+            entity.Property(e => e.ModerationStatus)
+                .HasColumnName("moderation_status")
+                .HasConversion<string>()
+                .HasDefaultValue(ModerationStatus.PENDING)
+                .IsRequired();
+            entity.Property(e => e.ModeratedBy).HasColumnName("moderated_by");
+            entity.Property(e => e.ModeratedAt).HasColumnName("moderated_at");
+            entity.Property(e => e.RejectionReason).HasColumnName("rejection_reason");
+            entity.Property(e => e.ModerationNotes).HasColumnName("moderation_notes");
+            
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+            entity.Property(e => e.PublishedAt).HasColumnName("published_at");
 
             // Foreign Key to Category
             entity.HasOne(p => p.Category)
@@ -115,10 +140,9 @@ public class ProductDbContext : DbContext
             // Indexes
             entity.HasIndex(e => e.ShopId);
             entity.HasIndex(e => e.CategoryId);
-            // Remove unique constraint to allow multiple null values during product creation
-            // GlobalSku will be generated when first version is created
-            entity.HasIndex(e => e.GlobalSku); 
+            entity.HasIndex(e => e.GlobalSku).IsUnique();
             entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.ModerationStatus);
         });
 
         // ========================================
