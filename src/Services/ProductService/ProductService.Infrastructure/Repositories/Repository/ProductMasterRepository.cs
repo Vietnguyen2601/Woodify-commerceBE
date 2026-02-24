@@ -70,15 +70,17 @@ public class ProductMasterRepository : GenericRepository<ProductMaster>, IProduc
             query = query.Where(p => p.AvgRating <= (decimal)searchParams.MaxRating.Value);
         }
 
-        // Search by keyword in ProductVersion (title, description)
+        // Search by keyword in ProductVersion (VersionName, SellerSku) and ProductMaster
         if (!string.IsNullOrWhiteSpace(searchParams.Keyword))
         {
             var keyword = $"%{searchParams.Keyword}%";
             query = query.Where(p =>
+                EF.Functions.ILike(p.Name, keyword) ||
+                (p.Description != null && EF.Functions.ILike(p.Description, keyword)) ||
                 _context.ProductVersions
                     .Where(v => v.ProductId == p.ProductId)
-                    .Any(v => EF.Functions.ILike(v.Title, keyword) ||
-                             (v.Description != null && EF.Functions.ILike(v.Description, keyword)))
+                    .Any(v => (v.VersionName != null && EF.Functions.ILike(v.VersionName, keyword)) ||
+                             EF.Functions.ILike(v.SellerSku, keyword))
             );
         }
 

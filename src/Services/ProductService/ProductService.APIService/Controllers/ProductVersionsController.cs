@@ -34,10 +34,10 @@ public class ProductVersionsController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("GetVersionBySku/{sku}")]
-    public async Task<ActionResult<ServiceResult<ProductVersionDto>>> GetBySku(string sku)
+    [HttpGet("GetVersionBySellerSku/{sellerSku}")]
+    public async Task<ActionResult<ServiceResult<ProductVersionDto>>> GetBySellerSku(string sellerSku)
     {
-        var result = await _productVersionService.GetBySkuAsync(sku);
+        var result = await _productVersionService.GetBySellerSkuAsync(sellerSku);
         
         if (result.Status == 404)
             return NotFound(result);
@@ -63,10 +63,21 @@ public class ProductVersionsController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("GetDeletedVersions")]
-    public async Task<ActionResult<ServiceResult<IEnumerable<ProductVersionDto>>>> GetDeletedVersions()
+    [HttpGet("GetDefaultVersionByProductId/{productId:guid}")]
+    public async Task<ActionResult<ServiceResult<ProductVersionDto>>> GetDefaultVersionByProductId(Guid productId)
     {
-        var result = await _productVersionService.GetDeletedVersionsAsync();
+        var result = await _productVersionService.GetDefaultVersionByProductIdAsync(productId);
+        
+        if (result.Status == 404)
+            return NotFound(result);
+        
+        return Ok(result);
+    }
+
+    [HttpGet("GetInactiveVersions")]
+    public async Task<ActionResult<ServiceResult<IEnumerable<ProductVersionDto>>>> GetInactiveVersions()
+    {
+        var result = await _productVersionService.GetInactiveVersionsAsync();
         return Ok(result);
     }
 
@@ -102,10 +113,10 @@ public class ProductVersionsController : ControllerBase
         return Ok(result);
     }
 
-    [HttpDelete("DeleteVersion/{id:guid}")]
-    public async Task<ActionResult<ServiceResult>> Delete(Guid id)
+    [HttpPatch("DeactivateVersion/{id:guid}")]
+    public async Task<ActionResult<ServiceResult>> Deactivate(Guid id)
     {
-        var result = await _productVersionService.DeleteAsync(id);
+        var result = await _productVersionService.DeactivateAsync(id);
         
         if (result.Status == 404)
             return NotFound(result);
@@ -116,10 +127,24 @@ public class ProductVersionsController : ControllerBase
         return Ok(result);
     }
 
-    [HttpPatch("RestoreVersion/{id:guid}")]
-    public async Task<ActionResult<ServiceResult>> Restore(Guid id)
+    [HttpPatch("ActivateVersion/{id:guid}")]
+    public async Task<ActionResult<ServiceResult>> Activate(Guid id)
     {
-        var result = await _productVersionService.RestoreAsync(id);
+        var result = await _productVersionService.ActivateAsync(id);
+        
+        if (result.Status == 404)
+            return NotFound(result);
+        
+        if (result.Status != 200)
+            return BadRequest(result);
+        
+        return Ok(result);
+    }
+
+    [HttpPatch("SetAsDefault/{id:guid}")]
+    public async Task<ActionResult<ServiceResult>> SetAsDefault(Guid id)
+    {
+        var result = await _productVersionService.SetAsDefaultAsync(id);
         
         if (result.Status == 404)
             return NotFound(result);

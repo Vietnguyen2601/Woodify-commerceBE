@@ -11,6 +11,7 @@ public interface IProductReviewRepository : IGenericRepository<ProductReview>
     Task<List<ProductReview>> GetByProductIdAsync(Guid productId);
     Task<List<ProductReview>> GetByAccountIdAsync(Guid accountId);
     Task<List<ProductReview>> GetByOrderIdAsync(Guid orderId);
-    Task<List<ProductReview>> GetVerifiedReviewsAsync(Guid productId);
+    Task<List<ProductReview>> GetVisibleReviewsAsync(Guid productId);
+    Task<List<ProductReview>> GetByVersionIdAsync(Guid versionId);
     Task<ProductReview?> GetByOrderAndAccountAsync(Guid orderId, Guid accountId);
 }
