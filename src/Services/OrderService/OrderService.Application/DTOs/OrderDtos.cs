@@ -6,9 +6,12 @@ namespace OrderService.Application.DTOs;
 public class CreateOrderFromCartDto
 {
     public Guid AccountId { get; set; }
-    public string? CustomerName { get; set; }
-    public string? CustomerPhone { get; set; }
-    public string? ShippingAddress { get; set; }
+    public string CustomerName { get; set; } = string.Empty;
+    public string CustomerPhone { get; set; } = string.Empty;
+    public string? CustomerEmail { get; set; }
+    public Guid? DeliveryAddressId { get; set; }
+    public string PaymentMethod { get; set; } = "BANK_TRANSFER";
+    public string? CustomerNote { get; set; }
 }
 
 /// <summary>
@@ -19,22 +22,43 @@ public class OrderDto
     public Guid OrderId { get; set; }
     public string OrderCode { get; set; } = string.Empty;
     
-    public Guid AccountId { get; set; }
-    public Guid ShopId { get; set; }
+    public Guid? AccountId { get; set; }
+    public string CustomerName { get; set; } = string.Empty;
+    public string CustomerPhone { get; set; } = string.Empty;
+    public string? CustomerEmail { get; set; }
+    
+    public Guid? ShopId { get; set; }
+    public string ShopName { get; set; } = string.Empty;
     
     public string Currency { get; set; } = "VND";
     public long SubtotalCents { get; set; }
     public long ShippingFeeCents { get; set; }
+    public long DiscountCents { get; set; }
+    public long TaxCents { get; set; }
     public long TotalAmountCents { get; set; }
+    
+    public Guid? VoucherApplied { get; set; }
+    
+    public string PaymentMethod { get; set; } = string.Empty;
+    public string PaymentStatus { get; set; } = string.Empty;
+    public string? PaymentTransactionId { get; set; }
     
     public string Status { get; set; } = string.Empty;
     
-    public DateTime PlacedAt { get; set; }
-    public DateTime? CompletedAt { get; set; }
+    public Guid? DeliveryAddressId { get; set; }
     
-    public string? CustomerName { get; set; }
-    public string? CustomerPhone { get; set; }
-    public string? ShippingAddress { get; set; }
+    public string? CustomerNote { get; set; }
+    public string? ShopNote { get; set; }
+    
+    public DateTime PlacedAt { get; set; }
+    public DateTime? ConfirmedAt { get; set; }
+    public DateTime? ShippedAt { get; set; }
+    public DateTime? DeliveredAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    public DateTime? CancelledAt { get; set; }
+    
+    public string? CancelReason { get; set; }
+    public Guid? CancelledBy { get; set; }
     
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
@@ -49,19 +73,25 @@ public class OrderItemDto
 {
     public Guid OrderItemId { get; set; }
     public Guid OrderId { get; set; }
+    public Guid VersionId { get; set; }
     
-    public Guid? ProductId { get; set; }
-    public Guid? ProductVersionId { get; set; }
-    public string? SkuCode { get; set; }
-    public string Title { get; set; } = string.Empty;
+    public string ProductName { get; set; } = string.Empty;
+    public string? VariantName { get; set; }
+    public string SellerSku { get; set; } = string.Empty;
     
     public long UnitPriceCents { get; set; }
-    public int Qty { get; set; }
+    public int Quantity { get; set; }
+    public long DiscountCents { get; set; }
     public long TaxCents { get; set; }
     public long LineTotalCents { get; set; }
     
-    public string FulfillmentStatus { get; set; } = string.Empty;
-    public int ReturnedQty { get; set; }
+    public Guid? ShipmentId { get; set; }
+    
+    public string Status { get; set; } = string.Empty;
+    public int ReturnedQuantity { get; set; }
+    public long RefundedAmountCents { get; set; }
+    
+    public string? ShippingInfo { get; set; }
     
     public DateTime CreatedAt { get; set; }
 }
@@ -84,8 +114,7 @@ public class CheckoutValidationDto
 public class InvalidCartItemDto
 {
     public Guid CartItemId { get; set; }
-    public Guid ProductVersionId { get; set; }
-    public string Title { get; set; } = string.Empty;
+    public Guid VersionId { get; set; }
     public string Reason { get; set; } = string.Empty;
     public string? Details { get; set; }
 }

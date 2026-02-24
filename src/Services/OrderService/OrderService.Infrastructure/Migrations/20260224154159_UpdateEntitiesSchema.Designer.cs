@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using OrderService.Infrastructure.Data.Context;
@@ -11,9 +12,11 @@ using OrderService.Infrastructure.Data.Context;
 namespace OrderService.Infrastructure.Migrations
 {
     [DbContext(typeof(OrderDbContext))]
-    partial class OrderDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260224154159_UpdateEntitiesSchema")]
+    partial class UpdateEntitiesSchema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -392,27 +395,6 @@ namespace OrderService.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("version_id");
 
-                    b.Property<bool>("AllowBackorder")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("allow_backorder");
-
-                    b.Property<long?>("BasePriceCents")
-                        .HasColumnType("bigint")
-                        .HasColumnName("base_price_cents");
-
-                    b.Property<string>("BulkyType")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("bulky_type");
-
-                    b.Property<long>("BundleDiscountCents")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasDefaultValue(0L)
-                        .HasColumnName("bundle_discount_cents");
-
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(10)
@@ -423,27 +405,10 @@ namespace OrderService.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
 
-                    b.Property<decimal>("HeightCm")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("height_cm");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true)
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsBundle")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_bundle");
-
-                    b.Property<bool>("IsDefault")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_default");
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
@@ -451,49 +416,17 @@ namespace OrderService.Infrastructure.Migrations
                         .HasDefaultValue(false)
                         .HasColumnName("is_deleted");
 
-                    b.Property<bool>("IsFragile")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_fragile");
-
                     b.Property<DateTime>("LastUpdated")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_updated");
 
-                    b.Property<decimal>("LengthCm")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("length_cm");
-
-                    b.Property<int>("LowStockThreshold")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(5)
-                        .HasColumnName("low_stock_threshold");
-
-                    b.Property<long>("PriceCents")
+                    b.Property<long?>("PriceCents")
                         .HasColumnType("bigint")
                         .HasColumnName("price_cents");
-
-                    b.Property<string>("PrimaryImageUrl")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("primary_image_url");
-
-                    b.Property<string>("ProductDescription")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
-                        .HasColumnName("product_description");
 
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uuid")
                         .HasColumnName("product_id");
-
-                    b.Property<string>("ProductName")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("product_name");
 
                     b.Property<string>("ProductStatus")
                         .IsRequired()
@@ -501,68 +434,22 @@ namespace OrderService.Infrastructure.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("product_status");
 
-                    b.Property<bool>("RequiresSpecialHandling")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("requires_special_handling");
+                    b.Property<string>("Sku")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("sku");
 
-                    b.Property<string>("SellerSku")
+                    b.Property<string>("Title")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("seller_sku");
-
-                    b.Property<Guid>("ShopId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("shop_id");
-
-                    b.Property<int>("StockQuantity")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("stock_quantity");
-
-                    b.Property<string>("VersionName")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("version_name");
-
-                    b.Property<int>("VersionNumber")
-                        .HasColumnType("integer")
-                        .HasColumnName("version_number");
-
-                    b.Property<long?>("VolumeCm3")
-                        .HasColumnType("bigint")
-                        .HasColumnName("volume_cm3");
-
-                    b.Property<int>("WarrantyMonths")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(12)
-                        .HasColumnName("warranty_months");
-
-                    b.Property<string>("WarrantyTerms")
-                        .HasColumnType("text")
-                        .HasColumnName("warranty_terms");
-
-                    b.Property<int>("WeightGrams")
-                        .HasColumnType("integer")
-                        .HasColumnName("weight_grams");
-
-                    b.Property<decimal>("WidthCm")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("width_cm");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("title");
 
                     b.HasKey("VersionId");
 
-                    b.HasIndex("IsActive");
-
                     b.HasIndex("ProductId");
 
-                    b.HasIndex("SellerSku");
-
-                    b.HasIndex("ShopId");
+                    b.HasIndex("Sku");
 
                     b.ToTable("product_version_cache", (string)null);
                 });

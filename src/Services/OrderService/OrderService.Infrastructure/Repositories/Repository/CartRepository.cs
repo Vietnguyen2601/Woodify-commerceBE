@@ -14,11 +14,10 @@ public class CartRepository : GenericRepository<Cart>, ICartRepository
 
     public async Task<Cart?> GetActiveCartByAccountIdAsync(Guid accountId)
     {
-        // Get the most recent cart that hasn't expired
+        // Get the most recent cart for the account
         return await _dbSet
             .Include(c => c.CartItems)
-            .Where(c => c.AccountId == accountId && 
-                       (c.ExpiresAt == null || c.ExpiresAt > DateTime.UtcNow))
+            .Where(c => c.AccountId == accountId)
             .OrderByDescending(c => c.CreatedAt)
             .FirstOrDefaultAsync();
     }

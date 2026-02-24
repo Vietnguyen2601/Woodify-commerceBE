@@ -5,8 +5,10 @@ namespace OrderService.Application.DTOs;
 /// </summary>
 public class AddToCartDto
 {
-    public Guid ProductVersionId { get; set; }
-    public int Qty { get; set; } = 1;
+    public Guid VersionId { get; set; }
+    public Guid ShopId { get; set; }
+    public int Quantity { get; set; } = 1;
+    public string? CustomizationNote { get; set; }
 }
 
 /// <summary>
@@ -15,7 +17,9 @@ public class AddToCartDto
 public class UpdateCartItemDto
 {
     public Guid CartItemId { get; set; }
-    public int Qty { get; set; }
+    public int Quantity { get; set; }
+    public bool? IsSelected { get; set; }
+    public string? CustomizationNote { get; set; }
 }
 
 /// <summary>
@@ -27,7 +31,6 @@ public class CartDto
     public Guid AccountId { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
-    public DateTime? ExpiresAt { get; set; }
     public List<CartItemDto> Items { get; set; } = new List<CartItemDto>();
     public long TotalPriceCents { get; set; }
     public int TotalItems { get; set; }
@@ -40,13 +43,16 @@ public class CartItemDto
 {
     public Guid CartItemId { get; set; }
     public Guid CartId { get; set; }
-    public Guid ProductVersionId { get; set; }
-    public string SkuCode { get; set; } = string.Empty;
-    public string Title { get; set; } = string.Empty;
+    public Guid VersionId { get; set; }
+    public Guid ShopId { get; set; }
+    public int Quantity { get; set; }
     public long UnitPriceCents { get; set; }
-    public int Qty { get; set; }
+    public long? CompareAtPriceCents { get; set; }
+    public bool? IsSelected { get; set; }
+    public string? CustomizationNote { get; set; }
+    public bool IsActive { get; set; }
     public long TotalPriceCents { get; set; }
-    public DateTime CreatedAt { get; set; }
+    public DateTime AddedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }
 
@@ -72,11 +78,10 @@ public class CheckoutPreviewDto
 public class CheckoutItemDto
 {
     public Guid CartItemId { get; set; }
-    public Guid ProductVersionId { get; set; }
-    public string SkuCode { get; set; } = string.Empty;
-    public string Title { get; set; } = string.Empty;
+    public Guid VersionId { get; set; }
+    public Guid ShopId { get; set; }
+    public int Quantity { get; set; }
     public long UnitPriceCents { get; set; }
-    public int Qty { get; set; }
     public long TotalPriceCents { get; set; }
     public bool IsValid { get; set; } = true;
     public string? InvalidReason { get; set; }
