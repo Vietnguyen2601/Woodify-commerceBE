@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Shared.Messaging;
-using InventoryService.Infrastructure.Data.Context;
+using ShipmentService.Infrastructure.Data.Context;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,10 +19,10 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new() { Title = "Inventory Service API", Version = "v1" });
+    c.SwaggerDoc("v1", new() { Title = "Shipment Service API", Version = "v1" });
 });
 
-builder.Services.AddDbContext<InventoryDbContext>();
+builder.Services.AddDbContext<ShipmentDbContext>();
 
 var rabbitMQSettings = new RabbitMQSettings
 {
@@ -48,7 +48,7 @@ var app = builder.Build();
 // Auto-migrate database on startup
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+    var dbContext = scope.ServiceProvider.GetRequiredService<ShipmentDbContext>();
     try
     {
         dbContext.Database.Migrate();
@@ -66,6 +66,6 @@ app.UseSwaggerUI();
 app.UseCors("AllowAll");
 
 app.MapControllers();
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "inventory-service" }));
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "shipment-service" }));
 
 app.Run();

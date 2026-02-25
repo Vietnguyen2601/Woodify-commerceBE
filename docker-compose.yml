@@ -196,31 +196,34 @@ services:
       - woodify-network
 
   # ==============================================================
-  # INVENTORY SERVICE
+  # SHIPMENT SERVICE
   # ==============================================================
-  # Quản lý: Stock
-  # Database: inventory_db
-  # Port: 5013
-  # ⚠️ COMMENTED OUT - Dockerfile chưa có
-  # inventory-service:
-  #   build:
-  #     context: .
-  #     dockerfile: src/Services/InventoryService/InventoryService.APIService/Dockerfile
-  #   container_name: woodify-inventory-service
-  #   restart: unless-stopped
-  #   ports:
-  #     - "5013:8080"
-  #   environment:
-  #     - ASPNETCORE_ENVIRONMENT=Development
-  #   volumes:
-  #     - ./.env:/app/.env
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     rabbitmq:
-  #       condition: service_healthy
-  #   networks:
-  #     - woodify-network
+  # Quản lý: Shipment, Delivery
+  # Database: shipment_db
+  # Port: 5016
+  shipment-service:
+    build:
+      context: .
+      dockerfile: src/Services/ShipmentService/ShipmentService.APIService/Dockerfile
+    container_name: woodify-shipment-service
+    restart: unless-stopped
+    ports:
+      - "5016:5016"
+    env_file:
+      - .env
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - RabbitMQ_Host=${RabbitMQ_Host}
+      - RabbitMQ_Port=${RabbitMQ_Port}
+      - RabbitMQ_Username=${RabbitMQ_Username}
+      - RabbitMQ_Password=${RabbitMQ_Password}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - woodify-network
 
   # ==============================================================
   # ORDER SERVICE

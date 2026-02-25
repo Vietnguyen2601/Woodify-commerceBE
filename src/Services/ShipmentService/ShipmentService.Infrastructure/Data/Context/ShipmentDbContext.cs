@@ -3,11 +3,11 @@ using Microsoft.Extensions.Configuration;
 using System;
 using System.IO;
 
-namespace InventoryService.Infrastructure.Data.Context;
+namespace ShipmentService.Infrastructure.Data.Context;
 
-public class InventoryDbContext : DbContext
+public class ShipmentDbContext : DbContext
 {
-    public InventoryDbContext(DbContextOptions<InventoryDbContext> options) : base(options)
+    public ShipmentDbContext(DbContextOptions<ShipmentDbContext> options) : base(options)
     {
     }
 
@@ -15,7 +15,7 @@ public class InventoryDbContext : DbContext
     {
         if (!optionsBuilder.IsConfigured)
         {
-            var connectionString = GetConnectionString("InventoryService");
+            var connectionString = GetConnectionString("ShipmentService");
             if (!string.IsNullOrEmpty(connectionString))
             {
                 optionsBuilder.UseNpgsql(connectionString);
