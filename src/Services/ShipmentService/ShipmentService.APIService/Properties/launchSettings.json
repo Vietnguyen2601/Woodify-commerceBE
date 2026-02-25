@@ -1,12 +1,12 @@
 {
   "profiles": {
-    "InventoryService.APIService": {
+    "ShipmentService.APIService": {
       "commandName": "Project",
       "launchBrowser": true,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
-      "applicationUrl": "https://localhost:54430;http://localhost:5012"
+      "applicationUrl": "https://localhost:61025;http://localhost:5016"
     }
   }
 }
