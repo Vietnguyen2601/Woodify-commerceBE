@@ -16,6 +16,9 @@ public interface IAuthenService
     Task<(bool Success, Guid? AccountId, string? ErrorMessage)> RegisterAsync(string email, string password, string username, string? address = null);
     Task<(bool Success, Account? Account, string? ErrorMessage)> LoginAsync(string email, string password);
 
+    // Current User
+    Task<(bool Success, Account? Account, string? ErrorMessage)> GetCurrentUserAsync(Guid userId);
+
     // Forgot Password
     Task<bool> SendResetPasswordOtpAsync(string email);
     Task<bool> VerifyResetPasswordOtpAsync(string email, string otp);

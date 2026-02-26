@@ -31,11 +31,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins("http://localhost:5173", "https://localhost:5010")
               .AllowAnyMethod()
-              .AllowAnyHeader();
-        // Note: Cannot use AllowCredentials() with AllowAnyOrigin()
-        // Will configure properly later with specific origins
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
 

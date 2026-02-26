@@ -1,11 +1,12 @@
-using System.Security.Claims;
+using IdentityService.APIService.Extensions;
 using IdentityService.Application.Constants;
 using IdentityService.Application.DTOs;
 using IdentityService.Application.Interfaces;
 using IdentityService.Infrastructure.Persistence;
-using IdentityService.APIService.Extensions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Results;
+using System.Security.Claims;
 
 namespace IdentityService.APIService.Controllers;
 
@@ -23,6 +24,48 @@ public class AuthController : ControllerBase
         _jwtTokenService = jwtTokenService;
         _unitOfWork = unitOfWork;
     }
+
+    #region Current User
+    [HttpGet("me")]
+    [Authorize]
+    public async Task<ActionResult<ServiceResult<object>>> GetMe()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(ServiceResult<object>.Unauthorized("Invalid user token"));
+        }
+
+        var (success, account, errorMessage) = await _authenService.GetCurrentUserAsync(userId);
+
+        if (!success)
+        {
+            if (errorMessage?.Contains("not found") == true)
+                return NotFound(ServiceResult<object>.NotFound(errorMessage));
+
+            if (errorMessage?.Contains("not active") == true)
+                return Unauthorized(ServiceResult<object>.Unauthorized(errorMessage));
+
+            return BadRequest(ServiceResult<object>.BadRequest(errorMessage ?? "Unknown error"));
+        }
+
+        var response = new
+        {
+            accountId = account!.AccountId,
+            email = account.Email,
+            username = account.Username,
+            name = account.Name,
+            gender = account.Gender,
+            dob = account.Dob,
+            address = account.Address,
+            phoneNumber = account.PhoneNumber,
+            role = account.Role?.RoleName ?? "customer"
+        };
+
+        return Ok(ServiceResult<object>.Success(response, "Current user retrieved successfully"));
+    }
+    #endregion
 
     #region OTP Endpoints
     /// <summary>
@@ -143,12 +186,12 @@ public class AuthController : ControllerBase
         var token = _jwtTokenService.GenerateJSONWebToken(account);
         var refreshToken = _jwtTokenService.GenerateRefreshToken(account);
 
-        // Set JWT tokens as HttpOnly Cookies
+        // Set JWT tokens as HttpOnly Cookies (for additional security)
         Response.SetJwtCookies(token, refreshToken);
 
-        // Return response without tokens (they are now in secure cookies)
+        // Return response WITH tokens (both in cookies and response body)
         return Ok(ServiceResult<LoginResponse>.Success(
-            new LoginResponse(true, AuthMessages.LoginSuccess, account.AccountId, account.Email, account.Username, null, null),
+            new LoginResponse(true, AuthMessages.LoginSuccess, account.AccountId, account.Email, account.Username, token, refreshToken),
             AuthMessages.LoginSuccess
         ));
     }
