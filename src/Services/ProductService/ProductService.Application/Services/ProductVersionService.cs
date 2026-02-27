@@ -113,12 +113,6 @@ public class ProductVersionService : IProductVersionService
             if (existingSku != null)
                 return ServiceResult<ProductVersionDto>.BadRequest($"SellerSku '{dto.SellerSku}' already exists");
 
-            // Calculate volume if not provided
-            if (!dto.VolumeCm3.HasValue)
-            {
-                dto.VolumeCm3 = (long)(dto.LengthCm * dto.WidthCm * dto.HeightCm);
-            }
-
             // Create version
             var version = dto.ToModel();
             await _productVersionRepository.CreateAsync(version);
@@ -134,19 +128,10 @@ public class ProductVersionService : IProductVersionService
                 CategoryId = product.CategoryId,
                 Name = product.Name,
                 GlobalSku = product.GlobalSku, // Keep existing GlobalSku by default
-                ImgUrl = product.ImgUrl,
                 Description = product.Description,
-                ArAvailable = product.ArAvailable,
-                ArModelUrl = product.ArModelUrl,
                 Status = product.Status,
                 ModerationStatus = product.ModerationStatus,
-                ModeratedBy = product.ModeratedBy,
                 ModeratedAt = product.ModeratedAt,
-                RejectionReason = product.RejectionReason,
-                ModerationNotes = product.ModerationNotes,
-                AvgRating = product.AvgRating,
-                ReviewCount = product.ReviewCount,
-                SoldCount = product.SoldCount,
                 CreatedAt = product.CreatedAt,
                 UpdatedAt = DateTime.UtcNow,
                 PublishedAt = product.PublishedAt
@@ -171,29 +156,15 @@ public class ProductVersionService : IProductVersionService
                 ProductDescription = product.Description,
                 ProductStatus = product.Status.ToString(),
                 SellerSku = version.SellerSku,
-                VersionNumber = version.VersionNumber,
                 VersionName = version.VersionName,
-                PriceCents = version.PriceCents,
-                BasePriceCents = version.BasePriceCents,
+                Price = version.Price,
                 Currency = "VND",
                 StockQuantity = version.StockQuantity,
-                LowStockThreshold = version.LowStockThreshold,
-                AllowBackorder = version.AllowBackorder,
                 WeightGrams = version.WeightGrams,
                 LengthCm = version.LengthCm,
                 WidthCm = version.WidthCm,
                 HeightCm = version.HeightCm,
-                VolumeCm3 = version.VolumeCm3,
-                BulkyType = version.BulkyType,
-                IsFragile = version.IsFragile,
-                RequiresSpecialHandling = version.RequiresSpecialHandling,
-                WarrantyMonths = version.WarrantyMonths,
-                WarrantyTerms = version.WarrantyTerms,
-                IsBundle = version.IsBundle,
-                BundleDiscountCents = version.BundleDiscountCents,
-                PrimaryImageUrl = version.PrimaryImageUrl,
                 IsActive = version.IsActive,
-                IsDefault = version.IsDefault,
                 UpdatedAt = DateTime.UtcNow,
                 EventType = "Created"
             });
@@ -267,12 +238,6 @@ public class ProductVersionService : IProductVersionService
 
             dto.MapToUpdate(version);
 
-            // Recalculate volume if dimensions changed
-            if (dto.LengthCm.HasValue || dto.WidthCm.HasValue || dto.HeightCm.HasValue)
-            {
-                version.VolumeCm3 = (long)(version.LengthCm * version.WidthCm * version.HeightCm);
-            }
-
             await _productVersionRepository.UpdateAsync(version);
             
             var updatedVersion = await _productVersionRepository.GetByIdAsync(id);
@@ -291,29 +256,15 @@ public class ProductVersionService : IProductVersionService
                     ProductDescription = product.Description,
                     ProductStatus = product.Status.ToString(),
                     SellerSku = updatedVersion.SellerSku,
-                    VersionNumber = updatedVersion.VersionNumber,
                     VersionName = updatedVersion.VersionName,
-                    PriceCents = updatedVersion.PriceCents,
-                    BasePriceCents = updatedVersion.BasePriceCents,
+                    Price = updatedVersion.Price,
                     Currency = "VND",
                     StockQuantity = updatedVersion.StockQuantity,
-                    LowStockThreshold = updatedVersion.LowStockThreshold,
-                    AllowBackorder = updatedVersion.AllowBackorder,
                     WeightGrams = updatedVersion.WeightGrams,
                     LengthCm = updatedVersion.LengthCm,
                     WidthCm = updatedVersion.WidthCm,
                     HeightCm = updatedVersion.HeightCm,
-                    VolumeCm3 = updatedVersion.VolumeCm3,
-                    BulkyType = updatedVersion.BulkyType,
-                    IsFragile = updatedVersion.IsFragile,
-                    RequiresSpecialHandling = updatedVersion.RequiresSpecialHandling,
-                    WarrantyMonths = updatedVersion.WarrantyMonths,
-                    WarrantyTerms = updatedVersion.WarrantyTerms,
-                    IsBundle = updatedVersion.IsBundle,
-                    BundleDiscountCents = updatedVersion.BundleDiscountCents,
-                    PrimaryImageUrl = updatedVersion.PrimaryImageUrl,
                     IsActive = updatedVersion.IsActive,
-                    IsDefault = updatedVersion.IsDefault,
                     UpdatedAt = updatedVersion.UpdatedAt ?? DateTime.UtcNow,
                     EventType = "Updated"
                 });
@@ -358,29 +309,15 @@ public class ProductVersionService : IProductVersionService
                     ProductDescription = product.Description,
                     ProductStatus = product.Status.ToString(),
                     SellerSku = version.SellerSku,
-                    VersionNumber = version.VersionNumber,
                     VersionName = version.VersionName,
-                    PriceCents = version.PriceCents,
-                    BasePriceCents = version.BasePriceCents,
+                    Price = version.Price,
                     Currency = "VND",
                     StockQuantity = version.StockQuantity,
-                    LowStockThreshold = version.LowStockThreshold,
-                    AllowBackorder = version.AllowBackorder,
                     WeightGrams = version.WeightGrams,
                     LengthCm = version.LengthCm,
                     WidthCm = version.WidthCm,
                     HeightCm = version.HeightCm,
-                    VolumeCm3 = version.VolumeCm3,
-                    BulkyType = version.BulkyType,
-                    IsFragile = version.IsFragile,
-                    RequiresSpecialHandling = version.RequiresSpecialHandling,
-                    WarrantyMonths = version.WarrantyMonths,
-                    WarrantyTerms = version.WarrantyTerms,
-                    IsBundle = version.IsBundle,
-                    BundleDiscountCents = version.BundleDiscountCents,
-                    PrimaryImageUrl = version.PrimaryImageUrl,
                     IsActive = version.IsActive,
-                    IsDefault = version.IsDefault,
                     UpdatedAt = version.UpdatedAt.Value,
                     EventType = "Updated"
                 });
@@ -425,29 +362,15 @@ public class ProductVersionService : IProductVersionService
                     ProductDescription = product.Description,
                     ProductStatus = product.Status.ToString(),
                     SellerSku = version.SellerSku,
-                    VersionNumber = version.VersionNumber,
                     VersionName = version.VersionName,
-                    PriceCents = version.PriceCents,
-                    BasePriceCents = version.BasePriceCents,
+                    Price = version.Price,
                     Currency = "VND",
                     StockQuantity = version.StockQuantity,
-                    LowStockThreshold = version.LowStockThreshold,
-                    AllowBackorder = version.AllowBackorder,
                     WeightGrams = version.WeightGrams,
                     LengthCm = version.LengthCm,
                     WidthCm = version.WidthCm,
                     HeightCm = version.HeightCm,
-                    VolumeCm3 = version.VolumeCm3,
-                    BulkyType = version.BulkyType,
-                    IsFragile = version.IsFragile,
-                    RequiresSpecialHandling = version.RequiresSpecialHandling,
-                    WarrantyMonths = version.WarrantyMonths,
-                    WarrantyTerms = version.WarrantyTerms,
-                    IsBundle = version.IsBundle,
-                    BundleDiscountCents = version.BundleDiscountCents,
-                    PrimaryImageUrl = version.PrimaryImageUrl,
                     IsActive = version.IsActive,
-                    IsDefault = version.IsDefault,
                     UpdatedAt = version.UpdatedAt.Value,
                     EventType = "Updated"
                 });
@@ -469,69 +392,15 @@ public class ProductVersionService : IProductVersionService
             if (version == null)
                 return ServiceResult.NotFound("Product version not found");
 
-            // Get all versions of the product
-            var allVersions = await _productVersionRepository.GetByProductIdAsync(version.ProductId);
+            // Note: IsDefault property has been removed from ProductVersion entity
+            // This method is kept for backward compatibility but does nothing now
+            // Consider removing this method entirely if not needed
 
-            // Remove default flag from all versions
-            foreach (var v in allVersions)
-            {
-                v.IsDefault = false;
-                v.UpdatedAt = DateTime.UtcNow;
-                await _productVersionRepository.UpdateAsync(v);
-            }
-
-            // Set current version as default
-            version.IsDefault = true;
-            version.UpdatedAt = DateTime.UtcNow;
-            await _productVersionRepository.UpdateAsync(version);
-
-            // Get product info for event
-            var product = await _productMasterRepository.GetByIdAsync(version.ProductId);
-            if (product != null)
-            {
-                // Publish event to OrderService for the new default version
-                _eventPublisher.PublishProductVersionUpdated(new ProductVersionUpdatedEvent
-                {
-                    VersionId = version.VersionId,
-                    ProductId = version.ProductId,
-                    ShopId = product.ShopId,
-                    ProductName = product.Name,
-                    ProductDescription = product.Description,
-                    ProductStatus = product.Status.ToString(),
-                    SellerSku = version.SellerSku,
-                    VersionNumber = version.VersionNumber,
-                    VersionName = version.VersionName,
-                    PriceCents = version.PriceCents,
-                    BasePriceCents = version.BasePriceCents,
-                    Currency = "VND",
-                    StockQuantity = version.StockQuantity,
-                    LowStockThreshold = version.LowStockThreshold,
-                    AllowBackorder = version.AllowBackorder,
-                    WeightGrams = version.WeightGrams,
-                    LengthCm = version.LengthCm,
-                    WidthCm = version.WidthCm,
-                    HeightCm = version.HeightCm,
-                    VolumeCm3 = version.VolumeCm3,
-                    BulkyType = version.BulkyType,
-                    IsFragile = version.IsFragile,
-                    RequiresSpecialHandling = version.RequiresSpecialHandling,
-                    WarrantyMonths = version.WarrantyMonths,
-                    WarrantyTerms = version.WarrantyTerms,
-                    IsBundle = version.IsBundle,
-                    BundleDiscountCents = version.BundleDiscountCents,
-                    PrimaryImageUrl = version.PrimaryImageUrl,
-                    IsActive = version.IsActive,
-                    IsDefault = version.IsDefault,
-                    UpdatedAt = version.UpdatedAt.Value,
-                    EventType = "Updated"
-                });
-            }
-
-            return ServiceResult.Success("Product version set as default successfully");
+            return ServiceResult.Success("IsDefault property no longer exists. This operation has been deprecated.");
         }
         catch (Exception ex)
         {
-            return ServiceResult.InternalServerError($"Error setting product version as default: {ex.Message}");
+            return ServiceResult.InternalServerError($"Error: {ex.Message}");
         }
     }
 }

@@ -18,7 +18,7 @@ public interface IProductReviewService
     Task<ServiceResult<ProductReviewDto>> CreateAsync(CreateProductReviewDto dto);
     Task<ServiceResult<ProductReviewDto>> UpdateAsync(Guid id, UpdateProductReviewDto dto);
     Task<ServiceResult> DeleteAsync(Guid id);
-    Task<ServiceResult<ProductReviewDto>> HideReviewAsync(Guid id, Guid hiddenBy);
+    Task<ServiceResult<ProductReviewDto>> HideReviewAsync(Guid id);
     Task<ServiceResult<ProductReviewDto>> UnhideReviewAsync(Guid id);
     Task<ServiceResult<ProductReviewDto>> AddShopResponseAsync(Guid id, ShopResponseDto dto);
 }

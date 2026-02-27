@@ -131,7 +131,7 @@ public class OrderService : IOrderService
                     ReturnedQuantity = 0,
                     RefundedAmountCents = 0,
                     ShippingInfo = productCache != null 
-                        ? $"Weight: {productCache.WeightGrams}g, Dimensions: {productCache.LengthCm}x{productCache.WidthCm}x{productCache.HeightCm}cm, Type: {productCache.BulkyType ?? "NORMAL"}, Fragile: {productCache.IsFragile}"
+                        ? $"Weight: {productCache.WeightGrams}g, Dimensions: {productCache.LengthCm}x{productCache.WidthCm}x{productCache.HeightCm}cm"
                         : null,
                     CreatedAt = DateTime.UtcNow
                 };

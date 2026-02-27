@@ -231,8 +231,6 @@ public class ProductMasterService : IProductMasterService
                 Keyword = searchDto.Keyword,
                 Status = searchDto.Status?.ToString() ?? "PUBLISHED",
                 CategoryName = searchDto.CategoryName,
-                MinRating = (double?)searchDto.MinRating,
-                MaxRating = (double?)searchDto.MaxRating,
                 Page = searchDto.Page,
                 PageSize = searchDto.PageSize,
                 SortBy = searchDto.SortBy,

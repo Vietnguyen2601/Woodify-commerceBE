@@ -16,45 +16,23 @@ public class ProductVersionUpdatedEvent
     
     // Version Info
     public string SellerSku { get; set; } = string.Empty;
-    public int VersionNumber { get; set; } = 1;
     public string? VersionName { get; set; }
     
     // Pricing
-    public long PriceCents { get; set; }
-    public long? BasePriceCents { get; set; }
+    public double Price { get; set; }
     public string Currency { get; set; } = "VND";
     
     // Stock
     public int StockQuantity { get; set; } = 0;
-    public int LowStockThreshold { get; set; } = 5;
-    public bool AllowBackorder { get; set; } = false;
     
     // Shipping Dimensions
     public int WeightGrams { get; set; }
     public decimal LengthCm { get; set; }
     public decimal WidthCm { get; set; }
     public decimal HeightCm { get; set; }
-    public long? VolumeCm3 { get; set; }
-    
-    // Shipping Properties
-    public string? BulkyType { get; set; }
-    public bool IsFragile { get; set; } = false;
-    public bool RequiresSpecialHandling { get; set; } = false;
-    
-    // Warranty
-    public int WarrantyMonths { get; set; } = 12;
-    public string? WarrantyTerms { get; set; }
-    
-    // Bundle
-    public bool IsBundle { get; set; } = false;
-    public long BundleDiscountCents { get; set; } = 0;
-    
-    // Images
-    public string? PrimaryImageUrl { get; set; }
     
     // Status
     public bool IsActive { get; set; } = true;
-    public bool IsDefault { get; set; } = false;
     
     public DateTime UpdatedAt { get; set; }
     public string EventType { get; set; } = "ProductVersionUpdated"; // Created, Updated, Deleted

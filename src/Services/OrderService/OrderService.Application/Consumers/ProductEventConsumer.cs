@@ -95,45 +95,26 @@ public class ProductEventConsumer
                     
                     // Version Info
                     SellerSku = evt.SellerSku,
-                    VersionNumber = evt.VersionNumber,
                     VersionName = evt.VersionName,
                     
                     // Pricing
-                    PriceCents = evt.PriceCents,
-                    BasePriceCents = evt.BasePriceCents,
+                    Price = evt.Price,
                     Currency = evt.Currency,
+                    PriceCents = (long)(evt.Price * 100), // Convert to cents for precise calculations
+                    BasePriceCents = (long)(evt.Price * 100), // No discount, use same as price
                     
                     // Stock
                     StockQuantity = evt.StockQuantity,
-                    LowStockThreshold = evt.LowStockThreshold,
-                    AllowBackorder = evt.AllowBackorder,
+                    AllowBackorder = false, // Default to false as ProductVersion doesn't have this field
                     
                     // Shipping Dimensions
                     WeightGrams = evt.WeightGrams,
                     LengthCm = evt.LengthCm,
                     WidthCm = evt.WidthCm,
                     HeightCm = evt.HeightCm,
-                    VolumeCm3 = evt.VolumeCm3,
-                    
-                    // Shipping Properties
-                    BulkyType = evt.BulkyType,
-                    IsFragile = evt.IsFragile,
-                    RequiresSpecialHandling = evt.RequiresSpecialHandling,
-                    
-                    // Warranty
-                    WarrantyMonths = evt.WarrantyMonths,
-                    WarrantyTerms = evt.WarrantyTerms,
-                    
-                    // Bundle
-                    IsBundle = evt.IsBundle,
-                    BundleDiscountCents = evt.BundleDiscountCents,
-                    
-                    // Images
-                    PrimaryImageUrl = evt.PrimaryImageUrl,
                     
                     // Status
                     IsActive = evt.IsActive,
-                    IsDefault = evt.IsDefault,
                     
                     LastUpdated = evt.UpdatedAt
                 };

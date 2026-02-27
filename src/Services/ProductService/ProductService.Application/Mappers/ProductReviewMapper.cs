@@ -12,15 +12,12 @@ public static class ProductReviewMapper
         return new ProductReviewDto
         {
             ReviewId = review.ReviewId,
-            ProductId = review.ProductId,
             VersionId = review.VersionId,
             OrderId = review.OrderId,
             AccountId = review.AccountId,
             Rating = review.Rating,
             Content = review.Content,
             IsVisible = review.IsVisible,
-            HiddenBy = review.HiddenBy,
-            HiddenAt = review.HiddenAt,
             ShopResponse = review.ShopResponse,
             ShopResponseAt = review.ShopResponseAt,
             CreatedAt = review.CreatedAt,
@@ -37,7 +34,6 @@ public static class ProductReviewMapper
 
         return new ProductReview
         {
-            ProductId = dto.ProductId,
             VersionId = dto.VersionId,
             OrderId = dto.OrderId,
             AccountId = dto.AccountId,

@@ -146,45 +146,23 @@ public class OrderDbContext : DbContext
             
             // Version Info
             entity.Property(e => e.SellerSku).HasColumnName("seller_sku").HasMaxLength(255).IsRequired();
-            entity.Property(e => e.VersionNumber).HasColumnName("version_number").IsRequired();
             entity.Property(e => e.VersionName).HasColumnName("version_name").HasMaxLength(255);
             
             // Pricing
-            entity.Property(e => e.PriceCents).HasColumnName("price_cents").IsRequired();
-            entity.Property(e => e.BasePriceCents).HasColumnName("base_price_cents");
+            entity.Property(e => e.Price).HasColumnName("price").HasColumnType("decimal(18,2)").IsRequired();
             entity.Property(e => e.Currency).HasColumnName("currency").HasMaxLength(10);
             
             // Stock
             entity.Property(e => e.StockQuantity).HasColumnName("stock_quantity").HasDefaultValue(0);
-            entity.Property(e => e.LowStockThreshold).HasColumnName("low_stock_threshold").HasDefaultValue(5);
-            entity.Property(e => e.AllowBackorder).HasColumnName("allow_backorder").HasDefaultValue(false);
             
             // Shipping Dimensions
             entity.Property(e => e.WeightGrams).HasColumnName("weight_grams");
             entity.Property(e => e.LengthCm).HasColumnName("length_cm").HasColumnType("decimal(10,2)");
             entity.Property(e => e.WidthCm).HasColumnName("width_cm").HasColumnType("decimal(10,2)");
             entity.Property(e => e.HeightCm).HasColumnName("height_cm").HasColumnType("decimal(10,2)");
-            entity.Property(e => e.VolumeCm3).HasColumnName("volume_cm3");
-            
-            // Shipping Properties
-            entity.Property(e => e.BulkyType).HasColumnName("bulky_type").HasMaxLength(50);
-            entity.Property(e => e.IsFragile).HasColumnName("is_fragile").HasDefaultValue(false);
-            entity.Property(e => e.RequiresSpecialHandling).HasColumnName("requires_special_handling").HasDefaultValue(false);
-            
-            // Warranty
-            entity.Property(e => e.WarrantyMonths).HasColumnName("warranty_months").HasDefaultValue(12);
-            entity.Property(e => e.WarrantyTerms).HasColumnName("warranty_terms");
-            
-            // Bundle
-            entity.Property(e => e.IsBundle).HasColumnName("is_bundle").HasDefaultValue(false);
-            entity.Property(e => e.BundleDiscountCents).HasColumnName("bundle_discount_cents").HasDefaultValue(0);
-            
-            // Images
-            entity.Property(e => e.PrimaryImageUrl).HasColumnName("primary_image_url").HasMaxLength(1000);
             
             // Status
             entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
-            entity.Property(e => e.IsDefault).HasColumnName("is_default").HasDefaultValue(false);
             
             // Soft Delete
             entity.Property(e => e.IsDeleted).HasColumnName("is_deleted").IsRequired().HasDefaultValue(false);

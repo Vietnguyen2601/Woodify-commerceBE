@@ -84,21 +84,16 @@ public static class OrderDbSeeder
                     ProductDescription = "Ghế cao cấp từ gỗ teak nhập khẩu",
                     ProductStatus = "PUBLISHED",
                     SellerSku = "WOOD-CHAIR-001",
-                    VersionNumber = 1,
                     VersionName = "Phiên bản tiêu chuẩn",
-                    PriceCents = 299900000,
-                    BasePriceCents = 349900000,
+                    Price = 2999000.00,
                     Currency = "VND",
                     StockQuantity = 50,
                     WeightGrams = 15000,
                     LengthCm = 60,
                     WidthCm = 55,
                     HeightCm = 90,
-                    BulkyType = "NORMAL",
-                    IsFragile = false,
-                    WarrantyMonths = 24,
                     IsActive = true,
-                    IsDefault = true
+                    LastUpdated = DateTime.UtcNow
                 },
                 new ProductVersionCache 
                 { 
@@ -109,20 +104,15 @@ public static class OrderDbSeeder
                     ProductDescription = "Bàn làm việc hiện đại từ gỗ sồi tự nhiên",
                     ProductStatus = "PUBLISHED",
                     SellerSku = "WOOD-DESK-001",
-                    VersionNumber = 1,
-                    PriceCents = 499900000,
-                    BasePriceCents = 599900000,
+                    Price = 4999000.00,
                     Currency = "VND",
                     StockQuantity = 30,
                     WeightGrams = 35000,
                     LengthCm = 140,
                     WidthCm = 70,
                     HeightCm = 75,
-                    BulkyType = "BULKY",
-                    IsFragile = false,
-                    WarrantyMonths = 36,
                     IsActive = true,
-                    IsDefault = true
+                    LastUpdated = DateTime.UtcNow
                 },
                 new ProductVersionCache 
                 { 
@@ -133,21 +123,15 @@ public static class OrderDbSeeder
                     ProductDescription = "Giường ngủ cao cấp từ gỗ thông tự nhiên",
                     ProductStatus = "PUBLISHED",
                     SellerSku = "WOOD-BED-001",
-                    VersionNumber = 1,
-                    PriceCents = 599900000,
-                    BasePriceCents = 699900000,
+                    Price = 5999000.00,
                     Currency = "VND",
                     StockQuantity = 20,
                     WeightGrams = 80000,
                     LengthCm = 200,
                     WidthCm = 160,
                     HeightCm = 45,
-                    BulkyType = "SUPER_BULKY",
-                    IsFragile = false,
-                    RequiresSpecialHandling = true,
-                    WarrantyMonths = 48,
                     IsActive = true,
-                    IsDefault = true
+                    LastUpdated = DateTime.UtcNow
                 },
                 new ProductVersionCache 
                 { 
@@ -158,20 +142,15 @@ public static class OrderDbSeeder
                     ProductDescription = "Tủ âm tường sang trọng từ gỗ óc chó",
                     ProductStatus = "PUBLISHED",
                     SellerSku = "WOOD-CABINET-001",
-                    VersionNumber = 1,
-                    PriceCents = 799900000,
-                    BasePriceCents = 899900000,
+                    Price = 7999000.00,
                     Currency = "VND",
                     StockQuantity = 15,
                     WeightGrams = 45000,
                     LengthCm = 100,
                     WidthCm = 40,
                     HeightCm = 180,
-                    BulkyType = "BULKY",
-                    IsFragile = true,
-                    WarrantyMonths = 36,
                     IsActive = true,
-                    IsDefault = true
+                    LastUpdated = DateTime.UtcNow
                 }
             );
             await dbContext.SaveChangesAsync();

@@ -79,10 +79,10 @@ public class ProductReviewService : IProductReviewService
     {
         try
         {
-            // Validate Product exists
-            var productExists = await _unitOfWork.ProductMasters.ExistsAsync(dto.ProductId);
-            if (!productExists)
-                return ServiceResult<ProductReviewDto>.NotFound("Product not found");
+            // Validate ProductVersion exists
+            var versionExists = await _unitOfWork.ProductVersions.ExistsAsync(dto.VersionId);
+            if (!versionExists)
+                return ServiceResult<ProductReviewDto>.NotFound("Product version not found");
 
             // Check if user already reviewed this order
             var existingReview = await _productReviewRepository.GetByOrderAndAccountAsync(dto.OrderId, dto.AccountId);
@@ -137,7 +137,7 @@ public class ProductReviewService : IProductReviewService
         }
     }
 
-    public async Task<ServiceResult<ProductReviewDto>> HideReviewAsync(Guid id, Guid hiddenBy)
+    public async Task<ServiceResult<ProductReviewDto>> HideReviewAsync(Guid id)
     {
         try
         {
@@ -146,8 +146,6 @@ public class ProductReviewService : IProductReviewService
                 return ServiceResult<ProductReviewDto>.NotFound("Review not found");
 
             review.IsVisible = false;
-            review.HiddenBy = hiddenBy;
-            review.HiddenAt = DateTime.UtcNow;
             review.UpdatedAt = DateTime.UtcNow;
             
             await _productReviewRepository.UpdateAsync(review);
@@ -170,8 +168,6 @@ public class ProductReviewService : IProductReviewService
                 return ServiceResult<ProductReviewDto>.NotFound("Review not found");
 
             review.IsVisible = true;
-            review.HiddenBy = null;
-            review.HiddenAt = null;
             review.UpdatedAt = DateTime.UtcNow;
             
             await _productReviewRepository.UpdateAsync(review);

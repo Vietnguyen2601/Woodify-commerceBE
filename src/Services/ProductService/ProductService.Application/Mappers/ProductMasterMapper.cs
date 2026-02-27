@@ -17,19 +17,10 @@ public static class ProductMasterMapper
             CategoryName = product.Category?.Name,
             Name = product.Name,
             GlobalSku = product.GlobalSku,
-            ImgUrl = product.ImgUrl,
             Description = product.Description,
-            ArAvailable = product.ArAvailable,
-            ArModelUrl = product.ArModelUrl,
-            AvgRating = product.AvgRating,
-            ReviewCount = product.ReviewCount,
-            SoldCount = product.SoldCount,
             Status = product.Status,
             ModerationStatus = product.ModerationStatus,
-            ModeratedBy = product.ModeratedBy,
             ModeratedAt = product.ModeratedAt,
-            RejectionReason = product.RejectionReason,
-            ModerationNotes = product.ModerationNotes,
             CreatedAt = product.CreatedAt,
             UpdatedAt = product.UpdatedAt,
             PublishedAt = product.PublishedAt
@@ -48,16 +39,10 @@ public static class ProductMasterMapper
             ShopId = dto.ShopId,
             CategoryId = dto.CategoryId,
             Name = dto.Name,
+            GlobalSku = dto.GlobalSku,
             Description = dto.Description,
-            ImgUrl = dto.ImgUrl,
-            ArAvailable = dto.ArAvailable,
-            ArModelUrl = dto.ArModelUrl,
-            GlobalSku = null, // Will be generated later
             Status = ProductStatus.DRAFT,
             ModerationStatus = ModerationStatus.PENDING,
-            AvgRating = 0,
-            ReviewCount = 0,
-            SoldCount = 0,
             CreatedAt = DateTime.UtcNow
         };
     }
@@ -81,30 +66,12 @@ public static class ProductMasterMapper
 
         if (dto.GlobalSku != null)
             product.GlobalSku = dto.GlobalSku;
-        
-        if (dto.ImgUrl != null)
-            product.ImgUrl = dto.ImgUrl;
 
         if (dto.Description != null)
             product.Description = dto.Description;
-
-        if (dto.ArAvailable.HasValue)
-            product.ArAvailable = dto.ArAvailable.Value;
-
-        if (dto.ArModelUrl != null)
-            product.ArModelUrl = dto.ArModelUrl;
         
         if (dto.Status.HasValue)
             product.Status = dto.Status.Value;
-        
-        if (dto.AvgRating.HasValue)
-            product.AvgRating = dto.AvgRating.Value;
-        
-        if (dto.ReviewCount.HasValue)
-            product.ReviewCount = dto.ReviewCount.Value;
-
-        if (dto.SoldCount.HasValue)
-            product.SoldCount = dto.SoldCount.Value;
 
         product.UpdatedAt = DateTime.UtcNow;
     }
@@ -121,10 +88,7 @@ public static class ProductMasterMapper
         }
 
         product.ModerationStatus = dto.ModerationStatus;
-        product.ModeratedBy = dto.ModeratedBy;
         product.ModeratedAt = DateTime.UtcNow;
-        product.RejectionReason = dto.RejectionReason;
-        product.ModerationNotes = dto.ModerationNotes;
         product.UpdatedAt = DateTime.UtcNow;
 
         // Auto update status based on moderation

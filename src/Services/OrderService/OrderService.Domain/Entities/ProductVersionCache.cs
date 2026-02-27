@@ -19,17 +19,18 @@ public class ProductVersionCache
     
     // Version Info
     public string SellerSku { get; set; } = string.Empty;
-    public int VersionNumber { get; set; } = 1;
     public string? VersionName { get; set; }
     
     // Pricing
-    public long PriceCents { get; set; }
-    public long? BasePriceCents { get; set; }
+    public double Price { get; set; }
     public string Currency { get; set; } = "VND";
+    
+    // Pricing in cents (computed from Price for precise calculations)
+    public long PriceCents { get; set; }
+    public long BasePriceCents { get; set; }
     
     // Stock
     public int StockQuantity { get; set; } = 0;
-    public int LowStockThreshold { get; set; } = 5;
     public bool AllowBackorder { get; set; } = false;
     
     // Shipping Dimensions
@@ -37,27 +38,9 @@ public class ProductVersionCache
     public decimal LengthCm { get; set; }
     public decimal WidthCm { get; set; }
     public decimal HeightCm { get; set; }
-    public long? VolumeCm3 { get; set; }
-    
-    // Shipping Properties
-    public string? BulkyType { get; set; } // NORMAL, BULKY, SUPER_BULKY
-    public bool IsFragile { get; set; } = false;
-    public bool RequiresSpecialHandling { get; set; } = false;
-    
-    // Warranty
-    public int WarrantyMonths { get; set; } = 12;
-    public string? WarrantyTerms { get; set; }
-    
-    // Bundle
-    public bool IsBundle { get; set; } = false;
-    public long BundleDiscountCents { get; set; } = 0;
-    
-    // Images
-    public string? PrimaryImageUrl { get; set; }
     
     // Status
     public bool IsActive { get; set; } = true;
-    public bool IsDefault { get; set; } = false;
     
     // Soft Delete
     public bool IsDeleted { get; set; } = false;
