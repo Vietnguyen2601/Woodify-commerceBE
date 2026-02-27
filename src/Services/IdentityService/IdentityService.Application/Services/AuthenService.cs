@@ -209,32 +209,25 @@ namespace IdentityService.Application.Services
 
         public async Task<(bool Success, Account? Account, string? ErrorMessage)> GetCurrentUserAsync(Guid userId)
         {
-            try
+            var account = await _unitOfWork.Accounts.GetByIdAsync(userId);
+            
+            if (account == null)
             {
-                var account = await _unitOfWork.Accounts.GetByIdAsync(userId);
-                
-                if (account == null)
-                {
-                    return (false, null, "Account not found");
-                }
-
-                if (!account.IsActive)
-                {
-                    return (false, null, "Account is not active");
-                }
-
-                // Load Role information
-                if (account.RoleId.HasValue)
-                {
-                    account.Role = await _unitOfWork.Roles.GetByIdAsync(account.RoleId.Value);
-                }
-
-                return (true, account, null);
+                return (false, null, "Account not found");
             }
-            catch (Exception ex)
+
+            if (!account.IsActive)
             {
-                return (false, null, $"Error retrieving current user: {ex.Message}");
+                return (false, null, "Account is not active");
             }
+
+            // Load Role information
+            if (account.RoleId.HasValue)
+            {
+                account.Role = await _unitOfWork.Roles.GetByIdAsync(account.RoleId.Value);
+            }
+
+            return (true, account, null);
         }
         #endregion
 
