@@ -64,14 +64,8 @@ public static class ProductMasterMapper
         if (dto.Name != null)
             product.Name = dto.Name;
 
-        if (dto.GlobalSku != null)
-            product.GlobalSku = dto.GlobalSku;
-
         if (dto.Description != null)
             product.Description = dto.Description;
-        
-        if (dto.Status.HasValue)
-            product.Status = dto.Status.Value;
 
         product.UpdatedAt = DateTime.UtcNow;
     }

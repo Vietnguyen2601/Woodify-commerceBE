@@ -95,11 +95,75 @@ public class ProductMasterService : IProductMasterService
                     return ServiceResult<ProductMasterDto>.NotFound("Category not found");
             }
 
+            // Store current status for business logic
+            var currentStatus = product.Status;
+
+            // PENDING_APPROVAL: Block all edits to avoid review drift
+            if (currentStatus == Domain.Entities.ProductStatus.PENDING_APPROVAL)
+            {
+                return ServiceResult<ProductMasterDto>.BadRequest(
+                    "Cannot edit product while it is pending approval. Please wait for review or cancel the approval request.");
+            }
+
+            // Track if buyer-facing content has changed
+            bool buyerFacingContentChanged = false;
+
+            // Check for changes in buyer-facing content (name, description, category)
+            if (!string.IsNullOrEmpty(dto.Name) && dto.Name != product.Name)
+                buyerFacingContentChanged = true;
+            
+            if (dto.Description != null && dto.Description != product.Description)
+                buyerFacingContentChanged = true;
+            
+            if (dto.CategoryId.HasValue && dto.CategoryId.Value != product.CategoryId)
+                buyerFacingContentChanged = true;
+
+            // Determine if we need to reset to PENDING_APPROVAL
+            bool requiresReModeration = false;
+            
+            // APPROVED: Allow edits but reset to PENDING_APPROVAL if buyer-facing content changes
+            if (currentStatus == Domain.Entities.ProductStatus.APPROVED && buyerFacingContentChanged)
+            {
+                requiresReModeration = true;
+            }
+
+            // PUBLISHED: Limited edits - require re-moderation for buyer-facing content changes
+            if (currentStatus == Domain.Entities.ProductStatus.PUBLISHED && buyerFacingContentChanged)
+            {
+                requiresReModeration = true;
+            }
+
+            // DRAFT, REJECTED: Editable freely - no special logic needed
+
+            // Apply the updates from DTO first
             dto.MapToUpdate(product);
+
+            // Override status and moderation if re-moderation is required
+            if (requiresReModeration)
+            {
+                product.Status = Domain.Entities.ProductStatus.PENDING_APPROVAL;
+                product.ModerationStatus = Domain.Entities.ModerationStatus.PENDING;
+                product.ModeratedAt = null;
+                
+                // Unpublish if was PUBLISHED
+                if (currentStatus == Domain.Entities.ProductStatus.PUBLISHED)
+                {
+                    product.PublishedAt = null;
+                }
+            }
+
+            // Save changes
             await _productMasterRepository.UpdateAsync(product);
             
             var updatedProduct = await _productMasterRepository.GetByIdAsync(id);
-            return ServiceResult<ProductMasterDto>.Success(updatedProduct!.ToDto(), "Product updated successfully");
+            
+            string message = "Product updated successfully";
+            if (requiresReModeration)
+            {
+                message = "Product updated successfully. Status changed to PENDING_APPROVAL due to changes in buyer-facing content (name/description/category). Re-moderation required.";
+            }
+
+            return ServiceResult<ProductMasterDto>.Success(updatedProduct!.ToDto(), message);
         }
         catch (Exception ex)
         {

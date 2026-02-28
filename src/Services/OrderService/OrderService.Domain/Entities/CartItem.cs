@@ -11,13 +11,7 @@ public class CartItem
     public Guid VersionId { get; set; }
     public Guid ShopId { get; set; }
     public int Quantity { get; set; } = 1;
-    public long UnitPriceCents { get; set; }
-    public long? CompareAtPriceCents { get; set; }
-    public bool? IsSelected { get; set; }
-    public string? CustomizationNote { get; set; }
-    public bool IsActive { get; set; } = true;
-    public DateTime AddedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? UpdatedAt { get; set; }
+    public double Price { get; set; }
 
     // Navigation property
     public virtual Cart? Cart { get; set; }

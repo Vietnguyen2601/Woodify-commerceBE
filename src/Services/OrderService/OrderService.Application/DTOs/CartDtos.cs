@@ -8,7 +8,6 @@ public class AddToCartDto
     public Guid VersionId { get; set; }
     public Guid ShopId { get; set; }
     public int Quantity { get; set; } = 1;
-    public string? CustomizationNote { get; set; }
 }
 
 /// <summary>
@@ -18,8 +17,6 @@ public class UpdateCartItemDto
 {
     public Guid CartItemId { get; set; }
     public int Quantity { get; set; }
-    public bool? IsSelected { get; set; }
-    public string? CustomizationNote { get; set; }
 }
 
 /// <summary>
@@ -30,9 +27,8 @@ public class CartDto
     public Guid CartId { get; set; }
     public Guid AccountId { get; set; }
     public DateTime CreatedAt { get; set; }
-    public DateTime? UpdatedAt { get; set; }
     public List<CartItemDto> Items { get; set; } = new List<CartItemDto>();
-    public long TotalPriceCents { get; set; }
+    public double TotalPrice { get; set; }
     public int TotalItems { get; set; }
 }
 
@@ -46,14 +42,8 @@ public class CartItemDto
     public Guid VersionId { get; set; }
     public Guid ShopId { get; set; }
     public int Quantity { get; set; }
-    public long UnitPriceCents { get; set; }
-    public long? CompareAtPriceCents { get; set; }
-    public bool? IsSelected { get; set; }
-    public string? CustomizationNote { get; set; }
-    public bool IsActive { get; set; }
-    public long TotalPriceCents { get; set; }
-    public DateTime AddedAt { get; set; }
-    public DateTime? UpdatedAt { get; set; }
+    public double Price { get; set; }
+    public double TotalPrice { get; set; }
 }
 
 /// <summary>
@@ -64,7 +54,7 @@ public class CheckoutPreviewDto
     public Guid CartId { get; set; }
     public Guid AccountId { get; set; }
     public List<CheckoutItemDto> Items { get; set; } = new List<CheckoutItemDto>();
-    public long SubtotalCents { get; set; }
+    public double Subtotal { get; set; }
     public int TotalItems { get; set; }
     public int ValidItemsCount { get; set; }
     public int InvalidItemsCount { get; set; }
@@ -81,9 +71,8 @@ public class CheckoutItemDto
     public Guid VersionId { get; set; }
     public Guid ShopId { get; set; }
     public int Quantity { get; set; }
-    public long UnitPriceCents { get; set; }
-    public long TotalPriceCents { get; set; }
+    public double Price { get; set; }
+    public double TotalPrice { get; set; }
     public bool IsValid { get; set; } = true;
     public string? InvalidReason { get; set; }
-    public DateTime AddedAt { get; set; }
 }

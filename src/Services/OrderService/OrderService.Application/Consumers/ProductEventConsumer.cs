@@ -100,8 +100,6 @@ public class ProductEventConsumer
                     // Pricing
                     Price = evt.Price,
                     Currency = evt.Currency,
-                    PriceCents = (long)(evt.Price * 100), // Convert to cents for precise calculations
-                    BasePriceCents = (long)(evt.Price * 100), // No discount, use same as price
                     
                     // Stock
                     StockQuantity = evt.StockQuantity,

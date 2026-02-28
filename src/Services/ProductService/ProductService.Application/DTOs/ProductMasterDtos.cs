@@ -15,9 +15,7 @@ public class UpdateProductMasterDto
 {
     public Guid? CategoryId { get; set; }
     public string? Name { get; set; }
-    public string? GlobalSku { get; set; }
     public string? Description { get; set; }
-    public ProductStatus? Status { get; set; }
 }
 
 public class ModerateProductDto

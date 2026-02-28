@@ -36,7 +36,7 @@ public class CartService : ICartService
                 {
                     AccountId = accountId,
                     Items = new List<CartItemDto>(),
-                    TotalPriceCents = 0,
+                    TotalPrice = 0,
                     TotalItems = 0
                 });
             }
@@ -67,7 +67,7 @@ public class CartService : ICartService
                 return ServiceResult<CartDto>.BadRequest($"Product is not available for purchase (Status: {productCache.ProductStatus})");
 
             // Check if product has price
-            if (productCache.PriceCents <= 0)
+            if (productCache.Price <= 0)
                 return ServiceResult<CartDto>.BadRequest("Product price is not set");
             
             // Check if product is active
@@ -99,11 +99,6 @@ public class CartService : ICartService
             {
                 // Update quantity
                 existingItem.Quantity += dto.Quantity;
-                existingItem.UpdatedAt = DateTime.UtcNow;
-                if (!string.IsNullOrEmpty(dto.CustomizationNote))
-                {
-                    existingItem.CustomizationNote = dto.CustomizationNote;
-                }
                 await _cartItemRepository.UpdateAsync(existingItem);
             }
             else
@@ -115,18 +110,10 @@ public class CartService : ICartService
                     VersionId = dto.VersionId,
                     ShopId = dto.ShopId,
                     Quantity = dto.Quantity,
-                    UnitPriceCents = productCache.PriceCents,
-                    CompareAtPriceCents = productCache.BasePriceCents,
-                    CustomizationNote = dto.CustomizationNote,
-                    IsActive = true,
-                    AddedAt = DateTime.UtcNow
+                    Price = productCache.Price
                 };
                 await _cartItemRepository.CreateAsync(cartItem);
             }
-
-            // Update cart timestamp
-            cart.UpdatedAt = DateTime.UtcNow;
-            await _cartRepository.UpdateAsync(cart);
 
             // Reload cart with items
             var updatedCart = await _cartRepository.GetCartWithItemsAsync(cart.CartId);
@@ -154,22 +141,7 @@ public class CartService : ICartService
                 return ServiceResult<CartDto>.NotFound("Cart item not found");
 
             cartItem.Quantity = dto.Quantity;
-            cartItem.UpdatedAt = DateTime.UtcNow;
-            
-            if (dto.IsSelected.HasValue)
-            {
-                cartItem.IsSelected = dto.IsSelected.Value;
-            }
-            
-            if (dto.CustomizationNote != null)
-            {
-                cartItem.CustomizationNote = dto.CustomizationNote;
-            }
-            
             await _cartItemRepository.UpdateAsync(cartItem);
-
-            cart.UpdatedAt = DateTime.UtcNow;
-            await _cartRepository.UpdateAsync(cart);
 
             var updatedCart = await _cartRepository.GetCartWithItemsAsync(cart.CartId);
             return ServiceResult<CartDto>.Success(updatedCart!.ToDto(), "Cart item updated successfully");
@@ -193,10 +165,6 @@ public class CartService : ICartService
                 return ServiceResult.NotFound("Cart item not found");
 
             await _cartItemRepository.RemoveAsync(cartItem);
-
-            cart.UpdatedAt = DateTime.UtcNow;
-            await _cartRepository.UpdateAsync(cart);
-
             return ServiceResult.Success("Cart item removed successfully");
         }
         catch (Exception ex)
@@ -218,9 +186,6 @@ public class CartService : ICartService
             {
                 await _cartItemRepository.RemoveAsync(item);
             }
-
-            cart.UpdatedAt = DateTime.UtcNow;
-            await _cartRepository.UpdateAsync(cart);
 
             return ServiceResult.Success("Cart cleared successfully");
         }
@@ -248,9 +213,8 @@ public class CartService : ICartService
             }
 
             // Get all product version IDs to check validity
-            var versionIds = cartItems.Select(item => item.VersionId).ToList();
             var checkoutItems = new List<CheckoutItemDto>();
-            long subtotal = 0;
+            double subtotal = 0;
             int validCount = 0;
             int invalidCount = 0;
 
@@ -262,9 +226,8 @@ public class CartService : ICartService
                     VersionId = item.VersionId,
                     ShopId = item.ShopId,
                     Quantity = item.Quantity,
-                    UnitPriceCents = item.UnitPriceCents,
-                    TotalPriceCents = item.UnitPriceCents * item.Quantity,
-                    AddedAt = item.AddedAt,
+                    Price = item.Price,
+                    TotalPrice = item.Price * item.Quantity,
                     IsValid = true
                 };
 
@@ -292,7 +255,7 @@ public class CartService : ICartService
                 else
                 {
                     // Valid item, add to subtotal
-                    subtotal += checkoutItem.TotalPriceCents;
+                    subtotal += checkoutItem.TotalPrice;
                     validCount++;
                 }
 
@@ -304,7 +267,7 @@ public class CartService : ICartService
                 CartId = cart.CartId,
                 AccountId = cart.AccountId,
                 Items = checkoutItems,
-                SubtotalCents = subtotal,
+                Subtotal = subtotal,
                 TotalItems = cartItems.Count,
                 ValidItemsCount = validCount,
                 InvalidItemsCount = invalidCount,

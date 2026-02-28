@@ -22,15 +22,15 @@ public class UpdateProductMasterValidator : AbstractValidator<UpdateProductMaste
 {
     public UpdateProductMasterValidator()
     {
-        RuleFor(x => x.GlobalSku)
-            .MaximumLength(255)
-            .WithMessage("Global SKU cannot exceed 255 characters")
-            .When(x => !string.IsNullOrEmpty(x.GlobalSku));
+        RuleFor(x => x.Name)
+            .MaximumLength(500)
+            .WithMessage("Product name cannot exceed 500 characters")
+            .When(x => !string.IsNullOrEmpty(x.Name));
 
-        RuleFor(x => x.Status)
-            .IsInEnum()
-            .WithMessage("Invalid product status")
-            .When(x => x.Status.HasValue);
+        RuleFor(x => x.Description)
+            .MaximumLength(5000)
+            .WithMessage("Description cannot exceed 5000 characters")
+            .When(x => !string.IsNullOrEmpty(x.Description));
     }
 }
 

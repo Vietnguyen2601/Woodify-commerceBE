@@ -25,10 +25,6 @@ public class ProductVersionCache
     public double Price { get; set; }
     public string Currency { get; set; } = "VND";
     
-    // Pricing in cents (computed from Price for precise calculations)
-    public long PriceCents { get; set; }
-    public long BasePriceCents { get; set; }
-    
     // Stock
     public int StockQuantity { get; set; } = 0;
     public bool AllowBackorder { get; set; } = false;

@@ -16,9 +16,8 @@ public static class CartMapper
             CartId = cart.CartId,
             AccountId = cart.AccountId,
             CreatedAt = cart.CreatedAt,
-            UpdatedAt = cart.UpdatedAt,
             Items = items,
-            TotalPriceCents = items.Sum(i => i.TotalPriceCents),
+            TotalPrice = items.Sum(i => i.TotalPrice),
             TotalItems = items.Sum(i => i.Quantity)
         };
     }
@@ -34,14 +33,8 @@ public static class CartMapper
             VersionId = item.VersionId,
             ShopId = item.ShopId,
             Quantity = item.Quantity,
-            UnitPriceCents = item.UnitPriceCents,
-            CompareAtPriceCents = item.CompareAtPriceCents,
-            IsSelected = item.IsSelected,
-            CustomizationNote = item.CustomizationNote,
-            IsActive = item.IsActive,
-            TotalPriceCents = item.UnitPriceCents * item.Quantity,
-            AddedAt = item.AddedAt,
-            UpdatedAt = item.UpdatedAt
+            Price = item.Price,
+            TotalPrice = item.Price * item.Quantity
         };
     }
 }
