@@ -58,8 +58,16 @@ public class ProductEventConsumer
             handler: async (message) => await HandleProductVersionRestored(message)
         );
 
+        // Subscribe to Product Deleted events
+        _rabbitMQConsumer.Subscribe<ProductDeletedEvent>(
+            queueName: "orderservice.product.deleted",
+            exchange: "product.events",
+            routingKey: "product.deleted",
+            handler: async (message) => await HandleProductDeleted(message)
+        );
+
         Console.WriteLine("ProductEventConsumer started listening for Product events");
-        Console.WriteLine("Subscribed to: product.events exchange with routing keys: product.version.updated, product.status.changed, product.version.deleted, product.version.restored");
+        Console.WriteLine("Subscribed to: product.events exchange with routing keys: product.version.updated, product.status.changed, product.version.deleted, product.version.restored, product.deleted");
     }
 
     private async Task HandleProductVersionUpdated(ProductVersionUpdatedEvent evt)
@@ -204,6 +212,44 @@ public class ProductEventConsumer
         catch (Exception ex)
         {
             Console.WriteLine($"[OrderService] Error handling ProductVersionRestored: {ex.Message}");
+        }
+    }
+
+    private async Task HandleProductDeleted(ProductDeletedEvent evt)
+    {
+        try
+        {
+            Console.WriteLine($"[OrderService] Received ProductDeleted event: ProductId={evt.ProductId}, ProductName={evt.ProductName}");
+
+            using var scope = _scopeFactory.CreateScope();
+            var cacheRepository = scope.ServiceProvider.GetRequiredService<IProductVersionCacheRepository>();
+
+            // Get all product versions of this product from cache
+            var productVersions = await cacheRepository.GetByProductIdAsync(evt.ProductId);
+            
+            if (productVersions != null && productVersions.Any())
+            {
+                foreach (var version in productVersions)
+                {
+                    // Mark all versions as deleted when product is deleted
+                    version.IsDeleted = true;
+                    version.DeletedAt = evt.DeletedAt;
+                    version.ProductStatus = "DELETED";
+                    version.LastUpdated = DateTime.UtcNow;
+                    
+                    await cacheRepository.UpdateAsync(version);
+                }
+                
+                Console.WriteLine($"[OrderService] Product deleted - marked {productVersions.Count()} versions as deleted: ProductId={evt.ProductId}");
+            }
+            else
+            {
+                Console.WriteLine($"[OrderService] No product versions found in cache for deleted product: {evt.ProductId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[OrderService] Error handling ProductDeleted: {ex.Message}");
         }
     }
 }

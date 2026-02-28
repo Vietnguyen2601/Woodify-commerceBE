@@ -39,7 +39,7 @@ public static class ProductMasterMapper
             ShopId = dto.ShopId,
             CategoryId = dto.CategoryId,
             Name = dto.Name,
-            GlobalSku = dto.GlobalSku,
+            GlobalSku = null,
             Description = dto.Description,
             Status = ProductStatus.DRAFT,
             ModerationStatus = ModerationStatus.PENDING,

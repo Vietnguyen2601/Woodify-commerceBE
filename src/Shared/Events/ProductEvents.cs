@@ -70,3 +70,15 @@ public class ProductVersionRestoredEvent
     public DateTime RestoredAt { get; set; }
     public string EventType { get; set; } = "ProductVersionRestored";
 }
+
+/// <summary>
+/// Event được publish khi ProductMaster bị xóa (soft delete)
+/// </summary>
+public class ProductDeletedEvent
+{
+    public Guid ProductId { get; set; }
+    public Guid ShopId { get; set; }
+    public string ProductName { get; set; } = string.Empty;
+    public DateTime DeletedAt { get; set; }
+    public string EventType { get; set; } = "ProductDeleted";
+}

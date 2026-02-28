@@ -7,7 +7,6 @@ public class CreateProductMasterDto
     public Guid ShopId { get; set; }
     public Guid CategoryId { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string? GlobalSku { get; set; }
     public string? Description { get; set; }
 }
 

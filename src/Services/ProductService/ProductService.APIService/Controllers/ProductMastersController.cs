@@ -145,7 +145,8 @@ public class ProductMastersController : ControllerBase
     }
 
     /// <summary>
-    /// Submit product for approval (DRAFT -> PENDING_APPROVAL)
+    /// Submit product for approval (DRAFT|REJECTED -> PENDING_APPROVAL)
+    /// Requires at least 1 active product version
     /// </summary>
     [HttpPatch("SubmitForApproval/{id:guid}")]
     public async Task<ActionResult<ServiceResult<ProductMasterDto>>> SubmitForApproval(Guid id)
