@@ -71,9 +71,11 @@ public class ProductVersionRepository : GenericRepository<ProductVersion>, IProd
 
     public async Task<ProductVersion?> GetDefaultVersionByProductIdAsync(Guid productId)
     {
+        // Since IsDefault is removed, return the first active version or the latest version
         return await _dbSet
             .Include(v => v.Product)
-            .Where(v => v.ProductId == productId && v.IsDefault)
+            .Where(v => v.ProductId == productId && v.IsActive)
+            .OrderByDescending(v => v.CreatedAt)
             .FirstOrDefaultAsync();
     }
 

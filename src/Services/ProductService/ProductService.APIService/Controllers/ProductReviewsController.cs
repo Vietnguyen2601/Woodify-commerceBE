@@ -95,9 +95,9 @@ public class ProductReviewsController : ControllerBase
     }
 
     [HttpPost("HideReview/{id:guid}")]
-    public async Task<ActionResult<ServiceResult<ProductReviewDto>>> HideReview(Guid id, [FromBody] HideProductReviewDto dto)
+    public async Task<ActionResult<ServiceResult<ProductReviewDto>>> HideReview(Guid id)
     {
-        var result = await _productReviewService.HideReviewAsync(id, dto.HiddenBy);
+        var result = await _productReviewService.HideReviewAsync(id);
         
         if (result.Status == 404)
             return NotFound(result);

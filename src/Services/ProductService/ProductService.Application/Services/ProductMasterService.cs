@@ -12,15 +12,18 @@ namespace ProductService.Application.Services;
 public class ProductMasterService : IProductMasterService
 {
     private readonly IProductMasterRepository _productMasterRepository;
+    private readonly IProductVersionRepository _productVersionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ProductEventPublisher _eventPublisher;
 
     public ProductMasterService(
-        IProductMasterRepository productMasterRepository, 
+        IProductMasterRepository productMasterRepository,
+        IProductVersionRepository productVersionRepository,
         IUnitOfWork unitOfWork,
         ProductEventPublisher eventPublisher)
     {
         _productMasterRepository = productMasterRepository;
+        _productVersionRepository = productVersionRepository;
         _unitOfWork = unitOfWork;
         _eventPublisher = eventPublisher;
     }
@@ -95,11 +98,75 @@ public class ProductMasterService : IProductMasterService
                     return ServiceResult<ProductMasterDto>.NotFound("Category not found");
             }
 
+            // Store current status for business logic
+            var currentStatus = product.Status;
+
+            // PENDING_APPROVAL: Block all edits to avoid review drift
+            if (currentStatus == Domain.Entities.ProductStatus.PENDING_APPROVAL)
+            {
+                return ServiceResult<ProductMasterDto>.BadRequest(
+                    "Cannot edit product while it is pending approval. Please wait for review or cancel the approval request.");
+            }
+
+            // Track if buyer-facing content has changed
+            bool buyerFacingContentChanged = false;
+
+            // Check for changes in buyer-facing content (name, description, category)
+            if (!string.IsNullOrEmpty(dto.Name) && dto.Name != product.Name)
+                buyerFacingContentChanged = true;
+            
+            if (dto.Description != null && dto.Description != product.Description)
+                buyerFacingContentChanged = true;
+            
+            if (dto.CategoryId.HasValue && dto.CategoryId.Value != product.CategoryId)
+                buyerFacingContentChanged = true;
+
+            // Determine if we need to reset to PENDING_APPROVAL
+            bool requiresReModeration = false;
+            
+            // APPROVED: Allow edits but reset to PENDING_APPROVAL if buyer-facing content changes
+            if (currentStatus == Domain.Entities.ProductStatus.APPROVED && buyerFacingContentChanged)
+            {
+                requiresReModeration = true;
+            }
+
+            // PUBLISHED: Limited edits - require re-moderation for buyer-facing content changes
+            if (currentStatus == Domain.Entities.ProductStatus.PUBLISHED && buyerFacingContentChanged)
+            {
+                requiresReModeration = true;
+            }
+
+            // DRAFT, REJECTED: Editable freely - no special logic needed
+
+            // Apply the updates from DTO first
             dto.MapToUpdate(product);
+
+            // Override status and moderation if re-moderation is required
+            if (requiresReModeration)
+            {
+                product.Status = Domain.Entities.ProductStatus.PENDING_APPROVAL;
+                product.ModerationStatus = Domain.Entities.ModerationStatus.PENDING;
+                product.ModeratedAt = null;
+                
+                // Unpublish if was PUBLISHED
+                if (currentStatus == Domain.Entities.ProductStatus.PUBLISHED)
+                {
+                    product.PublishedAt = null;
+                }
+            }
+
+            // Save changes
             await _productMasterRepository.UpdateAsync(product);
             
             var updatedProduct = await _productMasterRepository.GetByIdAsync(id);
-            return ServiceResult<ProductMasterDto>.Success(updatedProduct!.ToDto(), "Product updated successfully");
+            
+            string message = "Product updated successfully";
+            if (requiresReModeration)
+            {
+                message = "Product updated successfully. Status changed to PENDING_APPROVAL due to changes in buyer-facing content (name/description/category). Re-moderation required.";
+            }
+
+            return ServiceResult<ProductMasterDto>.Success(updatedProduct!.ToDto(), message);
         }
         catch (Exception ex)
         {
@@ -115,7 +182,22 @@ public class ProductMasterService : IProductMasterService
             if (product == null)
                 return ServiceResult.NotFound("Product not found");
             
-            await _productMasterRepository.RemoveAsync(product);
+            // Soft delete: Set status to DELETED and update timestamp
+            product.Status = Domain.Entities.ProductStatus.DELETED;
+            product.UpdatedAt = DateTime.UtcNow;
+            
+            await _productMasterRepository.UpdateAsync(product);
+            
+            // Publish event để thông báo cho OrderService
+            _eventPublisher.PublishProductDeleted(new ProductDeletedEvent
+            {
+                ProductId = product.ProductId,
+                ShopId = product.ShopId,
+                ProductName = product.Name,
+                DeletedAt = product.UpdatedAt.Value,
+                EventType = "ProductDeleted"
+            });
+            
             return ServiceResult.Success("Product deleted successfully");
         }
         catch (Exception ex)
@@ -231,8 +313,6 @@ public class ProductMasterService : IProductMasterService
                 Keyword = searchDto.Keyword,
                 Status = searchDto.Status?.ToString() ?? "PUBLISHED",
                 CategoryName = searchDto.CategoryName,
-                MinRating = (double?)searchDto.MinRating,
-                MaxRating = (double?)searchDto.MaxRating,
                 Page = searchDto.Page,
                 PageSize = searchDto.PageSize,
                 SortBy = searchDto.SortBy,
@@ -266,13 +346,35 @@ public class ProductMasterService : IProductMasterService
             if (product == null)
                 return ServiceResult<ProductMasterDto>.NotFound("Product not found");
 
-            if (product.Status != Domain.Entities.ProductStatus.DRAFT)
-                return ServiceResult<ProductMasterDto>.BadRequest("Only draft products can be submitted for approval");
+            // Allow submission from DRAFT or REJECTED status
+            if (product.Status != Domain.Entities.ProductStatus.DRAFT && 
+                product.Status != Domain.Entities.ProductStatus.REJECTED)
+                return ServiceResult<ProductMasterDto>.BadRequest("Only draft or rejected products can be submitted for approval");
 
+            // Pre-submit validation: Check if product has at least 1 active version
+            var versions = await _productVersionRepository.GetByProductIdAsync(id);
+            var activeVersions = versions.Where(v => v.IsActive).ToList();
+            
+            if (!activeVersions.Any())
+                return ServiceResult<ProductMasterDto>.BadRequest("Product must have at least 1 active version before submission");
+
+            // Transition to PENDING_APPROVAL
             product.Status = Domain.Entities.ProductStatus.PENDING_APPROVAL;
             product.ModerationStatus = Domain.Entities.ModerationStatus.PENDING;
+            
+            // Clear previous rejection/moderation fields
+            product.ModeratedAt = null;
+            
             product.UpdatedAt = DateTime.UtcNow;
             await _productMasterRepository.UpdateAsync(product);
+
+            // Publish status change event
+            _eventPublisher.PublishProductStatusChanged(new ProductStatusChangedEvent
+            {
+                ProductId = product.ProductId,
+                Status = product.Status.ToString(),
+                ChangedAt = DateTime.UtcNow
+            });
 
             return ServiceResult<ProductMasterDto>.Success(product.ToDto(), "Product submitted for approval successfully");
         }
@@ -295,6 +397,14 @@ public class ProductMasterService : IProductMasterService
 
             dto.MapToModerate(product);
             await _productMasterRepository.UpdateAsync(product);
+
+            // Publish status change event
+            _eventPublisher.PublishProductStatusChanged(new ProductStatusChangedEvent
+            {
+                ProductId = product.ProductId,
+                Status = product.Status.ToString(),
+                ChangedAt = DateTime.UtcNow
+            });
 
             var message = dto.ModerationStatus == Domain.Entities.ModerationStatus.APPROVED 
                 ? "Product approved successfully" 
