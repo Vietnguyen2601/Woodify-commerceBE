@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ShipmentService.Application.DTOs;
 using ShipmentService.Application.Interfaces;
@@ -38,6 +39,7 @@ public class ProviderServicesController : ControllerBase
         return Ok(result);
     }
 
+    [Authorize]
     [HttpPost("CreateService")]
     public async Task<ActionResult<ServiceResult<ProviderServiceDto>>> Create([FromBody] CreateProviderServiceDto dto)
     {
@@ -47,6 +49,7 @@ public class ProviderServicesController : ControllerBase
         return BadRequest(result);
     }
 
+    [Authorize]
     [HttpPut("UpdateService/{id:guid}")]
     public async Task<ActionResult<ServiceResult<ProviderServiceDto>>> Update(Guid id, [FromBody] UpdateProviderServiceDto dto)
     {
@@ -56,6 +59,7 @@ public class ProviderServicesController : ControllerBase
         return Ok(result);
     }
 
+    [Authorize]
     [HttpDelete("DeleteService/{id:guid}")]
     public async Task<ActionResult<ServiceResult>> Delete(Guid id)
     {
