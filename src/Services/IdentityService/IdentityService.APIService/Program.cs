@@ -180,7 +180,7 @@ using (var scope = app.Services.CreateScope())
         // Seed initial data
         await AccountDbSeeder.SeedAsync(dbContext);
     }
-    catch (Exception ex)
+    catch (Exception)
     {
         // Log error but continue startup
     }
@@ -216,7 +216,7 @@ try
 
     app.Run();
 }
-catch (Exception ex)
+catch (Exception)
 {
     // Log startup error for debugging
 }

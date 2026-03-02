@@ -45,10 +45,10 @@ public class AuthController : ControllerBase
             return errorCode switch
             {
                 IdentityService.Application.Constants.ErrorCode.AccountNotFound =>
-                    NotFound(ServiceResult<CurrentUserResponse>.NotFound(errorMessage)),
+                    NotFound(ServiceResult<CurrentUserResponse>.NotFound(errorMessage ?? "Account not found")),
 
                 IdentityService.Application.Constants.ErrorCode.AccountNotActive =>
-                    Unauthorized(ServiceResult<CurrentUserResponse>.Unauthorized(errorMessage)),
+                    Unauthorized(ServiceResult<CurrentUserResponse>.Unauthorized(errorMessage ?? "Account not active")),
 
                 _ => BadRequest(ServiceResult<CurrentUserResponse>.BadRequest(errorMessage ?? "Unknown error"))
             };
@@ -64,8 +64,7 @@ public class AuthController : ControllerBase
             account.Gender,
             account.Dob,
             account.Address,
-            account.PhoneNumber,
-            account.Avatar
+            account.PhoneNumber
         );
 
         return Ok(ServiceResult<CurrentUserResponse>.Success(response, AuthMessages.LoginSuccess));

@@ -107,9 +107,8 @@ public record CurrentUserResponse(
     string? Email = null,
     string? Username = null,
     string? Name = null,
-    int? Gender = null,
+    string? Gender = null,
     DateTime? Dob = null,
     string? Address = null,
-    string? PhoneNumber = null,
-    string? Avatar = null
+    string? PhoneNumber = null
 );
