@@ -40,4 +40,7 @@ public static class AuthMessages
     // Refresh Token
     public const string RefreshTokenSuccess = "Làm mới token thành công.";
     public const string RefreshTokenInvalid = "Refresh token không hợp lệ hoặc đã hết hạn.";
+
+    // Get Current User
+    public const string InvalidUserToken = "Token người dùng không hợp lệ";
 }

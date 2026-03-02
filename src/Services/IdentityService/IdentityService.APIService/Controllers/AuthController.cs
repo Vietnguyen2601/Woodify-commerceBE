@@ -1,11 +1,12 @@
-using System.Security.Claims;
+using IdentityService.APIService.Extensions;
 using IdentityService.Application.Constants;
 using IdentityService.Application.DTOs;
 using IdentityService.Application.Interfaces;
 using IdentityService.Infrastructure.Persistence;
-using IdentityService.APIService.Extensions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Results;
+using System.Security.Claims;
 
 namespace IdentityService.APIService.Controllers;
 
@@ -23,6 +24,52 @@ public class AuthController : ControllerBase
         _jwtTokenService = jwtTokenService;
         _unitOfWork = unitOfWork;
     }
+
+    #region Current User
+    [HttpGet("me")]
+    [Authorize]
+    public async Task<ActionResult<ServiceResult<CurrentUserResponse>>> GetMe()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(ServiceResult<CurrentUserResponse>.Unauthorized(AuthMessages.InvalidUserToken));
+        }
+
+        var (success, account, errorMessage, errorCode) = await _authenService.GetCurrentUserAsync(userId);
+
+        if (!success)
+        {
+            // Use structured error codes instead of string parsing
+            return errorCode switch
+            {
+                IdentityService.Application.Constants.ErrorCode.AccountNotFound =>
+                    NotFound(ServiceResult<CurrentUserResponse>.NotFound(errorMessage ?? "Account not found")),
+
+                IdentityService.Application.Constants.ErrorCode.AccountNotActive =>
+                    Unauthorized(ServiceResult<CurrentUserResponse>.Unauthorized(errorMessage ?? "Account not active")),
+
+                _ => BadRequest(ServiceResult<CurrentUserResponse>.BadRequest(errorMessage ?? "Unknown error"))
+            };
+        }
+
+        var response = new CurrentUserResponse(
+            true,
+            AuthMessages.LoginSuccess,
+            account!.AccountId,
+            account.Email,
+            account.Username,
+            account.Name,
+            account.Gender,
+            account.Dob,
+            account.Address,
+            account.PhoneNumber
+        );
+
+        return Ok(ServiceResult<CurrentUserResponse>.Success(response, AuthMessages.LoginSuccess));
+    }
+    #endregion
 
     #region OTP Endpoints
     /// <summary>
@@ -108,11 +155,24 @@ public class AuthController : ControllerBase
             return BadRequest(ServiceResult<RegisterResponse>.BadRequest(AuthMessages.PasswordMismatch));
         }
 
-        var (success, accountId, errorMessage) = await _authenService.RegisterAsync(request.Email, request.Password, request.Username, request.Address);
+        var (success, accountId, errorMessage, errorCode) = await _authenService.RegisterAsync(request.Email, request.Password, request.Username, request.Address);
 
         if (!success)
         {
-            return BadRequest(ServiceResult<RegisterResponse>.BadRequest(errorMessage ?? AuthMessages.InvalidData));
+            // Use structured error codes for appropriate HTTP status codes
+            var statusCode = errorCode switch
+            {
+                IdentityService.Application.Constants.ErrorCode.EmailAlreadyRegistered => 409,   // Conflict
+                IdentityService.Application.Constants.ErrorCode.UsernameAlreadyExists => 409,    // Conflict
+                IdentityService.Application.Constants.ErrorCode.OtpNotVerified => 400,           // Bad Request
+                _ => 400  // Bad Request
+            };
+
+            var result = statusCode == 409
+                ? ServiceResult<RegisterResponse>.Conflict(errorMessage ?? AuthMessages.InvalidData)
+                : ServiceResult<RegisterResponse>.BadRequest(errorMessage ?? AuthMessages.InvalidData);
+
+            return StatusCode(statusCode, result);
         }
 
         return Ok(ServiceResult<RegisterResponse>.Success(
@@ -132,23 +192,35 @@ public class AuthController : ControllerBase
             return BadRequest(ServiceResult<LoginResponse>.BadRequest(AuthMessages.InvalidData));
         }
 
-        var (success, account, errorMessage) = await _authenService.LoginAsync(request.Email, request.Password);
+        var (success, account, errorMessage, errorCode) = await _authenService.LoginAsync(request.Email, request.Password);
 
         if (!success || account == null)
         {
-            return Unauthorized(ServiceResult<LoginResponse>.Unauthorized(errorMessage ?? AuthMessages.InvalidCredentials));
+            // Use structured error codes for better error handling
+            var statusCode = errorCode switch
+            {
+                IdentityService.Application.Constants.ErrorCode.AccountNotActive => 401, // Unauthorized
+                IdentityService.Application.Constants.ErrorCode.InvalidCredentials => 401, // Unauthorized
+                _ => 400 // Bad Request
+            };
+
+            var result = statusCode == 401
+                ? ServiceResult<LoginResponse>.Unauthorized(errorMessage ?? AuthMessages.InvalidCredentials)
+                : ServiceResult<LoginResponse>.BadRequest(errorMessage ?? AuthMessages.InvalidCredentials);
+
+            return StatusCode(statusCode, result);
         }
 
         // Generate JWT tokens
         var token = _jwtTokenService.GenerateJSONWebToken(account);
         var refreshToken = _jwtTokenService.GenerateRefreshToken(account);
 
-        // Set JWT tokens as HttpOnly Cookies
+        // Set JWT tokens as HttpOnly Cookies (for additional security)
         Response.SetJwtCookies(token, refreshToken);
 
-        // Return response without tokens (they are now in secure cookies)
+        // Return response WITH tokens (both in cookies and response body)
         return Ok(ServiceResult<LoginResponse>.Success(
-            new LoginResponse(true, AuthMessages.LoginSuccess, account.AccountId, account.Email, account.Username, null, null),
+            new LoginResponse(true, AuthMessages.LoginSuccess, account.AccountId, account.Email, account.Username, token, refreshToken),
             AuthMessages.LoginSuccess
         ));
     }
@@ -242,11 +314,11 @@ public class AuthController : ControllerBase
             return BadRequest(ServiceResult<OtpVerifyResponse>.BadRequest(AuthMessages.InvalidData));
         }
 
-        var (success, resetToken) = await _authenService.VerifyResetPasswordOtpWithTokenAsync(request.Email, request.Otp);
+        var (success, resetToken, errorMessage, _) = await _authenService.VerifyResetPasswordOtpWithTokenAsync(request.Email, request.Otp);
 
         if (!success)
         {
-            return BadRequest(ServiceResult<OtpVerifyResponse>.BadRequest(AuthMessages.OtpInvalidOrExpired));
+            return BadRequest(ServiceResult<OtpVerifyResponse>.BadRequest(errorMessage ?? AuthMessages.OtpInvalidOrExpired));
         }
 
         return Ok(ServiceResult<OtpVerifyResponse>.Success(

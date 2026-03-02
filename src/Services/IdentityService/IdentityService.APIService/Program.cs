@@ -31,11 +31,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins("http://localhost:5173", "https://localhost:5010")
               .AllowAnyMethod()
-              .AllowAnyHeader();
-        // Note: Cannot use AllowCredentials() with AllowAnyOrigin()
-        // Will configure properly later with specific origins
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
 
@@ -181,7 +180,7 @@ using (var scope = app.Services.CreateScope())
         // Seed initial data
         await AccountDbSeeder.SeedAsync(dbContext);
     }
-    catch (Exception ex)
+    catch (Exception)
     {
         // Log error but continue startup
     }
@@ -217,7 +216,7 @@ try
 
     app.Run();
 }
-catch (Exception ex)
+catch (Exception)
 {
     // Log startup error for debugging
 }
