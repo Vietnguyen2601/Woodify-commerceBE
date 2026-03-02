@@ -26,6 +26,11 @@ public class ValidationExceptionMiddleware
             _logger.LogWarning("Validation exception: {Message}", ex.Message);
             await HandleValidationExceptionAsync(context, ex);
         }
+        catch (OperationCanceledException)
+        {
+            // Let request cancellations propagate without being treated as internal server errors.
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError("Unhandled exception: {Message}", ex.Message);
