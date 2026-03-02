@@ -92,26 +92,26 @@ namespace IdentityService.Application.Services
         #endregion
 
         #region Register & Login
-        public async Task<(bool Success, Guid? AccountId, string? ErrorMessage)> RegisterAsync(string email, string password, string username, string? address = null)
+        public async Task<(bool Success, Guid? AccountId, string? ErrorMessage, ErrorCode ErrorCode)> RegisterAsync(string email, string password, string username, string? address = null)
         {
             // Kiểm tra email đã xác minh OTP chưa
             if (!_verifiedEmails.TryGetValue(email, out var isVerified) || !isVerified)
             {
-                return (false, null, AuthMessages.OtpNotVerifiedForRegister);
+                return (false, null, AuthMessages.OtpNotVerifiedForRegister, ErrorCode.OtpNotVerified);
             }
 
             // Kiểm tra email đã tồn tại chưa
             var existingAccount = await _unitOfWork.Accounts.GetByEmailAsync(email);
             if (existingAccount != null)
             {
-                return (false, null, AuthMessages.EmailAlreadyRegistered);
+                return (false, null, AuthMessages.EmailAlreadyRegistered, ErrorCode.EmailAlreadyRegistered);
             }
 
             // Kiểm tra username đã tồn tại chưa
             var existingUsername = await _unitOfWork.Accounts.GetByUsernameAsync(username);
             if (existingUsername != null)
             {
-                return (false, null, AuthMessages.UsernameAlreadyExists);
+                return (false, null, AuthMessages.UsernameAlreadyExists, ErrorCode.UsernameAlreadyExists);
             }
 
             var customerRole = await _unitOfWork.Roles.GetByNameAsync("Customer");
@@ -175,27 +175,27 @@ namespace IdentityService.Application.Services
                 throw;
             }
 
-            return (true, account.AccountId, null);
+            return (true, account.AccountId, null, ErrorCode.None);
         }
 
-        public async Task<(bool Success, Account? Account, string? ErrorMessage)> LoginAsync(string email, string password)
+        public async Task<(bool Success, Account? Account, string? ErrorMessage, ErrorCode ErrorCode)> LoginAsync(string email, string password)
         {
             var account = await _unitOfWork.Accounts.GetByEmailAsync(email);
 
             if (account == null)
             {
-                return (false, null, AuthMessages.InvalidCredentials);
+                return (false, null, AuthMessages.InvalidCredentials, ErrorCode.InvalidCredentials);
             }
 
             // Verify password
             if (!_passwordHasher.VerifyHashedPassword(account.Password, password))
             {
-                return (false, null, AuthMessages.InvalidCredentials);
+                return (false, null, AuthMessages.InvalidCredentials, ErrorCode.InvalidCredentials);
             }
 
             if (!account.IsActive)
             {
-                return (false, null, AuthMessages.AccountNotActive);
+                return (false, null, AuthMessages.AccountNotActive, ErrorCode.AccountNotActive);
             }
 
             // Load Role for JWT claims
@@ -204,21 +204,21 @@ namespace IdentityService.Application.Services
                 account.Role = await _unitOfWork.Roles.GetByIdAsync(account.RoleId.Value);
             }
 
-            return (true, account, null);
+            return (true, account, null, ErrorCode.None);
         }
 
-        public async Task<(bool Success, Account? Account, string? ErrorMessage)> GetCurrentUserAsync(Guid userId)
+        public async Task<(bool Success, Account? Account, string? ErrorMessage, ErrorCode ErrorCode)> GetCurrentUserAsync(Guid userId)
         {
             var account = await _unitOfWork.Accounts.GetByIdAsync(userId);
             
             if (account == null)
             {
-                return (false, null, "Account not found");
+                return (false, null, AuthMessages.AccountNotFound, ErrorCode.AccountNotFound);
             }
 
             if (!account.IsActive)
             {
-                return (false, null, "Account is not active");
+                return (false, null, AuthMessages.AccountNotActive, ErrorCode.AccountNotActive);
             }
 
             // Load Role information
@@ -227,7 +227,7 @@ namespace IdentityService.Application.Services
                 account.Role = await _unitOfWork.Roles.GetByIdAsync(account.RoleId.Value);
             }
 
-            return (true, account, null);
+            return (true, account, null, ErrorCode.None);
         }
         #endregion
 
@@ -274,7 +274,7 @@ namespace IdentityService.Application.Services
             && storedOtp.Expiry > DateTime.UtcNow;
         }
 
-        public async Task<(bool Success, string? ResetToken)> VerifyResetPasswordOtpWithTokenAsync(string email, string otp)
+        public async Task<(bool Success, string? ResetToken, string? ErrorMessage, ErrorCode ErrorCode)> VerifyResetPasswordOtpWithTokenAsync(string email, string otp)
         {
             if (_otpStorage.TryGetValue(email, out var storedOtp) && storedOtp.Otp == otp && storedOtp.Expiry > DateTime.UtcNow)
             {
@@ -283,9 +283,9 @@ namespace IdentityService.Application.Services
 
                 string resetToken = Guid.NewGuid().ToString();
                 _resetTokens[resetToken] = (email, DateTime.UtcNow.AddMinutes(10));
-                return (true, resetToken);
+                return (true, resetToken, null, ErrorCode.None);
             }
-            return (false, null);
+            return (false, null, AuthMessages.OtpInvalidOrExpired, ErrorCode.OtpInvalidOrExpired);
         }
 
         public async Task<bool> ResetPasswordAsync(string email, string newPassword)
