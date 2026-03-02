@@ -12,7 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ── Load .env file ────────────────────────────────────────────────────────────
 var rootPath = Directory.GetParent(Directory.GetCurrentDirectory())?.Parent?.Parent?.Parent?.FullName;
-var envPath = Path.Combine(rootPath ?? "", ".env");
+var envPath = Path.Join(rootPath ?? "", ".env");
 if (File.Exists(envPath)) Env.Load(envPath);
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
@@ -72,7 +72,17 @@ for (int attempt = 1; attempt <= 5; attempt++)
         builder.Services.AddSingleton(publisher);
         break;
     }
-    catch (Exception ex)
+    catch (InvalidOperationException ex)
+    {
+        Console.Error.WriteLine($"RabbitMQ attempt {attempt} failed: {ex.Message}");
+        if (attempt < 5) Thread.Sleep(5000);
+    }
+    catch (TimeoutException ex)
+    {
+        Console.Error.WriteLine($"RabbitMQ attempt {attempt} timed out: {ex.Message}");
+        if (attempt < 5) Thread.Sleep(5000);
+    }
+    catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
     {
         Console.Error.WriteLine($"RabbitMQ attempt {attempt} failed: {ex.Message}");
         if (attempt < 5) Thread.Sleep(5000);
@@ -93,7 +103,11 @@ using (var scope = app.Services.CreateScope())
         // Seed initial data
         await ShipmentDbSeeder.SeedAsync(dbContext);
     }
-    catch (Exception ex)
+    catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+    {
+        Console.Error.WriteLine($"Migration failed due to database update error: {ex.Message}");
+    }
+    catch (InvalidOperationException ex)
     {
         Console.Error.WriteLine($"Migration failed: {ex.Message}");
     }

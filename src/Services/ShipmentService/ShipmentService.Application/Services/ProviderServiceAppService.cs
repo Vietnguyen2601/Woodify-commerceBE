@@ -49,6 +49,14 @@ public class ProviderServiceAppService : IProviderServiceService
         {
             throw;
         }
+        catch (ArgumentException ex)
+        {
+            return ServiceResult<ProviderServiceDto>.InternalServerError($"{ShipmentMessages.ServiceCreateError}: {ex.Message}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ServiceResult<ProviderServiceDto>.InternalServerError($"{ShipmentMessages.ServiceCreateError}: {ex.Message}");
+        }
         catch (Exception ex)
         {
             return ServiceResult<ProviderServiceDto>.InternalServerError($"{ShipmentMessages.ServiceCreateError}: {ex.Message}");
@@ -73,6 +81,14 @@ public class ProviderServiceAppService : IProviderServiceService
         {
             throw;
         }
+        catch (ArgumentException ex)
+        {
+            return ServiceResult<ProviderServiceDto>.InternalServerError($"{ShipmentMessages.ServiceUpdateError}: {ex.Message}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ServiceResult<ProviderServiceDto>.InternalServerError($"{ShipmentMessages.ServiceUpdateError}: {ex.Message}");
+        }
         catch (Exception ex)
         {
             return ServiceResult<ProviderServiceDto>.InternalServerError($"{ShipmentMessages.ServiceUpdateError}: {ex.Message}");
@@ -93,6 +109,14 @@ public class ProviderServiceAppService : IProviderServiceService
         catch (OperationCanceledException)
         {
             throw;
+        }
+        catch (ArgumentException ex)
+        {
+            return ServiceResult.InternalServerError($"{ShipmentMessages.ServiceDeleteError}: {ex.Message}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ServiceResult.InternalServerError($"{ShipmentMessages.ServiceDeleteError}: {ex.Message}");
         }
         catch (Exception ex)
         {

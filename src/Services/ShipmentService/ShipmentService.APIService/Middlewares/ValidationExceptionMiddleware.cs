@@ -31,6 +31,11 @@ public class ValidationExceptionMiddleware
             // Let request cancellations propagate without being treated as internal server errors.
             throw;
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning("Unauthorized access: {Message}", ex.Message);
+            await HandleUnauthorizedAccessExceptionAsync(context, ex);
+        }
         catch (Exception ex)
         {
             _logger.LogError("Unhandled exception: {Message}", ex.Message);
@@ -54,6 +59,19 @@ public class ValidationExceptionMiddleware
             statusCode = context.Response.StatusCode,
             message = "Validation failed",
             errors = errors
+        });
+    }
+
+    private static Task HandleUnauthorizedAccessExceptionAsync(HttpContext context, UnauthorizedAccessException exception)
+    {
+        context.Response.ContentType = "application/json";
+        context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+
+        return context.Response.WriteAsJsonAsync(new
+        {
+            statusCode = context.Response.StatusCode,
+            message = "Access is denied",
+            error = exception.Message
         });
     }
 

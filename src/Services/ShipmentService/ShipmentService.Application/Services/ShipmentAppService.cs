@@ -57,6 +57,14 @@ public class ShipmentAppService : IShipmentService
         {
             throw;
         }
+        catch (ArgumentException ex)
+        {
+            return ServiceResult<ShipmentDto>.InternalServerError($"{ShipmentMessages.ShipmentCreateError}: {ex.Message}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ServiceResult<ShipmentDto>.InternalServerError($"{ShipmentMessages.ShipmentCreateError}: {ex.Message}");
+        }
         catch (Exception ex)
         {
             return ServiceResult<ShipmentDto>.InternalServerError($"{ShipmentMessages.ShipmentCreateError}: {ex.Message}");
@@ -80,6 +88,14 @@ public class ShipmentAppService : IShipmentService
         catch (OperationCanceledException)
         {
             throw;
+        }
+        catch (ArgumentException ex)
+        {
+            return ServiceResult<ShipmentDto>.InternalServerError($"{ShipmentMessages.ShipmentUpdateError}: {ex.Message}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ServiceResult<ShipmentDto>.InternalServerError($"{ShipmentMessages.ShipmentUpdateError}: {ex.Message}");
         }
         catch (Exception ex)
         {
@@ -109,6 +125,14 @@ public class ShipmentAppService : IShipmentService
         {
             throw;
         }
+        catch (ArgumentException ex)
+        {
+            return ServiceResult<ShipmentDto>.InternalServerError($"{ShipmentMessages.ShipmentUpdateError}: {ex.Message}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ServiceResult<ShipmentDto>.InternalServerError($"{ShipmentMessages.ShipmentUpdateError}: {ex.Message}");
+        }
         catch (Exception ex)
         {
             return ServiceResult<ShipmentDto>.InternalServerError($"{ShipmentMessages.ShipmentUpdateError}: {ex.Message}");
@@ -129,6 +153,14 @@ public class ShipmentAppService : IShipmentService
         catch (OperationCanceledException)
         {
             throw;
+        }
+        catch (ArgumentException ex)
+        {
+            return ServiceResult.InternalServerError($"{ShipmentMessages.ShipmentDeleteError}: {ex.Message}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ServiceResult.InternalServerError($"{ShipmentMessages.ShipmentDeleteError}: {ex.Message}");
         }
         catch (Exception ex)
         {
