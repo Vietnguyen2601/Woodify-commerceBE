@@ -314,7 +314,7 @@ public class AuthController : ControllerBase
             return BadRequest(ServiceResult<OtpVerifyResponse>.BadRequest(AuthMessages.InvalidData));
         }
 
-        var (success, resetToken, errorMessage, errorCode) = await _authenService.VerifyResetPasswordOtpWithTokenAsync(request.Email, request.Otp);
+        var (success, resetToken, errorMessage, _) = await _authenService.VerifyResetPasswordOtpWithTokenAsync(request.Email, request.Otp);
 
         if (!success)
         {
