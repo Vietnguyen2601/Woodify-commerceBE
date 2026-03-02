@@ -45,6 +45,10 @@ public class ProviderServiceAppService : IProviderServiceService
             await _serviceRepository.CreateAsync(service);
             return ServiceResult<ProviderServiceDto>.Created(service.ToDto(), ShipmentMessages.ServiceCreated);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             return ServiceResult<ProviderServiceDto>.InternalServerError($"{ShipmentMessages.ServiceCreateError}: {ex.Message}");
@@ -65,6 +69,10 @@ public class ProviderServiceAppService : IProviderServiceService
             var updated = await _serviceRepository.GetByIdAsync(id);
             return ServiceResult<ProviderServiceDto>.Success(updated!.ToDto(), ShipmentMessages.ServiceUpdated);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             return ServiceResult<ProviderServiceDto>.InternalServerError($"{ShipmentMessages.ServiceUpdateError}: {ex.Message}");
@@ -81,6 +89,10 @@ public class ProviderServiceAppService : IProviderServiceService
 
             await _serviceRepository.RemoveAsync(service);
             return ServiceResult.Success(ShipmentMessages.ServiceDeleted);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

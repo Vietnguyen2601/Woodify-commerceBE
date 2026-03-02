@@ -39,6 +39,10 @@ public class ShippingProviderAppService : IShippingProviderService
             await _providerRepository.CreateAsync(provider);
             return ServiceResult<ShippingProviderDto>.Created(provider.ToDto(), ShipmentMessages.ProviderCreated);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             return ServiceResult<ShippingProviderDto>.InternalServerError($"{ShipmentMessages.ProviderCreateError}: {ex.Message}");
@@ -59,6 +63,10 @@ public class ShippingProviderAppService : IShippingProviderService
             var updated = await _providerRepository.GetByIdAsync(id);
             return ServiceResult<ShippingProviderDto>.Success(updated!.ToDto(), ShipmentMessages.ProviderUpdated);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             return ServiceResult<ShippingProviderDto>.InternalServerError($"{ShipmentMessages.ProviderUpdateError}: {ex.Message}");
@@ -75,6 +83,10 @@ public class ShippingProviderAppService : IShippingProviderService
 
             await _providerRepository.RemoveAsync(provider);
             return ServiceResult.Success(ShipmentMessages.ProviderDeleted);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

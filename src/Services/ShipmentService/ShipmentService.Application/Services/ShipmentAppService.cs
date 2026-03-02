@@ -53,6 +53,10 @@ public class ShipmentAppService : IShipmentService
 
             return ServiceResult<ShipmentDto>.Created(shipment.ToDto(), ShipmentMessages.ShipmentCreated);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             return ServiceResult<ShipmentDto>.InternalServerError($"{ShipmentMessages.ShipmentCreateError}: {ex.Message}");
@@ -72,6 +76,10 @@ public class ShipmentAppService : IShipmentService
 
             var updated = await _shipmentRepository.GetByIdAsync(id);
             return ServiceResult<ShipmentDto>.Success(updated!.ToDto(), ShipmentMessages.ShipmentUpdated);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -97,6 +105,10 @@ public class ShipmentAppService : IShipmentService
             var updated = await _shipmentRepository.GetByIdAsync(id);
             return ServiceResult<ShipmentDto>.Success(updated!.ToDto(), ShipmentMessages.ShipmentStatusUpdated);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             return ServiceResult<ShipmentDto>.InternalServerError($"{ShipmentMessages.ShipmentUpdateError}: {ex.Message}");
@@ -113,6 +125,10 @@ public class ShipmentAppService : IShipmentService
 
             await _shipmentRepository.RemoveAsync(shipment);
             return ServiceResult.Success(ShipmentMessages.ShipmentDeleted);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
