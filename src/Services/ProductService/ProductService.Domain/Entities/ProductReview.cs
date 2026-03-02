@@ -1,14 +1,13 @@
 namespace ProductService.Domain.Entities;
 
 /// <summary>
-/// Entity ProductReview - Bảng Product_Review
+/// Entity ProductReview - Bảng Product_Reviews
 /// Quản lý đánh giá sản phẩm từ người dùng
 /// </summary>
 public class ProductReview
 {
     public Guid ReviewId { get; set; } = Guid.NewGuid();
-    public Guid ProductId { get; set; }
-    public Guid? VersionId { get; set; }
+    public Guid VersionId { get; set; }
     public Guid OrderId { get; set; }
     public Guid AccountId { get; set; }
 
@@ -16,8 +15,6 @@ public class ProductReview
     public string? Content { get; set; }
 
     public bool IsVisible { get; set; } = true;  // false = bị ẩn khỏi public
-    public Guid? HiddenBy { get; set; }          // admin/seller
-    public DateTime? HiddenAt { get; set; }
 
     // Shop reply
     public string? ShopResponse { get; set; }
@@ -27,6 +24,5 @@ public class ProductReview
     public DateTime? UpdatedAt { get; set; }
 
     // Navigation properties
-    public virtual ProductMaster? Product { get; set; }
     public virtual ProductVersion? Version { get; set; }
 }

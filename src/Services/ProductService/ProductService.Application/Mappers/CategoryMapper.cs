@@ -16,9 +16,7 @@ public static class CategoryMapper
             ParentCategoryName = category.ParentCategory?.Name,
             Name = category.Name,
             Description = category.Description,
-            ImageUrl = category.ImageUrl,
             Level = category.Level,
-            DisplayOrder = category.DisplayOrder,
             CreatedAt = category.CreatedAt,
             UpdatedAt = category.UpdatedAt,
             IsActive = category.IsActive,
@@ -38,9 +36,7 @@ public static class CategoryMapper
             ParentCategoryId = dto.ParentCategoryId,
             Name = dto.Name,
             Description = dto.Description,
-            ImageUrl = dto.ImageUrl,
             Level = dto.Level,
-            DisplayOrder = dto.DisplayOrder,
             IsActive = dto.IsActive,
             CreatedAt = DateTime.UtcNow
         };
@@ -66,14 +62,8 @@ public static class CategoryMapper
         if (dto.Description != null)
             category.Description = dto.Description;
         
-        if (dto.ImageUrl != null)
-            category.ImageUrl = dto.ImageUrl;
-        
         if (dto.Level.HasValue)
             category.Level = dto.Level.Value;
-        
-        if (dto.DisplayOrder.HasValue)
-            category.DisplayOrder = dto.DisplayOrder.Value;
         
         if (dto.IsActive.HasValue)
             category.IsActive = dto.IsActive.Value;

@@ -22,25 +22,15 @@ public class UpdateProductMasterValidator : AbstractValidator<UpdateProductMaste
 {
     public UpdateProductMasterValidator()
     {
-        RuleFor(x => x.GlobalSku)
-            .MaximumLength(255)
-            .WithMessage("Global SKU cannot exceed 255 characters")
-            .When(x => !string.IsNullOrEmpty(x.GlobalSku));
+        RuleFor(x => x.Name)
+            .MaximumLength(500)
+            .WithMessage("Product name cannot exceed 500 characters")
+            .When(x => !string.IsNullOrEmpty(x.Name));
 
-        RuleFor(x => x.Status)
-            .IsInEnum()
-            .WithMessage("Invalid product status")
-            .When(x => x.Status.HasValue);
-
-        RuleFor(x => x.AvgRating)
-            .InclusiveBetween(0, 5)
-            .WithMessage("Average rating must be between 0 and 5")
-            .When(x => x.AvgRating.HasValue);
-
-        RuleFor(x => x.ReviewCount)
-            .GreaterThanOrEqualTo(0)
-            .WithMessage("Review count must be greater than or equal to 0")
-            .When(x => x.ReviewCount.HasValue);
+        RuleFor(x => x.Description)
+            .MaximumLength(5000)
+            .WithMessage("Description cannot exceed 5000 characters")
+            .When(x => !string.IsNullOrEmpty(x.Description));
     }
 }
 
@@ -63,14 +53,9 @@ public class CreateProductVersionValidator : AbstractValidator<CreateProductVers
             .WithMessage("Version name cannot exceed 500 characters")
             .When(x => !string.IsNullOrEmpty(x.VersionName));
 
-        RuleFor(x => x.PriceCents)
+        RuleFor(x => x.Price)
             .GreaterThan(0)
             .WithMessage("Price must be greater than 0");
-
-        RuleFor(x => x.BasePriceCents)
-            .GreaterThan(0)
-            .WithMessage("Base price must be greater than 0")
-            .When(x => x.BasePriceCents.HasValue);
 
         RuleFor(x => x.WeightGrams)
             .GreaterThan(0)
@@ -87,15 +72,6 @@ public class CreateProductVersionValidator : AbstractValidator<CreateProductVers
         RuleFor(x => x.HeightCm)
             .GreaterThan(0)
             .WithMessage("Height must be greater than 0");
-
-        RuleFor(x => x.BulkyType)
-            .Must(bt => bt == null || new[] { "NORMAL", "BULKY", "SUPER_BULKY" }.Contains(bt))
-            .WithMessage("Bulky type must be NORMAL, BULKY, or SUPER_BULKY")
-            .When(x => !string.IsNullOrEmpty(x.BulkyType));
-
-        RuleFor(x => x.WarrantyMonths)
-            .GreaterThanOrEqualTo(0)
-            .WithMessage("Warranty months must be greater than or equal to 0");
     }
 }
 
@@ -113,15 +89,10 @@ public class UpdateProductVersionValidator : AbstractValidator<UpdateProductVers
             .WithMessage("Version name cannot exceed 500 characters")
             .When(x => !string.IsNullOrEmpty(x.VersionName));
 
-        RuleFor(x => x.PriceCents)
+        RuleFor(x => x.Price)
             .GreaterThan(0)
             .WithMessage("Price must be greater than 0")
-            .When(x => x.PriceCents.HasValue);
-
-        RuleFor(x => x.BasePriceCents)
-            .GreaterThan(0)
-            .WithMessage("Base price must be greater than 0")
-            .When(x => x.BasePriceCents.HasValue);
+            .When(x => x.Price.HasValue);
 
         RuleFor(x => x.WeightGrams)
             .GreaterThan(0)
@@ -142,16 +113,6 @@ public class UpdateProductVersionValidator : AbstractValidator<UpdateProductVers
             .GreaterThan(0)
             .WithMessage("Height must be greater than 0")
             .When(x => x.HeightCm.HasValue);
-
-        RuleFor(x => x.BulkyType)
-            .Must(bt => bt == null || new[] { "NORMAL", "BULKY", "SUPER_BULKY" }.Contains(bt))
-            .WithMessage("Bulky type must be NORMAL, BULKY, or SUPER_BULKY")
-            .When(x => !string.IsNullOrEmpty(x.BulkyType));
-
-        RuleFor(x => x.WarrantyMonths)
-            .GreaterThanOrEqualTo(0)
-            .WithMessage("Warranty months must be greater than or equal to 0")
-            .When(x => x.WarrantyMonths.HasValue);
     }
 }
 
@@ -192,10 +153,6 @@ public class CreateProductReviewValidator : AbstractValidator<CreateProductRevie
 {
     public CreateProductReviewValidator()
     {
-        RuleFor(x => x.ProductId)
-            .NotEmpty()
-            .WithMessage("Product ID is required");
-
         RuleFor(x => x.OrderId)
             .NotEmpty()
             .WithMessage("Order ID is required");

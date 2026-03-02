@@ -24,12 +24,73 @@ public static class OrderDbSeeder
 
         if (!dbContext.Orders.Any())
         {
+            var shopId = Guid.NewGuid(); // Sample shop ID
+            
             dbContext.Orders.AddRange(
-                new Order { OrderId = Guid.NewGuid(), OrderCode = "ORD-001", AccountId = Guid.NewGuid(), CustomerName = "Lê Văn Anh", CustomerPhone = "0901000001", CustomerEmail = "levananh@example.com", ShopId = Guid.NewGuid(), ShopName = "Shop Nội Thất A", Currency = "VND", SubtotalCents = 199900000, ShippingFeeCents = 3000000, TotalAmountCents = 202900000, PaymentMethod = PaymentMethod.VNPAY, PaymentStatus = PaymentStatus.PAID, Status = OrderStatus.DELIVERED, PlacedAt = DateTime.UtcNow.AddDays(-5), DeliveredAt = DateTime.UtcNow.AddDays(-1), CompletedAt = DateTime.UtcNow.AddDays(-1) },
-                new Order { OrderId = Guid.NewGuid(), OrderCode = "ORD-002", AccountId = Guid.NewGuid(), CustomerName = "Trần Thị Bình", CustomerPhone = "0902000002", ShopId = Guid.NewGuid(), ShopName = "Shop Nội Thất B", Currency = "VND", SubtotalCents = 49900000, ShippingFeeCents = 2500000, TotalAmountCents = 52400000, PaymentMethod = PaymentMethod.BANK_TRANSFER, PaymentStatus = PaymentStatus.PENDING, Status = OrderStatus.SHIPPED, PlacedAt = DateTime.UtcNow.AddDays(-2), ShippedAt = DateTime.UtcNow.AddDays(-1) },
-                new Order { OrderId = Guid.NewGuid(), OrderCode = "ORD-003", AccountId = Guid.NewGuid(), CustomerName = "Phạm Văn Công", CustomerPhone = "0903000003", ShopId = Guid.NewGuid(), ShopName = "Shop Nội Thất C", Currency = "VND", SubtotalCents = 299800000, ShippingFeeCents = 5000000, TotalAmountCents = 304800000, PaymentMethod = PaymentMethod.WALLET, PaymentStatus = PaymentStatus.PAID, Status = OrderStatus.CONFIRMED, PlacedAt = DateTime.UtcNow.AddHours(-3), ConfirmedAt = DateTime.UtcNow.AddHours(-2) },
-                new Order { OrderId = Guid.NewGuid(), OrderCode = "ORD-004", AccountId = Guid.NewGuid(), CustomerName = "Hoàng Thị Dương", CustomerPhone = "0904000004", ShopId = Guid.NewGuid(), ShopName = "Shop Nội Thất D", Currency = "VND", SubtotalCents = 149900000, ShippingFeeCents = 3000000, TotalAmountCents = 152900000, PaymentMethod = PaymentMethod.BANK_TRANSFER, PaymentStatus = PaymentStatus.PENDING, Status = OrderStatus.PENDING, PlacedAt = DateTime.UtcNow.AddMinutes(-30) },
-                new Order { OrderId = Guid.NewGuid(), OrderCode = "ORD-005", AccountId = Guid.NewGuid(), CustomerName = "Ngô Quốc Gia", CustomerPhone = "0905000005", ShopId = Guid.NewGuid(), ShopName = "Shop Nội Thất E", Currency = "VND", SubtotalCents = 79900000, ShippingFeeCents = 2500000, TotalAmountCents = 82400000, PaymentMethod = PaymentMethod.VNPAY, PaymentStatus = PaymentStatus.REFUNDED, Status = OrderStatus.REFUNDED, PlacedAt = DateTime.UtcNow.AddDays(-10), CompletedAt = DateTime.UtcNow.AddDays(-3) }
+                new Order 
+                { 
+                    OrderId = Guid.NewGuid(), 
+                    AccountId = Guid.NewGuid(), 
+                    ShopId = shopId, 
+                    SubtotalCents = 9995000.00, 
+                    TotalAmountCents = 10295000.00, 
+                    Payment = Guid.NewGuid(), 
+                    Status = OrderStatus.DELIVERED, 
+                    DeliveryAddressId = "Address-001",
+                    CreatedAt = DateTime.UtcNow.AddDays(-5), 
+                    UpdatedAt = DateTime.UtcNow.AddDays(-1) 
+                },
+                new Order 
+                { 
+                    OrderId = Guid.NewGuid(), 
+                    AccountId = Guid.NewGuid(), 
+                    ShopId = shopId, 
+                    SubtotalCents = 2495000.00, 
+                    TotalAmountCents = 2620000.00, 
+                    Payment = Guid.NewGuid(), 
+                    Status = OrderStatus.SHIPPED, 
+                    DeliveryAddressId = "Address-002",
+                    CreatedAt = DateTime.UtcNow.AddDays(-2), 
+                    UpdatedAt = DateTime.UtcNow.AddDays(-1) 
+                },
+                new Order 
+                { 
+                    OrderId = Guid.NewGuid(), 
+                    AccountId = Guid.NewGuid(), 
+                    ShopId = shopId, 
+                    SubtotalCents = 14990000.00, 
+                    TotalAmountCents = 15490000.00, 
+                    VoucherId = Guid.NewGuid(), 
+                    Payment = Guid.NewGuid(), 
+                    Status = OrderStatus.CONFIRMED, 
+                    DeliveryAddressId = "Address-003",
+                    CreatedAt = DateTime.UtcNow.AddHours(-3), 
+                    UpdatedAt = DateTime.UtcNow.AddHours(-2) 
+                },
+                new Order 
+                { 
+                    OrderId = Guid.NewGuid(), 
+                    AccountId = Guid.NewGuid(), 
+                    ShopId = shopId, 
+                    SubtotalCents = 7495000.00, 
+                    TotalAmountCents = 7645000.00, 
+                    Status = OrderStatus.PENDING, 
+                    DeliveryAddressId = "Address-004",
+                    CreatedAt = DateTime.UtcNow.AddMinutes(-30)
+                },
+                new Order 
+                { 
+                    OrderId = Guid.NewGuid(), 
+                    AccountId = Guid.NewGuid(), 
+                    ShopId = shopId, 
+                    SubtotalCents = 3995000.00, 
+                    TotalAmountCents = 4120000.00, 
+                    Payment = Guid.NewGuid(), 
+                    Status = OrderStatus.REFUNDED, 
+                    DeliveryAddressId = "Address-005",
+                    CreatedAt = DateTime.UtcNow.AddDays(-10), 
+                    UpdatedAt = DateTime.UtcNow.AddDays(-3) 
+                }
             );
             await dbContext.SaveChangesAsync();
         }
@@ -44,8 +105,24 @@ public static class OrderDbSeeder
                 
                 for (int i = 0; i < cartIds.Count; i++)
                 {
-                    items.Add(new CartItem { CartItemId = Guid.NewGuid(), CartId = cartIds[i], VersionId = Guid.NewGuid(), ShopId = shopId, Quantity = i + 1, UnitPriceCents = (100000 + i * 50000) * 100, IsActive = true, AddedAt = DateTime.UtcNow });
-                    items.Add(new CartItem { CartItemId = Guid.NewGuid(), CartId = cartIds[i], VersionId = Guid.NewGuid(), ShopId = shopId, Quantity = 2, UnitPriceCents = (200000 + i * 70000) * 100, IsActive = true, AddedAt = DateTime.UtcNow });
+                    items.Add(new CartItem 
+                    { 
+                        CartItemId = Guid.NewGuid(), 
+                        CartId = cartIds[i], 
+                        VersionId = Guid.NewGuid(), 
+                        ShopId = shopId, 
+                        Quantity = i + 1, 
+                        Price = 1000000.00 + (i * 500000.00)
+                    });
+                    items.Add(new CartItem 
+                    { 
+                        CartItemId = Guid.NewGuid(), 
+                        CartId = cartIds[i], 
+                        VersionId = Guid.NewGuid(), 
+                        ShopId = shopId, 
+                        Quantity = 2, 
+                        Price = 2000000.00 + (i * 700000.00)
+                    });
                 }
                 dbContext.CartItems.AddRange(items);
                 await dbContext.SaveChangesAsync();
@@ -60,10 +137,20 @@ public static class OrderDbSeeder
                 var items = new List<OrderItem>();
                 for (int i = 0; i < orderIds.Count; i++)
                 {
-                    var unitPrice = (100000 + i * 50000) * 100L;
+                    var unitPriceCents = (1000000 + i * 500000) * 100L;
                     var quantity = i + 1;
-                    var lineTotal = unitPrice * quantity;
-                    items.Add(new OrderItem { OrderItemId = Guid.NewGuid(), OrderId = orderIds[i], VersionId = Guid.NewGuid(), ProductName = $"Sản phẩm gỗ {i + 1}", SellerSku = $"SKU-{3000 + i}", Quantity = quantity, UnitPriceCents = unitPrice, LineTotalCents = lineTotal, Status = FulfillmentStatus.UNFULFILLED });
+                    var lineTotalCents = (double)(unitPriceCents * quantity);
+                    items.Add(new OrderItem 
+                    { 
+                        OrderItemId = Guid.NewGuid(), 
+                        OrderId = orderIds[i], 
+                        VersionId = Guid.NewGuid(), 
+                        Quantity = quantity, 
+                        UnitPriceCents = unitPriceCents, 
+                        LineTotalCents = lineTotalCents, 
+                        Status = FulfillmentStatus.UNFULFILLED,
+                        CreatedAt = DateTime.UtcNow
+                    });
                 }
                 dbContext.OrderItems.AddRange(items);
                 await dbContext.SaveChangesAsync();
@@ -84,21 +171,16 @@ public static class OrderDbSeeder
                     ProductDescription = "Ghế cao cấp từ gỗ teak nhập khẩu",
                     ProductStatus = "PUBLISHED",
                     SellerSku = "WOOD-CHAIR-001",
-                    VersionNumber = 1,
                     VersionName = "Phiên bản tiêu chuẩn",
-                    PriceCents = 299900000,
-                    BasePriceCents = 349900000,
+                    Price = 2999000.00,
                     Currency = "VND",
                     StockQuantity = 50,
                     WeightGrams = 15000,
                     LengthCm = 60,
                     WidthCm = 55,
                     HeightCm = 90,
-                    BulkyType = "NORMAL",
-                    IsFragile = false,
-                    WarrantyMonths = 24,
                     IsActive = true,
-                    IsDefault = true
+                    LastUpdated = DateTime.UtcNow
                 },
                 new ProductVersionCache 
                 { 
@@ -109,20 +191,15 @@ public static class OrderDbSeeder
                     ProductDescription = "Bàn làm việc hiện đại từ gỗ sồi tự nhiên",
                     ProductStatus = "PUBLISHED",
                     SellerSku = "WOOD-DESK-001",
-                    VersionNumber = 1,
-                    PriceCents = 499900000,
-                    BasePriceCents = 599900000,
+                    Price = 4999000.00,
                     Currency = "VND",
                     StockQuantity = 30,
                     WeightGrams = 35000,
                     LengthCm = 140,
                     WidthCm = 70,
                     HeightCm = 75,
-                    BulkyType = "BULKY",
-                    IsFragile = false,
-                    WarrantyMonths = 36,
                     IsActive = true,
-                    IsDefault = true
+                    LastUpdated = DateTime.UtcNow
                 },
                 new ProductVersionCache 
                 { 
@@ -133,21 +210,15 @@ public static class OrderDbSeeder
                     ProductDescription = "Giường ngủ cao cấp từ gỗ thông tự nhiên",
                     ProductStatus = "PUBLISHED",
                     SellerSku = "WOOD-BED-001",
-                    VersionNumber = 1,
-                    PriceCents = 599900000,
-                    BasePriceCents = 699900000,
+                    Price = 5999000.00,
                     Currency = "VND",
                     StockQuantity = 20,
                     WeightGrams = 80000,
                     LengthCm = 200,
                     WidthCm = 160,
                     HeightCm = 45,
-                    BulkyType = "SUPER_BULKY",
-                    IsFragile = false,
-                    RequiresSpecialHandling = true,
-                    WarrantyMonths = 48,
                     IsActive = true,
-                    IsDefault = true
+                    LastUpdated = DateTime.UtcNow
                 },
                 new ProductVersionCache 
                 { 
@@ -158,20 +229,15 @@ public static class OrderDbSeeder
                     ProductDescription = "Tủ âm tường sang trọng từ gỗ óc chó",
                     ProductStatus = "PUBLISHED",
                     SellerSku = "WOOD-CABINET-001",
-                    VersionNumber = 1,
-                    PriceCents = 799900000,
-                    BasePriceCents = 899900000,
+                    Price = 7999000.00,
                     Currency = "VND",
                     StockQuantity = 15,
                     WeightGrams = 45000,
                     LengthCm = 100,
                     WidthCm = 40,
                     HeightCm = 180,
-                    BulkyType = "BULKY",
-                    IsFragile = true,
-                    WarrantyMonths = 36,
                     IsActive = true,
-                    IsDefault = true
+                    LastUpdated = DateTime.UtcNow
                 }
             );
             await dbContext.SaveChangesAsync();

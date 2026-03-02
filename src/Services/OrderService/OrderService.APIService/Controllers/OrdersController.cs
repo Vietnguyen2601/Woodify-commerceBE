@@ -52,22 +52,6 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Lấy order theo order code
-    /// </summary>
-    /// <param name="orderCode">Mã order</param>
-    /// <returns>Thông tin order</returns>
-    [HttpGet("ByCode/{orderCode}")]
-    public async Task<ActionResult<ServiceResult<OrderDto>>> GetOrderByCode(string orderCode)
-    {
-        var result = await _orderService.GetOrderByCodeAsync(orderCode);
-        
-        if (result.Status == 404)
-            return NotFound(result);
-        
-        return Ok(result);
-    }
-
-    /// <summary>
     /// Lấy danh sách orders của user
     /// </summary>
     /// <param name="accountId">ID của tài khoản</param>

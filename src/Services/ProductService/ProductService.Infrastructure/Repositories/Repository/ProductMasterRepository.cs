@@ -60,15 +60,8 @@ public class ProductMasterRepository : GenericRepository<ProductMaster>, IProduc
             query = query.Where(p => EF.Functions.ILike(p.Category!.Name, categoryPattern));
         }
 
-        // Filter by Rating range
-        if (searchParams.MinRating.HasValue)
-        {
-            query = query.Where(p => p.AvgRating >= (decimal)searchParams.MinRating.Value);
-        }
-        if (searchParams.MaxRating.HasValue)
-        {
-            query = query.Where(p => p.AvgRating <= (decimal)searchParams.MaxRating.Value);
-        }
+        // Rating filter removed as AvgRating is no longer in ProductMaster
+        // Ratings are now managed separately through ProductReviews
 
         // Search by keyword in ProductVersion (VersionName, SellerSku) and ProductMaster
         if (!string.IsNullOrWhiteSpace(searchParams.Keyword))
@@ -90,12 +83,12 @@ public class ProductMasterRepository : GenericRepository<ProductMaster>, IProduc
         // Sorting
         query = searchParams.SortBy.ToLower() switch
         {
-            "avgrating" => searchParams.SortDirection.ToUpper() == "ASC"
-                ? query.OrderBy(p => p.AvgRating)
-                : query.OrderByDescending(p => p.AvgRating),
             "name" => searchParams.SortDirection.ToUpper() == "ASC"
-                ? query.OrderBy(p => p.Category!.Name)
-                : query.OrderByDescending(p => p.Category!.Name),
+                ? query.OrderBy(p => p.Name)
+                : query.OrderByDescending(p => p.Name),
+            "publishedat" => searchParams.SortDirection.ToUpper() == "ASC"
+                ? query.OrderBy(p => p.PublishedAt)
+                : query.OrderByDescending(p => p.PublishedAt),
             _ => searchParams.SortDirection.ToUpper() == "ASC"
                 ? query.OrderBy(p => p.CreatedAt)
                 : query.OrderByDescending(p => p.CreatedAt)
