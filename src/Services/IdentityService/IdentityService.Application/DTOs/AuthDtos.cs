@@ -99,3 +99,17 @@ public record ResetPasswordResponse(
     bool Success,
     string Message
 );
+
+public record CurrentUserResponse(
+    bool Success,
+    string Message,
+    Guid? AccountId = null,
+    string? Email = null,
+    string? Username = null,
+    string? Name = null,
+    int? Gender = null,
+    DateTime? Dob = null,
+    string? Address = null,
+    string? PhoneNumber = null,
+    string? Avatar = null
+);

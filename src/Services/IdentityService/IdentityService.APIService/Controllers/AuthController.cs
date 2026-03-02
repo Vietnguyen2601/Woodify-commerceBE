@@ -28,13 +28,13 @@ public class AuthController : ControllerBase
     #region Current User
     [HttpGet("me")]
     [Authorize]
-    public async Task<ActionResult<ServiceResult<object>>> GetMe()
+    public async Task<ActionResult<ServiceResult<CurrentUserResponse>>> GetMe()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
         {
-            return Unauthorized(ServiceResult<object>.Unauthorized("Invalid user token"));
+            return Unauthorized(ServiceResult<CurrentUserResponse>.Unauthorized(AuthMessages.InvalidUserToken));
         }
 
         var (success, account, errorMessage, errorCode) = await _authenService.GetCurrentUserAsync(userId);
@@ -45,29 +45,30 @@ public class AuthController : ControllerBase
             return errorCode switch
             {
                 IdentityService.Application.Constants.ErrorCode.AccountNotFound =>
-                    NotFound(ServiceResult<object>.NotFound(errorMessage)),
+                    NotFound(ServiceResult<CurrentUserResponse>.NotFound(errorMessage)),
 
                 IdentityService.Application.Constants.ErrorCode.AccountNotActive =>
-                    Unauthorized(ServiceResult<object>.Unauthorized(errorMessage)),
+                    Unauthorized(ServiceResult<CurrentUserResponse>.Unauthorized(errorMessage)),
 
-                _ => BadRequest(ServiceResult<object>.BadRequest(errorMessage ?? "Unknown error"))
+                _ => BadRequest(ServiceResult<CurrentUserResponse>.BadRequest(errorMessage ?? "Unknown error"))
             };
         }
 
-        var response = new
-        {
-            accountId = account!.AccountId,
-            email = account.Email,
-            username = account.Username,
-            name = account.Name,
-            gender = account.Gender,
-            dob = account.Dob,
-            address = account.Address,
-            phoneNumber = account.PhoneNumber,
-            role = account.Role?.RoleName ?? "customer"
-        };
+        var response = new CurrentUserResponse(
+            true,
+            AuthMessages.LoginSuccess,
+            account!.AccountId,
+            account.Email,
+            account.Username,
+            account.Name,
+            account.Gender,
+            account.Dob,
+            account.Address,
+            account.PhoneNumber,
+            account.Avatar
+        );
 
-        return Ok(ServiceResult<object>.Success(response, "Current user retrieved successfully"));
+        return Ok(ServiceResult<CurrentUserResponse>.Success(response, AuthMessages.LoginSuccess));
     }
     #endregion
 
