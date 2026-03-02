@@ -51,10 +51,6 @@ public class ShippingProviderAppService : IShippingProviderService
         {
             return ServiceResult<ShippingProviderDto>.InternalServerError($"{ShipmentMessages.ProviderCreateError}: {ex.Message}");
         }
-        catch (Exception ex)
-        {
-            return ServiceResult<ShippingProviderDto>.InternalServerError($"{ShipmentMessages.ProviderCreateError}: {ex.Message}");
-        }
     }
 
     public async Task<ServiceResult<ShippingProviderDto>> UpdateAsync(Guid id, UpdateShippingProviderDto dto)
@@ -83,10 +79,6 @@ public class ShippingProviderAppService : IShippingProviderService
         {
             return ServiceResult<ShippingProviderDto>.InternalServerError($"{ShipmentMessages.ProviderUpdateError}: {ex.Message}");
         }
-        catch (Exception ex)
-        {
-            return ServiceResult<ShippingProviderDto>.InternalServerError($"{ShipmentMessages.ProviderUpdateError}: {ex.Message}");
-        }
     }
 
     public async Task<ServiceResult> DeleteAsync(Guid id)
@@ -109,10 +101,6 @@ public class ShippingProviderAppService : IShippingProviderService
             return ServiceResult.InternalServerError($"{ShipmentMessages.ProviderDeleteError}: {ex.Message}");
         }
         catch (InvalidOperationException ex)
-        {
-            return ServiceResult.InternalServerError($"{ShipmentMessages.ProviderDeleteError}: {ex.Message}");
-        }
-        catch (Exception ex)
         {
             return ServiceResult.InternalServerError($"{ShipmentMessages.ProviderDeleteError}: {ex.Message}");
         }

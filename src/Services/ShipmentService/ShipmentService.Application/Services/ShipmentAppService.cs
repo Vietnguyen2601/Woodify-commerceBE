@@ -65,10 +65,6 @@ public class ShipmentAppService : IShipmentService
         {
             return ServiceResult<ShipmentDto>.InternalServerError($"{ShipmentMessages.ShipmentCreateError}: {ex.Message}");
         }
-        catch (Exception ex)
-        {
-            return ServiceResult<ShipmentDto>.InternalServerError($"{ShipmentMessages.ShipmentCreateError}: {ex.Message}");
-        }
     }
 
     public async Task<ServiceResult<ShipmentDto>> UpdateAsync(Guid id, UpdateShipmentDto dto)
@@ -94,10 +90,6 @@ public class ShipmentAppService : IShipmentService
             return ServiceResult<ShipmentDto>.InternalServerError($"{ShipmentMessages.ShipmentUpdateError}: {ex.Message}");
         }
         catch (InvalidOperationException ex)
-        {
-            return ServiceResult<ShipmentDto>.InternalServerError($"{ShipmentMessages.ShipmentUpdateError}: {ex.Message}");
-        }
-        catch (Exception ex)
         {
             return ServiceResult<ShipmentDto>.InternalServerError($"{ShipmentMessages.ShipmentUpdateError}: {ex.Message}");
         }
@@ -133,10 +125,6 @@ public class ShipmentAppService : IShipmentService
         {
             return ServiceResult<ShipmentDto>.InternalServerError($"{ShipmentMessages.ShipmentUpdateError}: {ex.Message}");
         }
-        catch (Exception ex)
-        {
-            return ServiceResult<ShipmentDto>.InternalServerError($"{ShipmentMessages.ShipmentUpdateError}: {ex.Message}");
-        }
     }
 
     public async Task<ServiceResult> DeleteAsync(Guid id)
@@ -159,10 +147,6 @@ public class ShipmentAppService : IShipmentService
             return ServiceResult.InternalServerError($"{ShipmentMessages.ShipmentDeleteError}: {ex.Message}");
         }
         catch (InvalidOperationException ex)
-        {
-            return ServiceResult.InternalServerError($"{ShipmentMessages.ShipmentDeleteError}: {ex.Message}");
-        }
-        catch (Exception ex)
         {
             return ServiceResult.InternalServerError($"{ShipmentMessages.ShipmentDeleteError}: {ex.Message}");
         }
