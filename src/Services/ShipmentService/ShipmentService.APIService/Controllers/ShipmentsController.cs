@@ -1,94 +1,81 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ShipmentService.Application.DTOs;
+using ShipmentService.Application.Interfaces;
+using Shared.Results;
 
-namespace ShipmentService.APIService.Controllers
+namespace ShipmentService.APIService.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class ShipmentsController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class ShipmentsController : ControllerBase
+    private readonly IShipmentService _shipmentService;
+
+    public ShipmentsController(IShipmentService shipmentService)
     {
-        /// <summary>
-        /// Get all shipments
-        /// </summary>
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
-        {
-            try
-            {
-                // TODO: Implement business logic
-                return Ok(new { message = "Get all shipments", service = "ShipmentService" });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = ex.Message });
-            }
-        }
+        _shipmentService = shipmentService;
+    }
 
-        /// <summary>
-        /// Get shipment by ID
-        /// </summary>
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id)
-        {
-            try
-            {
-                // TODO: Implement business logic
-                return Ok(new { message = $"Get shipment {id}", service = "ShipmentService" });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = ex.Message });
-            }
-        }
+    [HttpGet("GetAllShipments")]
+    public async Task<ActionResult<ServiceResult<IEnumerable<ShipmentDto>>>> GetAll()
+    {
+        var result = await _shipmentService.GetAllAsync();
+        return Ok(result);
+    }
 
-        /// <summary>
-        /// Create a new shipment
-        /// </summary>
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] object shipment)
-        {
-            try
-            {
-                // TODO: Implement business logic
-                return CreatedAtAction(nameof(GetById), new { id = 1 }, new { message = "Shipment created", service = "ShipmentService" });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = ex.Message });
-            }
-        }
+    [HttpGet("GetShipmentById/{id:guid}")]
+    public async Task<ActionResult<ServiceResult<ShipmentDto>>> GetById(Guid id)
+    {
+        var result = await _shipmentService.GetByIdAsync(id);
+        if (result.Status == 404) return NotFound(result);
+        return Ok(result);
+    }
 
-        /// <summary>
-        /// Update shipment
-        /// </summary>
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] object shipment)
-        {
-            try
-            {
-                // TODO: Implement business logic
-                return Ok(new { message = $"Shipment {id} updated", service = "ShipmentService" });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = ex.Message });
-            }
-        }
+    [HttpGet("GetShipmentsByOrderId/{orderId:guid}")]
+    public async Task<ActionResult<ServiceResult<IEnumerable<ShipmentDto>>>> GetByOrderId(Guid orderId)
+    {
+        var result = await _shipmentService.GetByOrderIdAsync(orderId);
+        return Ok(result);
+    }
 
-        /// <summary>
-        /// Delete shipment
-        /// </summary>
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
-        {
-            try
-            {
-                // TODO: Implement business logic
-                return Ok(new { message = $"Shipment {id} deleted", service = "ShipmentService" });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = ex.Message });
-            }
-        }
+    [Authorize]
+    [HttpPost("CreateShipment")]
+    public async Task<ActionResult<ServiceResult<ShipmentDto>>> Create([FromBody] CreateShipmentDto dto)
+    {
+        var result = await _shipmentService.CreateAsync(dto);
+        if (result.Status == 201)
+            return CreatedAtAction(nameof(GetById), new { id = result.Data?.ShipmentId }, result);
+        return BadRequest(result);
+    }
+
+    [Authorize]
+    [HttpPut("UpdateShipment/{id:guid}")]
+    public async Task<ActionResult<ServiceResult<ShipmentDto>>> Update(Guid id, [FromBody] UpdateShipmentDto dto)
+    {
+        var result = await _shipmentService.UpdateAsync(id, dto);
+        if (result.Status == 404) return NotFound(result);
+        if (result.Status != 200) return BadRequest(result);
+        return Ok(result);
+    }
+
+    [Authorize]
+    [HttpPatch("UpdateShipmentStatus/{id:guid}")]
+    public async Task<ActionResult<ServiceResult<ShipmentDto>>> UpdateStatus(Guid id, [FromBody] UpdateShipmentStatusDto dto)
+    {
+        var result = await _shipmentService.UpdateStatusAsync(id, dto);
+        if (result.Status == 404) return NotFound(result);
+        if (result.Status != 200) return BadRequest(result);
+        return Ok(result);
+    }
+
+    [Authorize]
+    [HttpDelete("DeleteShipment/{id:guid}")]
+    public async Task<ActionResult<ServiceResult>> Delete(Guid id)
+    {
+        var result = await _shipmentService.DeleteAsync(id);
+        if (result.Status == 404) return NotFound(result);
+        if (result.Status != 200) return BadRequest(result);
+        return Ok(result);
     }
 }
