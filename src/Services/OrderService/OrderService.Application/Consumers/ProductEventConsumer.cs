@@ -103,6 +103,7 @@ public class ProductEventConsumer
                     
                     // Version Info
                     SellerSku = evt.SellerSku,
+                    VersionNumber = evt.VersionNumber,
                     VersionName = evt.VersionName,
                     
                     // Pricing
@@ -114,6 +115,7 @@ public class ProductEventConsumer
                     AllowBackorder = false, // Default to false as ProductVersion doesn't have this field
                     
                     // Shipping Dimensions
+                    WoodType = evt.WoodType,
                     WeightGrams = evt.WeightGrams,
                     LengthCm = evt.LengthCm,
                     WidthCm = evt.WidthCm,

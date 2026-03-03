@@ -432,4 +432,207 @@ public class ProductMasterService : IProductMasterService
             return ServiceResult<IEnumerable<ProductMasterDto>>.InternalServerError($"Error retrieving pending approval products: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// Get product detail with versions
+    /// For seller/admin: Returns all information including status and moderation_status
+    /// For buyer: Only returns PUBLISHED products with active versions
+    /// </summary>
+    public async Task<ServiceResult<ProductMasterDetailDto>> GetProductDetailAsync(Guid productId, string userRole)
+    {
+        try
+        {
+            var product = await _productMasterRepository.GetByIdAsync(productId);
+            if (product == null)
+                return ServiceResult<ProductMasterDetailDto>.NotFound("Product not found");
+
+            // Role-based filtering
+            bool isSellerOrAdmin = userRole?.ToLower() is "seller" or "admin";
+
+            // For buyer, only show PUBLISHED products
+            if (!isSellerOrAdmin && product.Status != Domain.Entities.ProductStatus.PUBLISHED)
+            {
+                return ServiceResult<ProductMasterDetailDto>.NotFound("Product not found");
+            }
+
+            // Get all versions for this product
+            var versions = await _productVersionRepository.GetByProductIdAsync(productId);
+
+            // Filter versions based on role
+            var filteredVersions = isSellerOrAdmin 
+                ? versions 
+                : versions.Where(v => v.IsActive).ToList();
+
+            // Get category name
+            var category = await _unitOfWork.Categories.GetByIdAsync(product.CategoryId);
+
+            // Map to detail DTO
+            var detailDto = new ProductMasterDetailDto
+            {
+                ProductId = product.ProductId,
+                ShopId = product.ShopId,
+                CategoryId = product.CategoryId,
+                CategoryName = category?.Name,
+                Name = product.Name,
+                GlobalSku = product.GlobalSku,
+                Description = product.Description,
+                Status = product.Status.ToString(),
+                ModerationStatus = isSellerOrAdmin ? product.ModerationStatus.ToString() : null,
+                ModeratedAt = isSellerOrAdmin ? product.ModeratedAt : null,
+                CreatedAt = product.CreatedAt,
+                UpdatedAt = product.UpdatedAt,
+                PublishedAt = product.PublishedAt,
+                Versions = filteredVersions.Select(v => new ProductVersionDetailDto
+                {
+                    VersionId = v.VersionId,
+                    VersionNumber = v.VersionNumber,
+                    VersionName = v.VersionName,
+                    Price = v.Price,
+                    StockQuantity = v.StockQuantity,
+                    WoodType = v.WoodType,
+                    WeightGrams = v.WeightGrams,
+                    LengthCm = v.LengthCm,
+                    WidthCm = v.WidthCm,
+                    HeightCm = v.HeightCm,
+                    IsActive = v.IsActive,
+                    CreatedAt = v.CreatedAt
+                }).ToList()
+            };
+
+            return ServiceResult<ProductMasterDetailDto>.Success(detailDto);
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<ProductMasterDetailDto>.InternalServerError($"Error retrieving product detail: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Get all products with versions (paginated)
+    /// For seller/admin: Returns all products with all information
+    /// For buyer: Only returns PUBLISHED products with active versions
+    /// </summary>
+    public async Task<ServiceResult<ProductDetailListResultDto>> GetAllProductDetailsAsync(
+        string userRole, 
+        int page = 1, 
+        int pageSize = 20, 
+        Guid? shopId = null, 
+        Guid? categoryId = null)
+    {
+        try
+        {
+            // Validate pagination
+            if (page < 1) page = 1;
+            if (pageSize < 1 || pageSize > 100) pageSize = 20;
+
+            bool isSellerOrAdmin = userRole?.ToLower() is "seller" or "admin";
+
+            // Get products based on role and filters
+            IEnumerable<Domain.Entities.ProductMaster> products;
+            
+            if (shopId.HasValue)
+            {
+                products = await _productMasterRepository.GetByShopIdAsync(shopId.Value);
+            }
+            else
+            {
+                products = await _productMasterRepository.GetAllAsync();
+            }
+
+            // Apply category filter
+            if (categoryId.HasValue)
+            {
+                products = products.Where(p => p.CategoryId == categoryId.Value);
+            }
+
+            // For buyer, filter to only PUBLISHED products
+            if (!isSellerOrAdmin)
+            {
+                products = products.Where(p => p.Status == Domain.Entities.ProductStatus.PUBLISHED);
+            }
+
+            // Get total count before pagination
+            var totalCount = products.Count();
+
+            // Apply pagination
+            var pagedProducts = products
+                .OrderByDescending(p => p.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            // Get all categories (for performance, get once)
+            var categoryIds = pagedProducts.Select(p => p.CategoryId).Distinct().ToList();
+            var categories = new Dictionary<Guid, string>();
+            foreach (var catId in categoryIds)
+            {
+                var category = await _unitOfWork.Categories.GetByIdAsync(catId);
+                if (category != null)
+                {
+                    categories[catId] = category.Name;
+                }
+            }
+
+            // Build product details with versions
+            var productDetails = new List<ProductMasterDetailDto>();
+            foreach (var product in pagedProducts)
+            {
+                // Get versions for this product
+                var versions = await _productVersionRepository.GetByProductIdAsync(product.ProductId);
+
+                // Filter versions based on role
+                var filteredVersions = isSellerOrAdmin 
+                    ? versions 
+                    : versions.Where(v => v.IsActive).ToList();
+
+                var detailDto = new ProductMasterDetailDto
+                {
+                    ProductId = product.ProductId,
+                    ShopId = product.ShopId,
+                    CategoryId = product.CategoryId,
+                    CategoryName = categories.ContainsKey(product.CategoryId) ? categories[product.CategoryId] : null,
+                    Name = product.Name,
+                    GlobalSku = product.GlobalSku,
+                    Description = product.Description,
+                    Status = product.Status.ToString(),
+                    ModerationStatus = isSellerOrAdmin ? product.ModerationStatus.ToString() : null,
+                    ModeratedAt = isSellerOrAdmin ? product.ModeratedAt : null,
+                    CreatedAt = product.CreatedAt,
+                    UpdatedAt = product.UpdatedAt,
+                    PublishedAt = product.PublishedAt,
+                    Versions = filteredVersions.Select(v => new ProductVersionDetailDto
+                    {
+                        VersionId = v.VersionId,
+                        VersionNumber = v.VersionNumber,
+                        VersionName = v.VersionName,
+                        Price = v.Price,
+                        StockQuantity = v.StockQuantity,
+                        WoodType = v.WoodType,
+                        WeightGrams = v.WeightGrams,
+                        LengthCm = v.LengthCm,
+                        WidthCm = v.WidthCm,
+                        HeightCm = v.HeightCm,
+                        IsActive = v.IsActive,
+                        CreatedAt = v.CreatedAt
+                    }).ToList()
+                };
+
+                productDetails.Add(detailDto);
+            }
+
+            var result = new ProductDetailListResultDto
+            {
+                Products = productDetails,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            };
+
+            return ServiceResult<ProductDetailListResultDto>.Success(result);
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<ProductDetailListResultDto>.InternalServerError($"Error retrieving product details: {ex.Message}");
+        }
+    }
 }

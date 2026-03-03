@@ -48,6 +48,11 @@ public class CreateProductVersionValidator : AbstractValidator<CreateProductVers
             .MaximumLength(255)
             .WithMessage("Seller SKU cannot exceed 255 characters");
 
+        RuleFor(x => x.VersionNumber)
+            .GreaterThan(0)
+            .WithMessage("Version number must be greater than 0")
+            .When(x => x.VersionNumber.HasValue);
+
         RuleFor(x => x.VersionName)
             .MaximumLength(500)
             .WithMessage("Version name cannot exceed 500 characters")
@@ -56,6 +61,11 @@ public class CreateProductVersionValidator : AbstractValidator<CreateProductVers
         RuleFor(x => x.Price)
             .GreaterThan(0)
             .WithMessage("Price must be greater than 0");
+
+        RuleFor(x => x.WoodType)
+            .MaximumLength(200)
+            .WithMessage("Wood type cannot exceed 200 characters")
+            .When(x => !string.IsNullOrEmpty(x.WoodType));
 
         RuleFor(x => x.WeightGrams)
             .GreaterThan(0)
@@ -84,6 +94,11 @@ public class UpdateProductVersionValidator : AbstractValidator<UpdateProductVers
             .WithMessage("Seller SKU cannot exceed 255 characters")
             .When(x => !string.IsNullOrEmpty(x.SellerSku));
 
+        RuleFor(x => x.VersionNumber)
+            .GreaterThan(0)
+            .WithMessage("Version number must be greater than 0")
+            .When(x => x.VersionNumber.HasValue);
+
         RuleFor(x => x.VersionName)
             .MaximumLength(500)
             .WithMessage("Version name cannot exceed 500 characters")
@@ -93,6 +108,11 @@ public class UpdateProductVersionValidator : AbstractValidator<UpdateProductVers
             .GreaterThan(0)
             .WithMessage("Price must be greater than 0")
             .When(x => x.Price.HasValue);
+
+        RuleFor(x => x.WoodType)
+            .MaximumLength(200)
+            .WithMessage("Wood type cannot exceed 200 characters")
+            .When(x => !string.IsNullOrEmpty(x.WoodType));
 
         RuleFor(x => x.WeightGrams)
             .GreaterThan(0)

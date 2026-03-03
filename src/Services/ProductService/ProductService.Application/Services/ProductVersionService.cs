@@ -104,9 +104,9 @@ public class ProductVersionService : IProductVersionService
             if (product == null)
                 return ServiceResult<ProductVersionDto>.NotFound($"Product with ID {dto.ProductId} not found");
 
-            // Check if product is archived
-            if (product.Status == Domain.Entities.ProductStatus.ARCHIVED)
-                return ServiceResult<ProductVersionDto>.BadRequest("Cannot create new version for archived product");
+            // Only allow creating versions for DRAFT products
+            if (product.Status != Domain.Entities.ProductStatus.DRAFT)
+                return ServiceResult<ProductVersionDto>.BadRequest("Can only create versions for products in DRAFT status");
 
             // Check if SellerSku already exists
             var existingSku = await _productVersionRepository.GetBySellerSkuAsync(dto.SellerSku);
@@ -156,10 +156,12 @@ public class ProductVersionService : IProductVersionService
                 ProductDescription = product.Description,
                 ProductStatus = product.Status.ToString(),
                 SellerSku = version.SellerSku,
+                VersionNumber = version.VersionNumber,
                 VersionName = version.VersionName,
                 Price = version.Price,
                 Currency = "VND",
                 StockQuantity = version.StockQuantity,
+                WoodType = version.WoodType,
                 WeightGrams = version.WeightGrams,
                 LengthCm = version.LengthCm,
                 WidthCm = version.WidthCm,
@@ -256,10 +258,12 @@ public class ProductVersionService : IProductVersionService
                     ProductDescription = product.Description,
                     ProductStatus = product.Status.ToString(),
                     SellerSku = updatedVersion.SellerSku,
+                    VersionNumber = updatedVersion.VersionNumber,
                     VersionName = updatedVersion.VersionName,
                     Price = updatedVersion.Price,
                     Currency = "VND",
                     StockQuantity = updatedVersion.StockQuantity,
+                    WoodType = updatedVersion.WoodType,
                     WeightGrams = updatedVersion.WeightGrams,
                     LengthCm = updatedVersion.LengthCm,
                     WidthCm = updatedVersion.WidthCm,
@@ -309,10 +313,12 @@ public class ProductVersionService : IProductVersionService
                     ProductDescription = product.Description,
                     ProductStatus = product.Status.ToString(),
                     SellerSku = version.SellerSku,
+                    VersionNumber = version.VersionNumber,
                     VersionName = version.VersionName,
                     Price = version.Price,
                     Currency = "VND",
                     StockQuantity = version.StockQuantity,
+                    WoodType = version.WoodType,
                     WeightGrams = version.WeightGrams,
                     LengthCm = version.LengthCm,
                     WidthCm = version.WidthCm,
@@ -362,10 +368,12 @@ public class ProductVersionService : IProductVersionService
                     ProductDescription = product.Description,
                     ProductStatus = product.Status.ToString(),
                     SellerSku = version.SellerSku,
+                    VersionNumber = version.VersionNumber,
                     VersionName = version.VersionName,
                     Price = version.Price,
                     Currency = "VND",
                     StockQuantity = version.StockQuantity,
+                    WoodType = version.WoodType,
                     WeightGrams = version.WeightGrams,
                     LengthCm = version.LengthCm,
                     WidthCm = version.WidthCm,

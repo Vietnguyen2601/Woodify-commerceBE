@@ -188,4 +188,41 @@ public class ProductMastersController : ControllerBase
         var result = await _productMasterService.GetPendingApprovalProductsAsync();
         return Ok(result);
     }
+
+    /// <summary>
+    /// Get product detail with versions
+    /// Query param 'role' can be: seller, admin, or buyer (default: buyer)
+    /// For seller/admin: Returns all information including status and moderation_status
+    /// For buyer: Only returns PUBLISHED products with active versions
+    /// </summary>
+    [HttpGet("GetProductDetail/{id:guid}")]
+    public async Task<ActionResult<ServiceResult<ProductMasterDetailDto>>> GetProductDetail(
+        Guid id, 
+        [FromQuery] string role = "buyer")
+    {
+        var result = await _productMasterService.GetProductDetailAsync(id, role);
+        
+        if (result.Status == 404)
+            return NotFound(result);
+        
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Get all products with versions (paginated)
+    /// Query params: role (seller/admin/buyer), page, pageSize, shopId, categoryId
+    /// For seller/admin: Returns all products with all information
+    /// For buyer: Only returns PUBLISHED products with active versions
+    /// </summary>
+    [HttpGet("GetAllProductDetails")]
+    public async Task<ActionResult<ServiceResult<ProductDetailListResultDto>>> GetAllProductDetails(
+        [FromQuery] string role = "buyer",
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] Guid? shopId = null,
+        [FromQuery] Guid? categoryId = null)
+    {
+        var result = await _productMasterService.GetAllProductDetailsAsync(role, page, pageSize, shopId, categoryId);
+        return Ok(result);
+    }
 }
