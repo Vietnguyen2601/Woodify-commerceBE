@@ -104,7 +104,7 @@ public class RabbitMQConsumer : IDisposable
 
                 _channel.BasicAck(ea.DeliveryTag, multiple: false);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Optionally: _channel.BasicNack(ea.DeliveryTag, false, true); // requeue on error
             }

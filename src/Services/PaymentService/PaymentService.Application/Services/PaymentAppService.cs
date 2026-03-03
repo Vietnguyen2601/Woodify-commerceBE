@@ -15,6 +15,7 @@ public class PaymentAppService : IPaymentAppService
 {
     private readonly IPayOsService _payOsService;
     private readonly IPaymentRepository _paymentRepository;
+    private readonly IWalletService _walletService;
     private readonly ILogger<PaymentAppService> _logger;
 
     private const string PROVIDER_PAYOS = "PAYOS";
@@ -22,10 +23,12 @@ public class PaymentAppService : IPaymentAppService
     public PaymentAppService(
         IPayOsService payOsService,
         IPaymentRepository paymentRepository,
+        IWalletService walletService,
         ILogger<PaymentAppService> logger)
     {
         _payOsService = payOsService;
         _paymentRepository = paymentRepository;
+        _walletService = walletService;
         _logger = logger;
     }
 
@@ -195,6 +198,51 @@ public class PaymentAppService : IPaymentAppService
             _logger.LogInformation(
                 "Payment status updated. OrderCode: {OrderCode}, PreviousStatus: {Previous}, NewStatus: {New}",
                 webhook.Data.OrderCode, previousStatus, newStatus);
+
+            // AUTO CREDIT WALLET: Nếu thanh toán thành công và có AccountId, tự động nạp tiền vào ví
+            if (newStatus == PaymentStatus.Succeeded && payment.AccountId.HasValue)
+            {
+                _logger.LogInformation(
+                    "Auto-crediting wallet for accountId: {AccountId}, amount: {Amount}",
+                    payment.AccountId, payment.AmountCents);
+
+                try
+                {
+                    var creditRequest = new CreditWalletRequest
+                    {
+                        Amount = payment.AmountCents,
+                        Note = $"Nạp tiền qua PayOS - OrderCode: {webhook.Data.OrderCode}",
+                        RelatedPaymentId = payment.PaymentId
+                    };
+
+                    var walletResult = await _walletService.GetWalletByAccountAsync(payment.AccountId.Value);
+                    if (walletResult.Status == 200 && walletResult.Data != null)
+                    {
+                        var creditResult = await _walletService.CreditAsync(walletResult.Data.WalletId, creditRequest);
+                        if (creditResult.Status == 200 && creditResult.Data != null)
+                        {
+                            _logger.LogInformation(
+                                "Wallet credited successfully. WalletId: {WalletId}, NewBalance: {Balance}",
+                                walletResult.Data.WalletId, creditResult.Data.NewBalance);
+                        }
+                        else
+                        {
+                            _logger.LogWarning(
+                                "Failed to credit wallet. WalletId: {WalletId}, Error: {Error}",
+                                walletResult.Data.WalletId, creditResult.Message);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Wallet not found for accountId: {AccountId}", payment.AccountId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error auto-crediting wallet for accountId: {AccountId}",
+                        payment.AccountId);
+                }
+            }
 
             return ServiceResult<WebhookProcessResult>.Success(new WebhookProcessResult
             {

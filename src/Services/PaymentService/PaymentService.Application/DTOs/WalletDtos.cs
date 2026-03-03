@@ -72,6 +72,47 @@ public class DebitWalletRequest
     public Guid? RelatedPaymentId { get; set; }
 }
 
+/// <summary>
+/// Request nạp tiền vào ví thông qua thanh toán PayOS
+/// </summary>
+public class TopUpWalletWithPaymentRequest
+{
+    /// <summary>
+    /// ID tài khoản người dùng (bắt buộc)
+    /// </summary>
+    public Guid AccountId { get; set; }
+
+    /// <summary>
+    /// Số tiền muốn nạp (VND)
+    /// </summary>
+    public long Amount { get; set; }
+
+    /// <summary>
+    /// URL redirect khi thanh toán thành công (bắt buộc)
+    /// </summary>
+    public string ReturnUrl { get; set; } = string.Empty;
+
+    /// <summary>
+    /// URL redirect khi hủy thanh toán (bắt buộc)
+    /// </summary>
+    public string CancelUrl { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Tên người mua
+    /// </summary>
+    public string? BuyerName { get; set; }
+
+    /// <summary>
+    /// Email người mua
+    /// </summary>
+    public string? BuyerEmail { get; set; }
+
+    /// <summary>
+    /// Số điện thoại người mua
+    /// </summary>
+    public string? BuyerPhone { get; set; }
+}
+
 #endregion
 
 #region Response DTOs
@@ -153,6 +194,42 @@ public class WalletTransactionResult
     public Guid TransactionId { get; set; }
     public long NewBalance { get; set; }
     public string? Message { get; set; }
+}
+
+/// <summary>
+/// Response khi khởi tạo nạp tiền qua PayOS
+/// </summary>
+public class TopUpWalletWithPaymentResponse
+{
+    /// <summary>
+    /// ID payment được tạo
+    /// </summary>
+    public Guid PaymentId { get; set; }
+
+    /// <summary>
+    /// ID ví
+    /// </summary>
+    public Guid WalletId { get; set; }
+
+    /// <summary>
+    /// Số tiền
+    /// </summary>
+    public long Amount { get; set; }
+
+    /// <summary>
+    /// Link thanh toán PayOS - redirect user đến đây
+    /// </summary>
+    public string PaymentUrl { get; set; } = string.Empty;
+
+    /// <summary>
+    /// URL QR code
+    /// </summary>
+    public string? QrCodeUrl { get; set; }
+
+    /// <summary>
+    /// Trạng thái thanh toán (PENDING)
+    /// </summary>
+    public string Status { get; set; } = "PENDING";
 }
 
 #endregion

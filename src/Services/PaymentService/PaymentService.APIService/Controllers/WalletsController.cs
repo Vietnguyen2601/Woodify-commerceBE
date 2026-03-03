@@ -13,13 +13,16 @@ namespace PaymentService.APIService.Controllers;
 public class WalletsController : ControllerBase
 {
     private readonly IWalletService _walletService;
+    private readonly IPaymentAppService _paymentAppService;
     private readonly ILogger<WalletsController> _logger;
 
     public WalletsController(
         IWalletService walletService,
+        IPaymentAppService paymentAppService,
         ILogger<WalletsController> logger)
     {
         _walletService = walletService;
+        _paymentAppService = paymentAppService;
         _logger = logger;
     }
 
@@ -155,5 +158,119 @@ public class WalletsController : ControllerBase
             404 => NotFound(result),
             _ => StatusCode(result.Status, result)
         };
+    }
+
+    /// <summary>
+    /// Nạp tiền vào ví thông qua thanh toán PayOS
+    /// </summary>
+    /// <remarks>
+    /// Flow:
+    /// 1. API tạo link thanh toán PayOS
+    /// 2. User được redirect đến PayOS để thanh toán
+    /// 3. Sau khi thanh toán, PayOS gọi webhook
+    /// 4. Webhook tự động nạp tiền vào ví
+    /// 
+    /// Sample request:
+    /// 
+    ///     POST /api/wallets/topup
+    ///     {
+    ///         "accountId": "550e8400-e29b-41d4-a716-446655440000",
+    ///         "amount": 100000,
+    ///         "returnUrl": "https://app.example.com/wallet/topup-success",
+    ///         "cancelUrl": "https://app.example.com/wallet/topup-cancel",
+    ///         "buyerName": "Nguyễn Văn A",
+    ///         "buyerEmail": "user@example.com",
+    ///         "buyerPhone": "0909123456"
+    ///     }
+    /// </remarks>
+    [HttpPost("topup")]
+    [ProducesResponseType(typeof(ServiceResult<TopUpWalletWithPaymentResponse>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ServiceResult<TopUpWalletWithPaymentResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ServiceResult<TopUpWalletWithPaymentResponse>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ServiceResult<TopUpWalletWithPaymentResponse>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ServiceResult<TopUpWalletWithPaymentResponse>>> TopUpWithPayment(
+        [FromBody] TopUpWalletWithPaymentRequest request)
+    {
+        _logger.LogInformation(
+            "TopUpWithPayment request for accountId: {AccountId}, amount: {Amount}",
+            request.AccountId, request.Amount);
+
+        try
+        {
+            // 1. Kiểm tra ví tồn tại
+            var walletResult = await _walletService.GetWalletByAccountAsync(request.AccountId);
+            if (walletResult.Status != 200 || walletResult.Data == null)
+            {
+                _logger.LogWarning("Wallet not found for accountId: {AccountId}", request.AccountId);
+                return NotFound(new ServiceResult<TopUpWalletWithPaymentResponse>
+                {
+                    Status = 404,
+                    Message = "Wallet not found"
+                });
+            }
+
+            var wallet = walletResult.Data;
+
+            // 2. Tạo link thanh toán PayOS
+            var paymentRequest = new CreatePaymentLinkRequest
+            {
+                OrderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                Amount = (int)request.Amount,
+                Description = $"Nạp tiền vào ví",
+                ReturnUrl = request.ReturnUrl,
+                CancelUrl = request.CancelUrl,
+                AccountId = request.AccountId,
+                BuyerName = request.BuyerName,
+                BuyerEmail = request.BuyerEmail,
+                BuyerPhone = request.BuyerPhone
+            };
+
+            var paymentResult = await _paymentAppService.CreatePaymentLinkAsync(paymentRequest);
+
+            if (paymentResult.Status != 201 || paymentResult.Data == null)
+            {
+                _logger.LogError("Failed to create payment link for accountId: {AccountId}", request.AccountId);
+                return StatusCode(500, new ServiceResult<TopUpWalletWithPaymentResponse>
+                {
+                    Status = 500,
+                    Message = "Failed to create payment link"
+                });
+            }
+
+            // 3. Trả về response
+            var response = new TopUpWalletWithPaymentResponse
+            {
+                PaymentId = paymentResult.Data.PaymentId,
+                WalletId = wallet.WalletId,
+                Amount = request.Amount,
+                PaymentUrl = paymentResult.Data.PaymentUrl,
+                QrCodeUrl = paymentResult.Data.QrCodeUrl,
+                Status = "PENDING"
+            };
+
+            _logger.LogInformation(
+                "TopUp payment created successfully. PaymentId: {PaymentId}, WalletId: {WalletId}",
+                response.PaymentId, response.WalletId);
+
+            var successResult = new ServiceResult<TopUpWalletWithPaymentResponse>
+            {
+                Status = 201,
+                Data = response,
+                Message = "Top-up payment initiated. Please complete payment on PayOS."
+            };
+
+            return CreatedAtAction(nameof(GetWallet),
+                new { walletId = wallet.WalletId },
+                successResult);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating top-up payment for accountId: {AccountId}", request.AccountId);
+            return StatusCode(500, new ServiceResult<TopUpWalletWithPaymentResponse>
+            {
+                Status = 500,
+                Message = "Internal server error"
+            });
+        }
     }
 }

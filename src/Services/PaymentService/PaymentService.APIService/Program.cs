@@ -163,7 +163,7 @@ using (var scope = app.Services.CreateScope())
         // Seed initial data
         await PaymentDbSeeder.SeedAsync(dbContext);
     }
-    catch (Exception ex)
+    catch (Exception)
     {
         // Log error but continue startup
     }
