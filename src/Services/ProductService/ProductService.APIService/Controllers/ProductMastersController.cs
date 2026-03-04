@@ -190,6 +190,24 @@ public class ProductMastersController : ControllerBase
     }
 
     /// <summary>
+    /// Admin's Pending Approval Queue with filters and sorting
+    /// Queue = status=PENDING_APPROVAL and moderation_status=PENDING
+    /// Sorted by oldest first (FIFO - First In First Out)
+    /// Filters: categoryId, shopId, submittedFrom, submittedTo
+    /// </summary>
+    [HttpPost("GetPendingApprovalQueue")]
+    public async Task<ActionResult<ServiceResult<PendingApprovalQueueResultDto>>> GetPendingApprovalQueue(
+        [FromBody] PendingApprovalQueueFilterDto filterDto)
+    {
+        var result = await _productMasterService.GetPendingApprovalQueueAsync(filterDto);
+        
+        if (result.Status != 200)
+            return BadRequest(result);
+        
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Get product detail with versions
     /// Query param 'role' can be: seller, admin, or buyer (default: buyer)
     /// For seller/admin: Returns all information including status and moderation_status

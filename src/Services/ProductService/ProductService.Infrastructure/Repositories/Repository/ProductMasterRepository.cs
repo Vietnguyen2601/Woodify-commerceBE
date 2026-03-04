@@ -103,6 +103,60 @@ public class ProductMasterRepository : GenericRepository<ProductMaster>, IProduc
         return (products, totalCount);
     }
 
+    public async Task<(List<ProductMaster> Products, int TotalCount)> GetPendingApprovalQueueAsync(
+        Guid? categoryId = null, 
+        Guid? shopId = null, 
+        DateTime? submittedFrom = null, 
+        DateTime? submittedTo = null,
+        int page = 1,
+        int pageSize = 20)
+    {
+        // Base query: status=PENDING_APPROVAL and moderation_status=PENDING
+        var query = _context.ProductMasters
+            .Include(p => p.Category)
+            .Where(p => p.Status == ProductStatus.PENDING_APPROVAL && 
+                       p.ModerationStatus == ModerationStatus.PENDING)
+            .AsQueryable();
+
+        // Filter by category
+        if (categoryId.HasValue)
+        {
+            query = query.Where(p => p.CategoryId == categoryId.Value);
+        }
+
+        // Filter by shop
+        if (shopId.HasValue)
+        {
+            query = query.Where(p => p.ShopId == shopId.Value);
+        }
+
+        // Filter by submission time range
+        // UpdatedAt represents the last update time, which is when the product was submitted for approval
+        if (submittedFrom.HasValue)
+        {
+            query = query.Where(p => p.UpdatedAt >= submittedFrom.Value);
+        }
+
+        if (submittedTo.HasValue)
+        {
+            query = query.Where(p => p.UpdatedAt <= submittedTo.Value);
+        }
+
+        // Get total count before pagination
+        var totalCount = await query.CountAsync();
+
+        // Sort by oldest first (earliest submission)
+        query = query.OrderBy(p => p.UpdatedAt);
+
+        // Pagination
+        var products = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return (products, totalCount);
+    }
+
     public override async Task<List<ProductMaster>> GetAllAsync()
     {
         return await _dbSet

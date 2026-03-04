@@ -434,6 +434,60 @@ public class ProductMasterService : IProductMasterService
     }
 
     /// <summary>
+    /// Admin's Pending Approval Queue with filters and sorting
+    /// Queue = status=PENDING_APPROVAL and moderation_status=PENDING
+    /// Sorted by oldest first (earliest submission)
+    /// Filters: category, shop, submission time range
+    /// </summary>
+    public async Task<ServiceResult<PendingApprovalQueueResultDto>> GetPendingApprovalQueueAsync(PendingApprovalQueueFilterDto filterDto)
+    {
+        try
+        {
+            // Validate pagination
+            if (filterDto.Page < 1) filterDto.Page = 1;
+            if (filterDto.PageSize < 1 || filterDto.PageSize > 100) filterDto.PageSize = 20;
+
+            // Validate date range
+            if (filterDto.SubmittedFrom.HasValue && filterDto.SubmittedTo.HasValue)
+            {
+                if (filterDto.SubmittedFrom.Value > filterDto.SubmittedTo.Value)
+                {
+                    return ServiceResult<PendingApprovalQueueResultDto>.BadRequest(
+                        "SubmittedFrom cannot be later than SubmittedTo");
+                }
+            }
+
+            // Get paginated queue from repository
+            var (products, totalCount) = await _productMasterRepository.GetPendingApprovalQueueAsync(
+                filterDto.CategoryId,
+                filterDto.ShopId,
+                filterDto.SubmittedFrom,
+                filterDto.SubmittedTo,
+                filterDto.Page,
+                filterDto.PageSize
+            );
+
+            // Map to DTOs
+            var productDtos = products.Select(p => p.ToDto()).ToList();
+
+            var result = new PendingApprovalQueueResultDto
+            {
+                Products = productDtos,
+                TotalCount = totalCount,
+                Page = filterDto.Page,
+                PageSize = filterDto.PageSize
+            };
+
+            return ServiceResult<PendingApprovalQueueResultDto>.Success(result);
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<PendingApprovalQueueResultDto>.InternalServerError(
+                $"Error retrieving pending approval queue: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Get product detail with versions
     /// For seller/admin: Returns all information including status and moderation_status
     /// For buyer: Only returns PUBLISHED products with active versions

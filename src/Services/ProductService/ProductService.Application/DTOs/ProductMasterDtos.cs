@@ -154,3 +154,52 @@ public class ProductDetailListResultDto
     public int PageSize { get; set; }
     public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
 }
+
+/// <summary>
+/// Filter DTO for Admin's Pending Approval Queue
+/// Queue = status=PENDING_APPROVAL and moderation_status=PENDING
+/// </summary>
+public class PendingApprovalQueueFilterDto
+{
+    /// <summary>
+    /// Filter by category ID (optional)
+    /// </summary>
+    public Guid? CategoryId { get; set; }
+    
+    /// <summary>
+    /// Filter by shop ID (optional)
+    /// </summary>
+    public Guid? ShopId { get; set; }
+    
+    /// <summary>
+    /// Filter by submission time from (optional)
+    /// </summary>
+    public DateTime? SubmittedFrom { get; set; }
+    
+    /// <summary>
+    /// Filter by submission time to (optional)
+    /// </summary>
+    public DateTime? SubmittedTo { get; set; }
+    
+    /// <summary>
+    /// Page number (starts from 1)
+    /// </summary>
+    public int Page { get; set; } = 1;
+    
+    /// <summary>
+    /// Page size (default: 20, max: 100)
+    /// </summary>
+    public int PageSize { get; set; } = 20;
+}
+
+/// <summary>
+/// Result DTO for Admin's Pending Approval Queue
+/// </summary>
+public class PendingApprovalQueueResultDto
+{
+    public List<ProductMasterDto> Products { get; set; } = new();
+    public int TotalCount { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
+}
