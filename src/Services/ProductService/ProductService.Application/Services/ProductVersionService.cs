@@ -1,6 +1,7 @@
 using ProductService.Application.DTOs;
 using ProductService.Application.Interfaces;
 using ProductService.Application.Mappers;
+using ProductService.Domain.Entities;
 using ProductService.Infrastructure.Repositories.IRepositories;
 using ProductService.Infrastructure.Persistence;
 using Shared.Results;
@@ -226,55 +227,70 @@ public class ProductVersionService : IProductVersionService
     {
         try
         {
-            var version = await _productVersionRepository.GetByIdAsync(id);
+            // Use UnitOfWork repositories to ensure same DbContext for both entities
+            var version = await _unitOfWork.ProductVersions.GetByIdAsync(id);
             if (version == null)
                 return ServiceResult<ProductVersionDto>.NotFound("Product version not found");
 
-            // Check if SellerSku is being changed and if it already exists
-            if (dto.SellerSku != null && dto.SellerSku != version.SellerSku)
+            // Get the ProductMaster to check its status - use UnitOfWork repository
+            var product = await _unitOfWork.ProductMasters.GetByIdAsync(version.ProductId);
+            if (product == null)
+                return ServiceResult<ProductVersionDto>.NotFound("Product not found");
+
+            // Only allow updates if product status is DRAFT or APPROVED
+            if (product.Status != ProductStatus.DRAFT && product.Status != ProductStatus.APPROVED)
             {
-                var existingSku = await _productVersionRepository.GetBySellerSkuAsync(dto.SellerSku);
-                if (existingSku != null && existingSku.VersionId != id)
-                    return ServiceResult<ProductVersionDto>.BadRequest($"SellerSku '{dto.SellerSku}' already exists");
+                return ServiceResult<ProductVersionDto>.BadRequest(
+                    $"Cannot update product version. Product must be in DRAFT or APPROVED status. Current status: {product.Status}");
             }
 
+            // Check if product is APPROVED and needs to revert to DRAFT
+            bool shouldRevertToDraft = product.Status == ProductStatus.APPROVED;
+
+            // Update version - just modify properties, don't call UpdateAsync
             dto.MapToUpdate(version);
+            _unitOfWork.MarkAsModified(version);
 
-            await _productVersionRepository.UpdateAsync(version);
-            
-            var updatedVersion = await _productVersionRepository.GetByIdAsync(id);
-            
-            // Get product info for event
-            var product = await _productMasterRepository.GetByIdAsync(version.ProductId);
-            if (product != null)
+            // If product was APPROVED, change it back to DRAFT
+            if (shouldRevertToDraft)
             {
-                // Publish event to OrderService
-                _eventPublisher.PublishProductVersionUpdated(new ProductVersionUpdatedEvent
-                {
-                    VersionId = updatedVersion!.VersionId,
-                    ProductId = updatedVersion.ProductId,
-                    ShopId = product.ShopId,
-                    ProductName = product.Name,
-                    ProductDescription = product.Description,
-                    ProductStatus = product.Status.ToString(),
-                    SellerSku = updatedVersion.SellerSku,
-                    VersionNumber = updatedVersion.VersionNumber,
-                    VersionName = updatedVersion.VersionName,
-                    Price = updatedVersion.Price,
-                    Currency = "VND",
-                    StockQuantity = updatedVersion.StockQuantity,
-                    WoodType = updatedVersion.WoodType,
-                    WeightGrams = updatedVersion.WeightGrams,
-                    LengthCm = updatedVersion.LengthCm,
-                    WidthCm = updatedVersion.WidthCm,
-                    HeightCm = updatedVersion.HeightCm,
-                    IsActive = updatedVersion.IsActive,
-                    UpdatedAt = updatedVersion.UpdatedAt ?? DateTime.UtcNow,
-                    EventType = "Updated"
-                });
+                product.Status = ProductStatus.DRAFT;
+                product.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.MarkAsModified(product);
             }
+
+            // Save all changes - this will save both version and product
+            await _unitOfWork.SaveChangesAsync();
             
-            return ServiceResult<ProductVersionDto>.Success(updatedVersion!.ToDto(), "Product version updated successfully");
+            // Get updated data
+            var updatedVersion = version.ToDto();
+            
+            // Publish event to OrderService with CURRENT product status
+            _eventPublisher.PublishProductVersionUpdated(new ProductVersionUpdatedEvent
+            {
+                VersionId = version.VersionId,
+                ProductId = version.ProductId,
+                ShopId = product.ShopId,
+                ProductName = product.Name,
+                ProductDescription = product.Description,
+                ProductStatus = product.Status.ToString(), // This will be DRAFT if shouldRevertToDraft was true
+                SellerSku = version.SellerSku,
+                VersionNumber = version.VersionNumber,
+                VersionName = version.VersionName,
+                Price = version.Price,
+                Currency = "VND",
+                StockQuantity = version.StockQuantity,
+                WoodType = version.WoodType,
+                WeightGrams = version.WeightGrams,
+                LengthCm = version.LengthCm,
+                WidthCm = version.WidthCm,
+                HeightCm = version.HeightCm,
+                IsActive = version.IsActive,
+                UpdatedAt = version.UpdatedAt ?? DateTime.UtcNow,
+                EventType = "Updated"
+            });
+            
+            return ServiceResult<ProductVersionDto>.Success(updatedVersion, "Product version updated successfully");
         }
         catch (Exception ex)
         {

@@ -64,12 +64,6 @@ public static class ProductVersionMapper
         {
             throw new ArgumentNullException(nameof(version), "ProductVersion cannot be null.");
         }
-
-        if (dto.SellerSku != null)
-            version.SellerSku = dto.SellerSku;
-        
-        if (dto.VersionNumber.HasValue)
-            version.VersionNumber = dto.VersionNumber.Value;
         
         if (dto.VersionName != null)
             version.VersionName = dto.VersionName;
@@ -94,9 +88,8 @@ public static class ProductVersionMapper
         
         if (dto.HeightCm.HasValue)
             version.HeightCm = dto.HeightCm.Value;
-        
-        if (dto.IsActive.HasValue)
-            version.IsActive = dto.IsActive.Value;
+
+        version.UpdatedAt = DateTime.UtcNow;
 
         version.UpdatedAt = DateTime.UtcNow;
     }

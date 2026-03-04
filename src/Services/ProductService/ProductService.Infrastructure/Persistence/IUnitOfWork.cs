@@ -17,4 +17,5 @@ public interface IUnitOfWork : IDisposable
     Task BeginTransactionAsync();
     Task CommitAsync();
     Task RollbackAsync();
+    void MarkAsModified<T>(T entity) where T : class;
 }
