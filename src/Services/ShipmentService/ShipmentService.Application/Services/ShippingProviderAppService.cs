@@ -105,7 +105,7 @@ public class ShippingProviderAppService : IShippingProviderService
                     return ServiceResult<ShippingProviderDto>.Conflict(ShipmentMessages.ProviderNameDuplicate);
             }
 
-            bool softDeleting = dto.IsActive.HasValue && dto.IsActive.Value == false && provider.IsActive;
+            bool softDeleting = dto.IsActive.HasValue && !dto.IsActive.Value && provider.IsActive;
             if (softDeleting)
             {
                 var hasActiveServices = await _providerServiceRepository.HasActiveByProviderIdAsync(providerId);

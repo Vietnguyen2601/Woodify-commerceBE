@@ -80,7 +80,7 @@ public class ProviderServiceAppService : IProviderServiceService
             if (service is null)
                 return ServiceResult<ProviderServiceDto>.NotFound(ShipmentMessages.ServiceNotFound);
 
-            bool softDeleting = dto.IsActive.HasValue && dto.IsActive.Value == false && service.IsActive;
+            bool softDeleting = dto.IsActive.HasValue && !dto.IsActive.Value && service.IsActive;
             if (softDeleting)
             {
                 var hasActiveShipments = await _shipmentRepository.HasNonTerminalByServiceIdAsync(serviceId);
