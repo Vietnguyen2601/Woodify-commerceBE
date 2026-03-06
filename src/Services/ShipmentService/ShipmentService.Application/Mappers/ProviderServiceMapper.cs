@@ -26,16 +26,16 @@ public static class ProviderServiceMapper
         };
     }
 
-    public static ProviderService ToModel(this CreateProviderServiceDto dto)
+    public static ProviderService ToModel(this CreateProviderServiceDto dto, Guid providerId)
     {
         if (dto == null) throw new ArgumentNullException(nameof(dto));
 
         return new ProviderService
         {
-            ProviderId = dto.ProviderId,
-            Code = dto.Code,
+            ProviderId = providerId,
+            Code = dto.Code.ToUpperInvariant(),
             Name = dto.Name,
-            SpeedLevel = dto.SpeedLevel,
+            SpeedLevel = dto.SpeedLevel?.ToUpperInvariant(),
             EstimatedDaysMin = dto.EstimatedDaysMin,
             EstimatedDaysMax = dto.EstimatedDaysMax,
             IsActive = dto.IsActive,
@@ -48,9 +48,9 @@ public static class ProviderServiceMapper
         if (dto == null) throw new ArgumentNullException(nameof(dto));
         if (service == null) throw new ArgumentNullException(nameof(service));
 
-        if (dto.Code != null) service.Code = dto.Code;
+        if (dto.Code != null) service.Code = dto.Code.ToUpperInvariant();
         if (dto.Name != null) service.Name = dto.Name;
-        if (dto.SpeedLevel != null) service.SpeedLevel = dto.SpeedLevel;
+        if (dto.SpeedLevel != null) service.SpeedLevel = dto.SpeedLevel.ToUpperInvariant();
         if (dto.EstimatedDaysMin.HasValue) service.EstimatedDaysMin = dto.EstimatedDaysMin;
         if (dto.EstimatedDaysMax.HasValue) service.EstimatedDaysMax = dto.EstimatedDaysMax;
         if (dto.IsActive.HasValue) service.IsActive = dto.IsActive.Value;

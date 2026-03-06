@@ -53,6 +53,9 @@ builder.Services.AddDbContext<ShipmentDbContext>();
 builder.Services.AddShipmentServices();
 builder.Services.AddValidators();
 
+// ── In-Memory Cache ───────────────────────────────────────────────────────────
+builder.Services.AddMemoryCache();
+
 // ── RabbitMQ (with retry) ─────────────────────────────────────────────────────
 var rabbitMQSettings = new RabbitMQSettings
 {

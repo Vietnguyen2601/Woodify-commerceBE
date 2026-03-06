@@ -35,6 +35,20 @@ public class ProviderServiceRepository : GenericRepository<ProviderService>, IPr
             .ToListAsync();
     }
 
+    public async Task<bool> HasActiveByProviderIdAsync(Guid providerId)
+    {
+        return await _dbSet.AnyAsync(ps =>
+            ps.ProviderId == providerId &&
+            ps.IsActive);
+    }
+
+    public async Task<bool> ExistsByCodeForProviderAsync(Guid providerId, string code)
+    {
+        return await _dbSet.AnyAsync(ps =>
+            ps.ProviderId == providerId &&
+            ps.Code.ToLower() == code.ToLower());
+    }
+
     public override async Task<List<ProviderService>> GetAllAsync()
     {
         return await _dbSet

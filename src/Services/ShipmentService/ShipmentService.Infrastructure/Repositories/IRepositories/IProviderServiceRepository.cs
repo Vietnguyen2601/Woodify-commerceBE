@@ -10,4 +10,6 @@ public interface IProviderServiceRepository : IGenericRepository<ProviderService
 {
     Task<List<ProviderService>> GetByProviderIdAsync(Guid providerId);
     Task<List<ProviderService>> GetAllActiveAsync();
+    Task<bool> HasActiveByProviderIdAsync(Guid providerId);
+    Task<bool> ExistsByCodeForProviderAsync(Guid providerId, string code);
 }
