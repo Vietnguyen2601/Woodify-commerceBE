@@ -16,6 +16,7 @@ public class ProductVersionUpdatedEvent
     
     // Version Info
     public string SellerSku { get; set; } = string.Empty;
+    public int? VersionNumber { get; set; }
     public string? VersionName { get; set; }
     
     // Pricing
@@ -26,6 +27,7 @@ public class ProductVersionUpdatedEvent
     public int StockQuantity { get; set; } = 0;
     
     // Shipping Dimensions
+    public string? WoodType { get; set; }
     public int WeightGrams { get; set; }
     public decimal LengthCm { get; set; }
     public decimal WidthCm { get; set; }

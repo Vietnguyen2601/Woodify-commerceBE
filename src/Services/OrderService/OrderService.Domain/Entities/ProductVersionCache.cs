@@ -19,6 +19,7 @@ public class ProductVersionCache
     
     // Version Info
     public string SellerSku { get; set; } = string.Empty;
+    public int? VersionNumber { get; set; }
     public string? VersionName { get; set; }
     
     // Pricing
@@ -30,6 +31,7 @@ public class ProductVersionCache
     public bool AllowBackorder { get; set; } = false;
     
     // Shipping Dimensions
+    public string? WoodType { get; set; }
     public int WeightGrams { get; set; }
     public decimal LengthCm { get; set; }
     public decimal WidthCm { get; set; }

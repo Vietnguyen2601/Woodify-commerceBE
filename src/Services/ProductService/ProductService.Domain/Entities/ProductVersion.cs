@@ -11,12 +11,15 @@ public class ProductVersion
 
     public string SellerSku { get; set; } = string.Empty;
 
+    public int? VersionNumber { get; set; }
+
     public string? VersionName { get; set; }
 
     public double Price { get; set; }
 
     public int StockQuantity { get; set; } = 0;
 
+    public string? WoodType { get; set; }
     public int WeightGrams { get; set; }
     public decimal LengthCm { get; set; }
     public decimal WidthCm { get; set; }

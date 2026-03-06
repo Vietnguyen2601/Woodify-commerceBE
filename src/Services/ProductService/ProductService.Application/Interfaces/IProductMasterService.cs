@@ -25,4 +25,9 @@ public interface IProductMasterService
     Task<ServiceResult<ProductMasterDto>> SubmitForApprovalAsync(Guid id);
     Task<ServiceResult<ProductMasterDto>> ModerateProductAsync(Guid id, ModerateProductDto dto);
     Task<ServiceResult<IEnumerable<ProductMasterDto>>> GetPendingApprovalProductsAsync();
+    Task<ServiceResult<PendingApprovalQueueResultDto>> GetPendingApprovalQueueAsync(PendingApprovalQueueFilterDto filterDto);
+    
+    // Product detail with versions
+    Task<ServiceResult<ProductMasterDetailDto>> GetProductDetailAsync(Guid productId, string userRole);
+    Task<ServiceResult<ProductDetailListResultDto>> GetAllProductDetailsAsync(string userRole, int page = 1, int pageSize = 20, Guid? shopId = null, Guid? categoryId = null);
 }

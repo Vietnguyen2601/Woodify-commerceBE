@@ -139,6 +139,7 @@ public class OrderDbContext : DbContext
             
             // Version Info
             entity.Property(e => e.SellerSku).HasColumnName("seller_sku").HasMaxLength(255).IsRequired();
+            entity.Property(e => e.VersionNumber).HasColumnName("version_number");
             entity.Property(e => e.VersionName).HasColumnName("version_name").HasMaxLength(255);
             
             // Pricing
@@ -149,6 +150,7 @@ public class OrderDbContext : DbContext
             entity.Property(e => e.StockQuantity).HasColumnName("stock_quantity").HasDefaultValue(0);
             
             // Shipping Dimensions
+            entity.Property(e => e.WoodType).HasColumnName("wood_type").HasMaxLength(200);
             entity.Property(e => e.WeightGrams).HasColumnName("weight_grams");
             entity.Property(e => e.LengthCm).HasColumnName("length_cm").HasColumnType("decimal(10,2)");
             entity.Property(e => e.WidthCm).HasColumnName("width_cm").HasColumnType("decimal(10,2)");

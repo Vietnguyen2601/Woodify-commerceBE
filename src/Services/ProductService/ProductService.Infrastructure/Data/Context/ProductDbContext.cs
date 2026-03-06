@@ -138,9 +138,11 @@ public class ProductDbContext : DbContext
             entity.Property(e => e.VersionId).HasColumnName("version_id");
             entity.Property(e => e.ProductId).HasColumnName("product_id").IsRequired();
             entity.Property(e => e.SellerSku).HasColumnName("seller_sku").IsRequired().HasMaxLength(255);
+            entity.Property(e => e.VersionNumber).HasColumnName("version_number");
             entity.Property(e => e.VersionName).HasColumnName("version_name").HasMaxLength(500);
             entity.Property(e => e.Price).HasColumnName("price").IsRequired();
             entity.Property(e => e.StockQuantity).HasColumnName("stock_quantity").HasDefaultValue(0);
+            entity.Property(e => e.WoodType).HasColumnName("wood_type").HasMaxLength(200);
             entity.Property(e => e.WeightGrams).HasColumnName("weight_grams").IsRequired();
             entity.Property(e => e.LengthCm).HasColumnName("length_cm").HasColumnType("decimal(8,2)").IsRequired();
             entity.Property(e => e.WidthCm).HasColumnName("width_cm").HasColumnType("decimal(8,2)").IsRequired();
