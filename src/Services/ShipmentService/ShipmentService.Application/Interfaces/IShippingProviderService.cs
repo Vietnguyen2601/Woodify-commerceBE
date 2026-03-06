@@ -8,9 +8,9 @@ namespace ShipmentService.Application.Interfaces;
 /// </summary>
 public interface IShippingProviderService
 {
-    Task<ServiceResult<IEnumerable<ShippingProviderDto>>> GetAllAsync();
-    Task<ServiceResult<ShippingProviderDto>> GetByIdAsync(Guid id);
     Task<ServiceResult<ShippingProviderDto>> CreateAsync(CreateShippingProviderDto dto);
-    Task<ServiceResult<ShippingProviderDto>> UpdateAsync(Guid id, UpdateShippingProviderDto dto);
-    Task<ServiceResult> DeleteAsync(Guid id);
+
+    Task<ServiceResult<ShippingProviderPagedDto>> GetPagedAsync(GetProvidersQueryDto query);
+
+    Task<ServiceResult<ShippingProviderDto>> UpdateAsync(Guid providerId, UpdateShippingProviderDto dto);
 }

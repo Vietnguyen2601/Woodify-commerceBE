@@ -30,7 +30,14 @@ public class ShipmentDbContext : DbContext
         // ── Shipments ──────────────────────────────────────────────────────────
         modelBuilder.Entity<Shipment>(entity =>
         {
-            entity.ToTable("Shipments");
+            entity.ToTable("Shipments", t =>
+            {
+                t.HasCheckConstraint("CHK_Shipments_status",
+                    "status IN ('DRAFT','PENDING','PICKUP_SCHEDULED','PICKED_UP','IN_TRANSIT'," +
+                    "'OUT_FOR_DELIVERY','DELIVERED','DELIVERY_FAILED','RETURNING','RETURNED','CANCELLED')");
+                t.HasCheckConstraint("CHK_Shipments_bulky_type",
+                    "bulky_type IS NULL OR bulky_type IN ('NORMAL','BULKY','SUPER_BULKY')");
+            });
             entity.HasKey(e => e.ShipmentId);
             entity.Property(e => e.ShipmentId).HasColumnName("shipment_id");
 
@@ -43,7 +50,7 @@ public class ShipmentDbContext : DbContext
             entity.Property(e => e.DeliveryAddressId).HasColumnName("delivery_address_id");
 
             entity.Property(e => e.TotalWeightGrams).HasColumnName("total_weight_grams").IsRequired();
-            entity.Property(e => e.BulkyType).HasColumnName("bulky_type");
+            entity.Property(e => e.BulkyType).HasColumnName("bulky_type").HasMaxLength(20);
             entity.Property(e => e.FinalShippingFeeCents).HasColumnName("final_shipping_fee_cents").IsRequired();
             entity.Property(e => e.IsFreeShipping).HasColumnName("is_free_shipping").HasDefaultValue(false);
 
@@ -51,12 +58,19 @@ public class ShipmentDbContext : DbContext
             entity.Property(e => e.PickedUpAt).HasColumnName("picked_up_at");
             entity.Property(e => e.DeliveryEstimatedAt).HasColumnName("delivery_estimated_at");
 
-            entity.Property(e => e.Status).HasColumnName("status").HasDefaultValue("PENDING").IsRequired();
-            entity.Property(e => e.FailureReason).HasColumnName("failure_reason");
-            entity.Property(e => e.CancelReason).HasColumnName("cancel_reason");
+            entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(30).HasDefaultValue("DRAFT").IsRequired();
+            entity.Property(e => e.FailureReason).HasColumnName("failure_reason").HasMaxLength(500);
+            entity.Property(e => e.CancelReason).HasColumnName("cancel_reason").HasMaxLength(500);
 
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            // Indexes
+            entity.HasIndex(e => e.OrderId).HasDatabaseName("IX_Shipments_order_id");
+            entity.HasIndex(e => e.TrackingNumber)
+                  .IsUnique()
+                  .HasFilter("tracking_number IS NOT NULL")
+                  .HasDatabaseName("UQ_Shipments_tracking_number");
 
             // FK -> ProviderServices
             entity.HasOne(e => e.ProviderService)
@@ -72,25 +86,34 @@ public class ShipmentDbContext : DbContext
             entity.HasKey(e => e.ProviderId);
             entity.Property(e => e.ProviderId).HasColumnName("provider_id");
 
-            entity.Property(e => e.Name).HasColumnName("name").IsRequired();
-            entity.Property(e => e.SupportPhone).HasColumnName("support_phone");
-            entity.Property(e => e.SupportEmail).HasColumnName("support_email");
+            entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(200).IsRequired();
+            entity.Property(e => e.SupportPhone).HasColumnName("support_phone").HasMaxLength(20);
+            entity.Property(e => e.SupportEmail).HasColumnName("support_email").HasMaxLength(200);
             entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
             entity.Property(e => e.CreatedAt).HasColumnName("created_at");
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            // Unique index on name
+            entity.HasIndex(e => e.Name).IsUnique().HasDatabaseName("UQ_Shipping_Providers_name");
         });
 
         // ── ProviderServices ───────────────────────────────────────────────────
         modelBuilder.Entity<ProviderService>(entity =>
         {
-            entity.ToTable("Provider_Services");
+            entity.ToTable("Provider_Services", t =>
+            {
+                t.HasCheckConstraint("CHK_Provider_Services_code",
+                    "code IN ('ECO','STD','EXP','SUP')");
+                t.HasCheckConstraint("CHK_Provider_Services_speed_level",
+                    "speed_level IS NULL OR speed_level IN ('ECONOMY','STANDARD','EXPRESS','SUPER_EXPRESS')");
+            });
             entity.HasKey(e => e.ServiceId);
             entity.Property(e => e.ServiceId).HasColumnName("service_id");
 
             entity.Property(e => e.ProviderId).HasColumnName("provider_id").IsRequired();
-            entity.Property(e => e.Code).HasColumnName("code").IsRequired();
-            entity.Property(e => e.Name).HasColumnName("name").IsRequired();
-            entity.Property(e => e.SpeedLevel).HasColumnName("speed_level");
+            entity.Property(e => e.Code).HasColumnName("code").HasMaxLength(10).IsRequired();
+            entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(200).IsRequired();
+            entity.Property(e => e.SpeedLevel).HasColumnName("speed_level").HasMaxLength(20);
             entity.Property(e => e.EstimatedDaysMin).HasColumnName("estimated_days_min");
             entity.Property(e => e.EstimatedDaysMax).HasColumnName("estimated_days_max");
             entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);

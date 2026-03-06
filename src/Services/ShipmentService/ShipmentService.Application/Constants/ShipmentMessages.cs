@@ -14,12 +14,15 @@ public static class ShipmentMessages
 
     // ShippingProvider
     public const string ProviderNotFound = "Shipping provider not found";
-    public const string ProviderCreated = "Shipping provider created successfully";
+    public const string ProviderCreated = "Provider created successfully";
     public const string ProviderUpdated = "Shipping provider updated successfully";
     public const string ProviderDeleted = "Shipping provider deleted successfully";
     public const string ProviderCreateError = "Error creating shipping provider";
     public const string ProviderUpdateError = "Error updating shipping provider";
     public const string ProviderDeleteError = "Error deleting shipping provider";
+    public const string ProviderNameDuplicate = "A provider with this name already exists";
+    public const string ProviderHasActiveServices = "Cannot deactivate provider: it still has active services. Deactivate all associated services first.";
+    public const string ProviderHasActiveShipments = "Cannot deactivate provider: there are shipments in non-terminal status using this provider.";
 
     // ProviderService
     public const string ServiceNotFound = "Provider service not found";
@@ -29,4 +32,5 @@ public static class ShipmentMessages
     public const string ServiceCreateError = "Error creating provider service";
     public const string ServiceUpdateError = "Error updating provider service";
     public const string ServiceDeleteError = "Error deleting provider service";
+    public const string ServiceHasActiveShipments = "Cannot deactivate service: there are shipments in non-terminal status using this service.";
 }
