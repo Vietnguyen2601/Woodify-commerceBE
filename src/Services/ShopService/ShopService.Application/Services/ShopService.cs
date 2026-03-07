@@ -96,9 +96,13 @@ public class ShopService : IShopService
 
             return ServiceResult<UpdateShopInfoResponseDto>.Success(response, response.Message);
         }
-        catch (Exception ex)
+        catch (ArgumentException ex)
         {
-            return ServiceResult<UpdateShopInfoResponseDto>.InternalServerError($"Error updating shop info: {ex.Message}");
+            return ServiceResult<UpdateShopInfoResponseDto>.BadRequest(ex.Message);
+        }
+        catch
+        {
+            return ServiceResult<UpdateShopInfoResponseDto>.InternalServerError("Error updating shop info.");
         }
     }
 
@@ -113,7 +117,6 @@ public class ShopService : IShopService
             if (!Enum.TryParse<ShopStatus>(dto.NewStatus.ToUpper(), out var newStatus))
                 return ServiceResult<UpdateShopStatusResponseDto>.BadRequest($"Invalid status value: {dto.NewStatus}");
 
-            var previousStatus = shop.Status;
             shop.Status = newStatus;
             shop.UpdatedAt = DateTime.UtcNow;
 

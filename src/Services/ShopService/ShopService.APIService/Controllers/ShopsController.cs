@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Results;
 using ShopService.Application.DTOs;
@@ -23,6 +24,7 @@ public class ShopsController : ControllerBase
         return Ok(result);
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpGet("admin/GetAllShops")]
     public async Task<ActionResult<ServiceResult<IEnumerable<ShopDto>>>> GetAllShopsAdmin()
     {
