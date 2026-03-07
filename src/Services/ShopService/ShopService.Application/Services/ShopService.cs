@@ -56,7 +56,15 @@ public class ShopService : IShopService
 
             return ServiceResult<RegisterShopResponseDto>.Created(response, response.Message);
         }
-        catch (Exception ex)
+        catch (ArgumentException ex)
+        {
+            return ServiceResult<RegisterShopResponseDto>.BadRequest(ex.Message);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
         {
             return ServiceResult<RegisterShopResponseDto>.InternalServerError($"Error registering shop: {ex.Message}");
         }
@@ -100,9 +108,13 @@ public class ShopService : IShopService
         {
             return ServiceResult<UpdateShopInfoResponseDto>.BadRequest(ex.Message);
         }
-        catch
+        catch (OperationCanceledException)
         {
-            return ServiceResult<UpdateShopInfoResponseDto>.InternalServerError("Error updating shop info.");
+            throw;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
+        {
+            return ServiceResult<UpdateShopInfoResponseDto>.InternalServerError($"Error updating shop info: {ex.Message}");
         }
     }
 
@@ -144,7 +156,11 @@ public class ShopService : IShopService
                 Message = message
             }, message);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
         {
             return ServiceResult<UpdateShopStatusResponseDto>.InternalServerError($"Error updating shop status: {ex.Message}");
         }
@@ -157,7 +173,11 @@ public class ShopService : IShopService
             var shops = await _unitOfWork.Shops.GetActiveShopsAsync();
             return ServiceResult<IEnumerable<ShopDto>>.Success(shops.ToDto());
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
         {
             return ServiceResult<IEnumerable<ShopDto>>.InternalServerError($"Error retrieving shops: {ex.Message}");
         }
@@ -170,7 +190,11 @@ public class ShopService : IShopService
             var shops = await _unitOfWork.Shops.GetAllShopsAsync();
             return ServiceResult<IEnumerable<ShopDto>>.Success(shops.ToDto());
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
         {
             return ServiceResult<IEnumerable<ShopDto>>.InternalServerError($"Error retrieving shops: {ex.Message}");
         }
@@ -186,7 +210,11 @@ public class ShopService : IShopService
 
             return ServiceResult<ShopDto>.Success(shop.ToDto());
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
         {
             return ServiceResult<ShopDto>.InternalServerError($"Error retrieving shop: {ex.Message}");
         }
@@ -202,7 +230,11 @@ public class ShopService : IShopService
 
             return ServiceResult<ShopDto>.Success(shop.ToDto());
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
         {
             return ServiceResult<ShopDto>.InternalServerError($"Error retrieving shop: {ex.Message}");
         }
@@ -232,7 +264,11 @@ public class ShopService : IShopService
 
             return ServiceResult<ShopDto>.Created(shop.ToDto(), "Shop created successfully");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
         {
             return ServiceResult<ShopDto>.InternalServerError($"Error creating shop: {ex.Message}");
         }
@@ -252,7 +288,11 @@ public class ShopService : IShopService
 
             return ServiceResult<ShopDto>.Success(shop.ToDto(), "Shop updated successfully");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
         {
             return ServiceResult<ShopDto>.InternalServerError($"Error updating shop: {ex.Message}");
         }
@@ -273,7 +313,11 @@ public class ShopService : IShopService
 
             return ServiceResult.Success("Shop deleted successfully");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
         {
             return ServiceResult.InternalServerError($"Error deleting shop: {ex.Message}");
         }
