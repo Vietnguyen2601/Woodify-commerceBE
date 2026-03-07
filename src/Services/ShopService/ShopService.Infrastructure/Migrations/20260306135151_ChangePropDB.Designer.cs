@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ShopService.Infrastructure.Data.Context;
@@ -11,9 +12,11 @@ using ShopService.Infrastructure.Data.Context;
 namespace ShopService.Infrastructure.Migrations
 {
     [DbContext(typeof(ShopDbContext))]
-    partial class ShopDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260306135151_ChangePropDB")]
+    partial class ChangePropDB
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -37,9 +40,9 @@ namespace ShopService.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<string>("DefaultPickupAddress")
+                    b.Property<string>("DefaultPickupAddressId")
                         .HasColumnType("text")
-                        .HasColumnName("default_pickup_address");
+                        .HasColumnName("default_pickup_address_id");
 
                     b.Property<Guid?>("DefaultProvider")
                         .HasColumnType("uuid")

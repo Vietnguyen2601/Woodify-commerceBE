@@ -9,8 +9,12 @@ namespace ShopService.Application.Interfaces;
 public interface IShopService
 {
     Task<ServiceResult<IEnumerable<ShopDto>>> GetAllShopsAsync();
+    Task<ServiceResult<IEnumerable<ShopDto>>> GetAllShopsAdminAsync();
     Task<ServiceResult<ShopDto>> GetShopByIdAsync(Guid shopId);
     Task<ServiceResult<ShopDto>> GetShopByOwnerIdAsync(Guid ownerId);
+    Task<ServiceResult<RegisterShopResponseDto>> RegisterShopAsync(RegisterShopDto dto);
+    Task<ServiceResult<UpdateShopInfoResponseDto>> UpdateShopInfoAsync(Guid shopId, UpdateShopInfoDto dto);
+    Task<ServiceResult<UpdateShopStatusResponseDto>> UpdateShopStatusAsync(Guid shopId, UpdateShopStatusDto dto);
     Task<ServiceResult<ShopDto>> CreateShopAsync(CreateShopDto dto);
     Task<ServiceResult<ShopDto>> UpdateShopAsync(Guid shopId, UpdateShopDto dto);
     Task<ServiceResult> DeleteShopAsync(Guid shopId);

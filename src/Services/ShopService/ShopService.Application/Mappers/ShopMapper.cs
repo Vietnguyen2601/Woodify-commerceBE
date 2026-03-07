@@ -10,11 +10,20 @@ public static class ShopMapper
         return new ShopDto
         {
             ShopId = shop.ShopId,
-            ShopName = shop.Name,
-            Description = shop.Description,
             OwnerId = shop.OwnerAccountId,
-            IsActive = shop.Status == Domain.Enums.ShopStatus.ACTIVE,
-            CreatedAt = shop.CreatedAt
+            Name = shop.Name,
+            Description = shop.Description,
+            LogoUrl = shop.LogoUrl,
+            CoverImageUrl = shop.CoverImageUrl,
+            DefaultPickupAddress = shop.DefaultPickupAddress,
+            DefaultProvider = shop.DefaultProvider,
+            Rating = shop.Rating,
+            ReviewCount = shop.ReviewCount,
+            TotalProducts = shop.TotalProducts,
+            TotalOrders = shop.TotalOrders,
+            Status = shop.Status.ToString(),
+            CreatedAt = shop.CreatedAt,
+            UpdatedAt = shop.UpdatedAt
         };
     }
 
@@ -27,16 +36,35 @@ public static class ShopMapper
     {
         return new Shop
         {
-            Name = dto.ShopName,
+            OwnerAccountId = dto.OwnerAccountId,
+            Name = dto.Name,
             Description = dto.Description,
-            OwnerAccountId = dto.OwnerId
+            LogoUrl = dto.LogoUrl,
+            CoverImageUrl = dto.CoverImageUrl,
+            DefaultPickupAddress = dto.DefaultPickupAddress,
+            DefaultProvider = dto.DefaultProvider
         };
     }
 
     public static void MapToUpdate(this Shop shop, UpdateShopDto dto)
     {
-        shop.Name = dto.ShopName;
+        shop.Name = dto.Name;
         shop.Description = dto.Description;
+        shop.LogoUrl = dto.LogoUrl;
+        shop.CoverImageUrl = dto.CoverImageUrl;
+        shop.DefaultPickupAddress = dto.DefaultPickupAddress;
+        shop.DefaultProvider = dto.DefaultProvider;
+        shop.UpdatedAt = DateTime.UtcNow;
+    }
+
+    public static void MapToShopInfo(this Shop shop, UpdateShopInfoDto dto)
+    {
+        if (dto.Name != null) shop.Name = dto.Name;
+        if (dto.Description != null) shop.Description = dto.Description;
+        if (dto.LogoUrl != null) shop.LogoUrl = dto.LogoUrl;
+        if (dto.CoverImageUrl != null) shop.CoverImageUrl = dto.CoverImageUrl;
+        if (dto.DefaultPickupAddress != null) shop.DefaultPickupAddress = dto.DefaultPickupAddress;
+        if (dto.DefaultProvider.HasValue) shop.DefaultProvider = dto.DefaultProvider;
         shop.UpdatedAt = DateTime.UtcNow;
     }
 }
