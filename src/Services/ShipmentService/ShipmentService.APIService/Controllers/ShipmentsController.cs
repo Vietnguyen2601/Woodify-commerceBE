@@ -1,4 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using ShipmentService.Application.DTOs;
+using ShipmentService.Application.Interfaces;
+using Shared.Results;
 
 namespace ShipmentService.APIService.Controllers;
 
@@ -6,10 +9,6 @@ namespace ShipmentService.APIService.Controllers;
 [Route("api/[controller]")]
 public class ShipmentsController : ControllerBase
 {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
     private readonly IShipmentService _shipmentService;
 
     public ShipmentsController(IShipmentService shipmentService)
@@ -83,10 +82,4 @@ public class ShipmentsController : ControllerBase
         if (result.Status != 200) return BadRequest(result);
         return Ok(result);
     }
-<<<<<<< HEAD
-=======
-    // APIs will be added incrementally.
->>>>>>> develop
-=======
->>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
 }

@@ -24,7 +24,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((ctx, _, cfg) => cfg
     .ReadFrom.Configuration(ctx.Configuration)
-    .Enrich.FromLogContext()    .Enrich.WithProperty("Service", "Shipment")    .Filter.ByExcluding(logEvent =>
+    .Enrich.FromLogContext().Enrich.WithProperty("Service", "Shipment").Filter.ByExcluding(logEvent =>
         logEvent.Exception is { } ex && (
             ex.ToString().Contains("57P01", StringComparison.Ordinal) ||
             ex.Message.Contains("transient failure", StringComparison.OrdinalIgnoreCase)))
@@ -75,10 +75,6 @@ builder.Services.AddDbContext<ShipmentDbContext>();
 builder.Services.AddShipmentServices();
 builder.Services.AddValidators();
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
 // ── GHN Shipping API Client ───────────────────────────────────────────────────
 builder.Services.AddGhnApiClient(builder.Configuration);
 
@@ -88,13 +84,9 @@ builder.Services.AddExternalServiceClients(builder.Configuration);
 // ── Event Consumers ───────────────────────────────────────────────────────────
 builder.Services.AddSingleton<OrderEventConsumer>();
 builder.Services.AddSingleton<ShopEventConsumer>();
-<<<<<<< HEAD
-=======
+
 // ── In-Memory Cache ───────────────────────────────────────────────────────────
 builder.Services.AddMemoryCache();
->>>>>>> develop
-=======
->>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
 
 // ── RabbitMQ (with retry) ─────────────────────────────────────────────────────
 var rabbitMQSettings = new RabbitMQSettings
@@ -169,8 +161,8 @@ app.UseSerilogRequestLogging(opts =>
     opts.MessageTemplate =
         "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
     opts.GetLevel = (httpCtx, _, ex) =>
-        ex != null || httpCtx.Response.StatusCode >= 500 ? Serilog.Events.LogEventLevel.Error   :
-        httpCtx.Response.StatusCode >= 400               ? Serilog.Events.LogEventLevel.Warning :
+        ex != null || httpCtx.Response.StatusCode >= 500 ? Serilog.Events.LogEventLevel.Error :
+        httpCtx.Response.StatusCode >= 400 ? Serilog.Events.LogEventLevel.Warning :
                                                            Serilog.Events.LogEventLevel.Information;
 });
 

@@ -41,10 +41,7 @@ public static class ShipmentMessages
     public const string ServiceCreateError = "Error creating provider service";
     public const string ServiceUpdateError = "Error updating provider service";
     public const string ServiceDeleteError = "Error deleting provider service";
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
+    public const string ServiceHasActiveShipments = "Cannot deactivate service: there are shipments in non-terminal status using this service.";
 
     // Shipping Fee Preview
     public const string FeePreviewSuccess = "Shipping fee preview calculated successfully";
@@ -57,10 +54,4 @@ public static class ShipmentMessages
         "delivery_address_id format: '{{district_id}}_{{ward_code}}'.";
     public const string FeePreviewProviderError =
         "Không thể lấy báo giá từ nhà cung cấp vận chuyển. Vui lòng thử lại sau.";
-<<<<<<< HEAD
-=======
-    public const string ServiceHasActiveShipments = "Cannot deactivate service: there are shipments in non-terminal status using this service.";
->>>>>>> develop
-=======
->>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
 }

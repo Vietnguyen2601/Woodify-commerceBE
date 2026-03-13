@@ -31,26 +31,39 @@ public class ProviderServiceAppService : IProviderServiceService
         _cache = cache;
     }
 
-    public async Task<ServiceResult<ProviderServiceDto>> CreateAsync(Guid providerId, CreateProviderServiceDto dto)
+    public async Task<ServiceResult<IEnumerable<ProviderServiceDto>>> GetAllAsync()
+    {
+        var services = await _serviceRepository.GetAllAsync();
+        return ServiceResult<IEnumerable<ProviderServiceDto>>.Success(
+            services.Select(s => s.ToDto()).ToList());
+    }
+
+    public async Task<ServiceResult<IEnumerable<ProviderServiceDto>>> GetByProviderIdAsync(Guid providerId)
+    {
+        var services = await _serviceRepository.GetByProviderIdAsync(providerId);
+        return ServiceResult<IEnumerable<ProviderServiceDto>>.Success(
+            services.Select(s => s.ToDto()).ToList());
+    }
+
+    public async Task<ServiceResult<ProviderServiceDto>> GetByIdAsync(Guid id)
+    {
+        var service = await _serviceRepository.GetByIdAsync(id);
+        if (service == null)
+            return ServiceResult<ProviderServiceDto>.NotFound(ShipmentMessages.ServiceNotFound);
+
+        return ServiceResult<ProviderServiceDto>.Success(service.ToDto());
+    }
+
+    public async Task<ServiceResult<ProviderServiceDto>> CreateAsync(CreateProviderServiceDto dto)
     {
         try
         {
-            var providerExists = await _providerRepository.ExistsAsync(providerId);
-            if (!providerExists)
-                return ServiceResult<ProviderServiceDto>.NotFound(ShipmentMessages.ProviderNotFound);
-
-            var codeExists = await _serviceRepository.ExistsByCodeForProviderAsync(providerId, dto.Code);
-            if (codeExists)
-                return ServiceResult<ProviderServiceDto>.Conflict(
-                    $"A service with code '{dto.Code}' already exists for this provider.");
-
-            var service = dto.ToModel(providerId);
+            var service = dto.ToModel(Guid.Empty);
             await _serviceRepository.CreateAsync(service);
 
             var created = await _serviceRepository.GetByIdAsync(service.ServiceId);
 
             _cache.Remove(CacheKeyAllServices);
-            _cache.Remove(ProviderServicesCacheKey(providerId));
 
             return ServiceResult<ProviderServiceDto>.Created(
                 created!.ToDto(),
@@ -72,18 +85,18 @@ public class ProviderServiceAppService : IProviderServiceService
         }
     }
 
-    public async Task<ServiceResult<ProviderServiceDto>> UpdateAsync(Guid serviceId, UpdateProviderServiceDto dto)
+    public async Task<ServiceResult<ProviderServiceDto>> UpdateAsync(Guid id, UpdateProviderServiceDto dto)
     {
         try
         {
-            var service = await _serviceRepository.GetByIdAsync(serviceId);
+            var service = await _serviceRepository.GetByIdAsync(id);
             if (service is null)
                 return ServiceResult<ProviderServiceDto>.NotFound(ShipmentMessages.ServiceNotFound);
 
             bool softDeleting = dto.IsActive.HasValue && !dto.IsActive.Value && service.IsActive;
             if (softDeleting)
             {
-                var hasActiveShipments = await _shipmentRepository.HasNonTerminalByServiceIdAsync(serviceId);
+                var hasActiveShipments = await _shipmentRepository.HasNonTerminalByServiceIdAsync(id);
                 if (hasActiveShipments)
                     return ServiceResult<ProviderServiceDto>.Conflict(ShipmentMessages.ServiceHasActiveShipments);
             }
@@ -114,10 +127,6 @@ public class ProviderServiceAppService : IProviderServiceService
         }
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
     public async Task<ServiceResult<ProviderServiceDto>> GetByShopIdAndCodeAsync(Guid shopId, string code)
     {
         var service = await _serviceRepository.GetByShopIdAndCodeAsync(shopId, code);
@@ -128,57 +137,32 @@ public class ProviderServiceAppService : IProviderServiceService
     }
 
     public async Task<ServiceResult> DeleteAsync(Guid id)
-<<<<<<< HEAD
-=======
-    public async Task<ServiceResult<ProviderServicePagedDto>> GetPagedAsync(GetServicesQueryDto query)
->>>>>>> develop
-=======
->>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
     {
-        var page = Math.Max(1, query.Page);
-        var limit = Math.Clamp(query.Limit, 1, 100);
-
-        var q = _serviceRepository.GetAllQueryable()
-            .Include(ps => ps.ShippingProvider)
-            .AsQueryable();
-
-        if (query.ProviderId.HasValue)
-            q = q.Where(ps => ps.ProviderId == query.ProviderId.Value);
-
-        q = q.OrderBy(ps => ps.ProviderId).ThenBy(ps => ps.Code);
-
-        var total = await q.CountAsync();
-        var items = await q.Skip((page - 1) * limit).Take(limit).ToListAsync();
-
-        var result = new ProviderServicePagedDto
+        try
         {
-            Services = items.Select(ps => ps.ToDto()).ToList(),
-            Pagination = new PaginationResultDto { Page = page, Limit = limit, Total = total }
-        };
+            var service = await _serviceRepository.GetByIdAsync(id);
+            if (service is null)
+                return ServiceResult.NotFound(ShipmentMessages.ServiceNotFound);
 
-        return ServiceResult<ProviderServicePagedDto>.Success(result);
-    }
+            var hasActiveShipments = await _shipmentRepository.HasNonTerminalByServiceIdAsync(id);
+            if (hasActiveShipments)
+                return ServiceResult.Conflict(ShipmentMessages.ServiceHasActiveShipments);
 
-    public async Task<ServiceResult<ProviderServicePagedDto>> GetByCodeAsync(GetServicesByCodeQueryDto query)
-    {
-        var page = Math.Max(1, query.Page);
-        var limit = Math.Clamp(query.Limit, 1, 100);
+            await _serviceRepository.RemoveAsync(service);
 
-        var q = _serviceRepository.GetAllQueryable()
-            .Include(ps => ps.ShippingProvider)
-            .Where(ps => ps.Code == query.Code.ToUpper())
-            .OrderBy(ps => ps.ProviderId)
-            .AsQueryable();
+            _cache.Remove(CacheKeyAllServices);
+            _cache.Remove(ProviderServicesCacheKey(service.ProviderId));
 
-        var total = await q.CountAsync();
-        var items = await q.Skip((page - 1) * limit).Take(limit).ToListAsync();
-
-        var result = new ProviderServicePagedDto
+            return ServiceResult.Success(ShipmentMessages.ServiceDeleted);
+        }
+        catch (OperationCanceledException)
         {
-            Services = items.Select(ps => ps.ToDto()).ToList(),
-            Pagination = new PaginationResultDto { Page = page, Limit = limit, Total = total }
-        };
-
-        return ServiceResult<ProviderServicePagedDto>.Success(result);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult.InternalServerError(
+                $"{ShipmentMessages.ServiceDeleteError}: {ex.Message}");
+        }
     }
 }

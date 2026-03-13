@@ -8,10 +8,6 @@ namespace ShipmentService.Application.Interfaces;
 /// </summary>
 public interface IShipmentService
 {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
     Task<ServiceResult<IEnumerable<ShipmentDto>>> GetAllAsync();
     Task<ServiceResult<ShipmentDto>> GetByIdAsync(Guid id);
     Task<ServiceResult<IEnumerable<ShipmentDto>>> GetByOrderIdAsync(Guid orderId);
@@ -20,10 +16,4 @@ public interface IShipmentService
     Task<ServiceResult<ShipmentDto>> UpdateStatusAsync(Guid id, UpdateShipmentStatusDto dto);
     Task<ServiceResult<ShipmentDto>> UpdatePickupAsync(Guid id, UpdateShipmentPickupDto dto);
     Task<ServiceResult> DeleteAsync(Guid id);
-<<<<<<< HEAD
-=======
-    // APIs will be added incrementally.
->>>>>>> develop
-=======
->>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
 }
