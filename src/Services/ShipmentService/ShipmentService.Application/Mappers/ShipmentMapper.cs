@@ -14,8 +14,8 @@ public static class ShipmentMapper
             ShipmentId = shipment.ShipmentId,
             OrderId = shipment.OrderId,
             TrackingNumber = shipment.TrackingNumber,
-            ProviderServiceId = shipment.ProviderServiceId,
-            ProviderServiceName = shipment.ProviderService?.Name,
+            ProviderServiceCode = shipment.ProviderService?.Code,
+            ShippingProviderName = shipment.ProviderService?.ShippingProvider?.Name,
             PickupAddressId = shipment.PickupAddressId,
             DeliveryAddressId = shipment.DeliveryAddressId,
             TotalWeightGrams = shipment.TotalWeightGrams,
@@ -26,8 +26,6 @@ public static class ShipmentMapper
             PickedUpAt = shipment.PickedUpAt,
             DeliveryEstimatedAt = shipment.DeliveryEstimatedAt,
             Status = shipment.Status,
-            FailureReason = shipment.FailureReason,
-            CancelReason = shipment.CancelReason,
             CreatedAt = shipment.CreatedAt,
             UpdatedAt = shipment.UpdatedAt
         };
@@ -40,16 +38,10 @@ public static class ShipmentMapper
         return new Shipment
         {
             OrderId = dto.OrderId,
-            TrackingNumber = dto.TrackingNumber,
-            ProviderServiceId = dto.ProviderServiceId,
+            // TrackingNumber, ProviderServiceId, BulkyType, FinalShippingFeeCents, DeliveryEstimatedAt are set by the service
             PickupAddressId = dto.PickupAddressId,
             DeliveryAddressId = dto.DeliveryAddressId,
-            TotalWeightGrams = dto.TotalWeightGrams,
-            BulkyType = dto.BulkyType,
-            FinalShippingFeeCents = dto.FinalShippingFeeCents,
-            IsFreeShipping = dto.IsFreeShipping,
-            PickupScheduledAt = dto.PickupScheduledAt,
-            DeliveryEstimatedAt = dto.DeliveryEstimatedAt
+            IsFreeShipping = dto.IsFreeShipping
         };
     }
 

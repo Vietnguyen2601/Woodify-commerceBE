@@ -87,6 +87,15 @@ public class ProviderServiceAppService : IProviderServiceService
         }
     }
 
+    public async Task<ServiceResult<ProviderServiceDto>> GetByShopIdAndCodeAsync(Guid shopId, string code)
+    {
+        var service = await _serviceRepository.GetByShopIdAndCodeAsync(shopId, code);
+        if (service == null)
+            return ServiceResult<ProviderServiceDto>.NotFound(ShipmentMessages.ServiceNotFound);
+
+        return ServiceResult<ProviderServiceDto>.Success(service.ToDto());
+    }
+
     public async Task<ServiceResult> DeleteAsync(Guid id)
     {
         try

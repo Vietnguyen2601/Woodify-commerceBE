@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ShipmentService.Application.DTOs;
 using ShipmentService.Application.Interfaces;
@@ -39,7 +38,6 @@ public class ShipmentsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize]
     [HttpPost("CreateShipment")]
     public async Task<ActionResult<ServiceResult<ShipmentDto>>> Create([FromBody] CreateShipmentDto dto)
     {
@@ -49,7 +47,6 @@ public class ShipmentsController : ControllerBase
         return BadRequest(result);
     }
 
-    [Authorize]
     [HttpPut("UpdateShipment/{id:guid}")]
     public async Task<ActionResult<ServiceResult<ShipmentDto>>> Update(Guid id, [FromBody] UpdateShipmentDto dto)
     {
@@ -59,7 +56,6 @@ public class ShipmentsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize]
     [HttpPatch("UpdateShipmentStatus/{id:guid}")]
     public async Task<ActionResult<ServiceResult<ShipmentDto>>> UpdateStatus(Guid id, [FromBody] UpdateShipmentStatusDto dto)
     {
@@ -69,7 +65,15 @@ public class ShipmentsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize]
+    [HttpPatch("MarkShipmentPickedUp/{id:guid}")]
+    public async Task<ActionResult<ServiceResult<ShipmentDto>>> UpdatePickup(Guid id, [FromBody] UpdateShipmentPickupDto dto)
+    {
+        var result = await _shipmentService.UpdatePickupAsync(id, dto);
+        if (result.Status == 404) return NotFound(result);
+        if (result.Status != 200) return BadRequest(result);
+        return Ok(result);
+    }
+
     [HttpDelete("DeleteShipment/{id:guid}")]
     public async Task<ActionResult<ServiceResult>> Delete(Guid id)
     {

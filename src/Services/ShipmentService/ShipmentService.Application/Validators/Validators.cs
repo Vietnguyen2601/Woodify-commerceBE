@@ -7,23 +7,13 @@ namespace ShipmentService.Application.Validators;
 
 public class CreateShipmentValidator : AbstractValidator<CreateShipmentDto>
 {
-    private static readonly string[] AllowedBulkyTypes = { "NORMAL", "BULKY", "SUPER_BULKY" };
-
     public CreateShipmentValidator()
     {
         RuleFor(x => x.OrderId)
             .NotEmpty().WithMessage("OrderId is required");
 
-        RuleFor(x => x.TotalWeightGrams)
-            .GreaterThan(0).WithMessage("TotalWeightGrams must be greater than 0");
-
-        RuleFor(x => x.FinalShippingFeeCents)
-            .GreaterThanOrEqualTo(0).WithMessage("FinalShippingFeeCents must be >= 0");
-
-        RuleFor(x => x.BulkyType)
-            .Must(b => b == null || AllowedBulkyTypes.Contains(b))
-            .WithMessage($"BulkyType must be one of: {string.Join(", ", AllowedBulkyTypes)}")
-            .When(x => x.BulkyType != null);
+        RuleFor(x => x.ProviderServiceCode)
+            .NotEmpty().WithMessage("ProviderServiceCode is required");
     }
 }
 
@@ -140,29 +130,37 @@ public class CreateProviderServiceValidator : AbstractValidator<CreateProviderSe
     }
 }
 
-// ── UpdateProviderServiceValidator ───────────────────────────────────────────
+// ── ShippingFeePreviewValidator ───────────────────────────────────────────────
 
-public class UpdateProviderServiceValidator : AbstractValidator<UpdateProviderServiceDto>
+public class ShippingFeePreviewValidator : AbstractValidator<ShippingFeePreviewRequest>
 {
-    private static readonly string[] AllowedSpeedLevels = { "ECONOMY", "STANDARD", "EXPRESS", "SUPER_EXPRESS" };
+    private static readonly string[] AllowedBulkyTypes = { "NORMAL", "BULKY", "SUPER_BULKY" };
 
-    public UpdateProviderServiceValidator()
+    public ShippingFeePreviewValidator()
     {
-        RuleFor(x => x.Code)
-            .MaximumLength(20).WithMessage("Code cannot exceed 20 characters")
-            .When(x => x.Code != null);
+        RuleFor(x => x.ShopId)
+            .NotEmpty().WithMessage("shop_id là bắt buộc.");
 
-        RuleFor(x => x.Name)
-            .MaximumLength(100).WithMessage("Name cannot exceed 100 characters")
-            .When(x => x.Name != null);
+        RuleFor(x => x.ProviderServiceCode)
+            .NotEmpty().WithMessage("provider_service_code là bắt buộc.")
+            .MaximumLength(20).WithMessage("provider_service_code tối đa 20 ký tự.");
 
-        RuleFor(x => x.SpeedLevel)
-            .Must(s => s == null || AllowedSpeedLevels.Contains(s))
-            .WithMessage($"SpeedLevel must be one of: {string.Join(", ", AllowedSpeedLevels)}")
-            .When(x => x.SpeedLevel != null);
+        RuleFor(x => x.TotalWeightGrams)
+            .GreaterThan(0).WithMessage("total_weight_grams phải lớn hơn 0.");
 
-        RuleFor(x => x.MultiplierFee)
-            .GreaterThan(0).WithMessage("MultiplierFee must be > 0")
-            .When(x => x.MultiplierFee.HasValue);
+        RuleFor(x => x.BulkyType)
+            .NotEmpty().WithMessage("bulky_type là bắt buộc.")
+            .Must(b => AllowedBulkyTypes.Contains(b?.ToUpperInvariant()))
+            .WithMessage($"bulky_type phải là: {string.Join(", ", AllowedBulkyTypes)}.");
+
+        RuleFor(x => x.PickupAddressId)
+            .NotEmpty().WithMessage("pickup_address_id là bắt buộc.");
+
+        RuleFor(x => x.DeliveryAddressId)
+            .NotEmpty().WithMessage("delivery_address_id là bắt buộc.");
+
+        RuleFor(x => x.SubtotalCents)
+            .GreaterThanOrEqualTo(0).WithMessage("subtotal_cents phải >= 0.")
+            .When(x => x.SubtotalCents.HasValue);
     }
 }

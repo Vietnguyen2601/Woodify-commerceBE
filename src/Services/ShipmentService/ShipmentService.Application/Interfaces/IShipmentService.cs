@@ -14,5 +14,6 @@ public interface IShipmentService
     Task<ServiceResult<ShipmentDto>> CreateAsync(CreateShipmentDto dto);
     Task<ServiceResult<ShipmentDto>> UpdateAsync(Guid id, UpdateShipmentDto dto);
     Task<ServiceResult<ShipmentDto>> UpdateStatusAsync(Guid id, UpdateShipmentStatusDto dto);
+    Task<ServiceResult<ShipmentDto>> UpdatePickupAsync(Guid id, UpdateShipmentPickupDto dto);
     Task<ServiceResult> DeleteAsync(Guid id);
 }

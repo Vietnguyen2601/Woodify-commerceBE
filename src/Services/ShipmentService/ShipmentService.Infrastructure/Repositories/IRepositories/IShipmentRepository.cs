@@ -10,4 +10,5 @@ public interface IShipmentRepository : IGenericRepository<Shipment>
 {
     Task<List<Shipment>> GetByOrderIdAsync(Guid orderId);
     Task<List<Shipment>> GetByStatusAsync(string status);
+    Task<bool> ExistsByTrackingNumberAsync(string trackingNumber);
 }

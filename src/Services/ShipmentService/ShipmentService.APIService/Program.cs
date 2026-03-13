@@ -4,6 +4,7 @@ using Shared.Messaging;
 using ShipmentService.APIService.Extensions;
 using ShipmentService.APIService.Filters;
 using ShipmentService.APIService.Middlewares;
+using ShipmentService.Application.Consumers;
 using ShipmentService.Infrastructure.Data.Context;
 using ShipmentService.Infrastructure.Data.Seeders;
 using System.Text.Json.Serialization;
@@ -52,6 +53,16 @@ builder.Services.AddDbContext<ShipmentDbContext>();
 // ── Application + Repository Services ────────────────────────────────────────
 builder.Services.AddShipmentServices();
 builder.Services.AddValidators();
+
+// ── GHN Shipping API Client ───────────────────────────────────────────────────
+builder.Services.AddGhnApiClient(builder.Configuration);
+
+// ── External Service Clients (OrderService, ProductService) ──────────────────
+builder.Services.AddExternalServiceClients(builder.Configuration);
+
+// ── Event Consumers ───────────────────────────────────────────────────────────
+builder.Services.AddSingleton<OrderEventConsumer>();
+builder.Services.AddSingleton<ShopEventConsumer>();
 
 // ── RabbitMQ (with retry) ─────────────────────────────────────────────────────
 var rabbitMQSettings = new RabbitMQSettings
@@ -112,6 +123,13 @@ using (var scope = app.Services.CreateScope())
         Console.Error.WriteLine($"Migration failed: {ex.Message}");
     }
 }
+
+// ── Start RabbitMQ Consumers ──────────────────────────────────────────────────
+var orderEventConsumer = app.Services.GetService<OrderEventConsumer>();
+orderEventConsumer?.StartListening();
+
+var shopEventConsumer = app.Services.GetService<ShopEventConsumer>();
+shopEventConsumer?.StartListening();
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
 app.UseSwagger();
