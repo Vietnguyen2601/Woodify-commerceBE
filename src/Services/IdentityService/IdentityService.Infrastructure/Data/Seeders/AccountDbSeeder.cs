@@ -32,24 +32,6 @@ public static class AccountDbSeeder
                 new()
                 {
                     RoleId = Guid.NewGuid(),
-                    RoleName = "Support",
-                    Description = "Handles customer inquiries, tickets, and troubleshooting.",
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                    IsActive = true
-                },
-                new()
-                {
-                    RoleId = Guid.NewGuid(),
-                    RoleName = "Staff",
-                    Description = "Internal staff with limited management and operational permissions.",
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                    IsActive = true
-                },
-                new()
-                {
-                    RoleId = Guid.NewGuid(),
                     RoleName = "Seller",
                     Description = "Seller role: manage product listings, inventory and orders.",
                     CreatedAt = DateTime.UtcNow,
