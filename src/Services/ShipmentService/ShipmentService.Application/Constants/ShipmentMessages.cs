@@ -41,6 +41,7 @@ public static class ShipmentMessages
     public const string ServiceCreateError = "Error creating provider service";
     public const string ServiceUpdateError = "Error updating provider service";
     public const string ServiceDeleteError = "Error deleting provider service";
+    public const string ServiceHasActiveShipments = "Cannot deactivate service: there are shipments in non-terminal status using this service.";
 
     // Shipping Fee Preview
     public const string FeePreviewSuccess = "Shipping fee preview calculated successfully";

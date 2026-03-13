@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using ShipmentService.Application.DTOs;
 using ShipmentService.Application.Interfaces;
 using Shared.Results;
@@ -16,22 +16,25 @@ public class ShippingProvidersController : ControllerBase
         _providerService = providerService;
     }
 
-    [HttpGet("GetAllProviders")]
-    public async Task<ActionResult<ServiceResult<IEnumerable<ShippingProviderDto>>>> GetAll()
+    [HttpGet("providers")]
+    [ProducesResponseType(typeof(ServiceResult<ShippingProviderPagedDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ServiceResult<ShippingProviderPagedDto>>> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int limit = 20)
     {
-        var result = await _providerService.GetAllAsync();
+        var query = new GetProvidersQueryDto
+        {
+            Page = page,
+            Limit = limit
+        };
+        var result = await _providerService.GetPagedAsync(query);
         return Ok(result);
     }
 
-    [HttpGet("GetProviderById/{id:guid}")]
-    public async Task<ActionResult<ServiceResult<ShippingProviderDto>>> GetById(Guid id)
-    {
-        var result = await _providerService.GetByIdAsync(id);
-        if (result.Status == 404) return NotFound(result);
-        return Ok(result);
-    }
-
-    [HttpPost("CreateProvider")]
+    [HttpPost("providers")]
+    [ProducesResponseType(typeof(ServiceResult<ShippingProviderDto>), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ServiceResult<ShippingProviderDto>>> Create([FromBody] CreateShippingProviderDto dto)
     {
         var result = await _providerService.CreateAsync(dto);
@@ -45,16 +48,14 @@ public class ShippingProvidersController : ControllerBase
         };
     }
 
-    [HttpPut("UpdateProvider/{id:guid}")]
-    public async Task<ActionResult<ServiceResult<ShippingProviderDto>>> Update(Guid id, [FromBody] UpdateShippingProviderDto dto)
-    {
-        var query = new GetProvidersQueryDto { Page = page, Limit = limit };
-        var result = await _providerService.GetPagedAsync(query);
-        return Ok(result);
-    }
-
-    [HttpDelete("DeleteProvider/{id:guid}")]
-    public async Task<ActionResult<ServiceResult>> Delete(Guid id)
+    [HttpPut("providers/{providerId:guid}")]
+    [ProducesResponseType(typeof(ServiceResult<ShippingProviderDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ServiceResult<ShippingProviderDto>>> Update(
+        [FromRoute] Guid providerId,
+        [FromBody] UpdateShippingProviderDto dto)
     {
         var result = await _providerService.UpdateAsync(providerId, dto);
 
@@ -68,3 +69,5 @@ public class ShippingProvidersController : ControllerBase
         };
     }
 }
+
+

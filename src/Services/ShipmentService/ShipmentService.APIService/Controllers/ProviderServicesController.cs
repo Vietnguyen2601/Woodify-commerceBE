@@ -1,3 +1,4 @@
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ShipmentService.Application.DTOs;
 using ShipmentService.Application.Interfaces;
@@ -16,21 +17,18 @@ public class ProviderServicesController : ControllerBase
         _serviceService = serviceService;
     }
 
-    [HttpPost("providers/{provider_id:guid}/services")]
+    [HttpPost("services")]
     [ProducesResponseType(typeof(ServiceResult<ProviderServiceDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ServiceResult<ProviderServiceDto>>> Create(
-        [FromRoute(Name = "provider_id")] Guid providerId,
         [FromBody] CreateProviderServiceDto dto)
     {
-        var result = await _serviceService.CreateAsync(providerId, dto);
+        var result = await _serviceService.CreateAsync(dto);
 
         return result.Status switch
         {
             201 => StatusCode(201, result),
-            404 => NotFound(result),
             409 => Conflict(result),
             400 => BadRequest(result),
             _ => StatusCode(result.Status, result)
@@ -48,49 +46,62 @@ public class ProviderServicesController : ControllerBase
     {
         var result = await _serviceService.UpdateAsync(serviceId, dto);
 
-    [HttpGet("GetByShopAndCode/{shopId:guid}/{code}")]
-    public async Task<ActionResult<ServiceResult<ProviderServiceDto>>> GetByShopAndCode(Guid shopId, string code)
-    {
-        var result = await _providerServiceService.GetByShopIdAndCodeAsync(shopId, code);
-        if (result.Status == 404) return NotFound(result);
-        return Ok(result);
-    }
-
-    [HttpPost("CreateService")]
-    public async Task<ActionResult<ServiceResult<ProviderServiceDto>>> Create([FromBody] CreateProviderServiceDto dto)
-    {
-        var result = await _providerServiceService.CreateAsync(dto);
-        if (result.Status == 201)
-            return CreatedAtAction(nameof(GetById), new { id = result.Data?.ServiceId }, result);
-        return BadRequest(result);
-    }
-
-    [HttpPut("UpdateService/{id:guid}")]
-    public async Task<ActionResult<ServiceResult<ProviderServiceDto>>> Update(Guid id, [FromBody] UpdateProviderServiceDto dto)
-    {
-        var query = new GetServicesQueryDto
+        return result.Status switch
         {
-            ProviderId = provider_id,
-            Page = page,
-            Limit = limit
+            200 => Ok(result),
+            404 => NotFound(result),
+            409 => Conflict(result),
+            400 => BadRequest(result),
+            _ => StatusCode(result.Status, result)
         };
-        var result = await _serviceService.GetPagedAsync(query);
+    }
+
+    [HttpGet("services")]
+    [ProducesResponseType(typeof(ServiceResult<IEnumerable<ProviderServiceDto>>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ServiceResult<IEnumerable<ProviderServiceDto>>>> GetAll()
+    {
+        var result = await _serviceService.GetAllAsync();
         return Ok(result);
     }
 
-    [HttpDelete("DeleteService/{id:guid}")]
-    public async Task<ActionResult<ServiceResult>> Delete(Guid id)
+    [HttpGet("providers/{providerId:guid}/services")]
+    [ProducesResponseType(typeof(ServiceResult<IEnumerable<ProviderServiceDto>>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ServiceResult<IEnumerable<ProviderServiceDto>>>> GetByProviderId(
+        [FromRoute] Guid providerId)
     {
-        if (string.IsNullOrWhiteSpace(code))
-            return BadRequest(ServiceResult<ProviderServicePagedDto>.BadRequest("query param 'code' is required."));
-
-        var query = new GetServicesByCodeQueryDto
-        {
-            Code = code,
-            Page = page,
-            Limit = limit
-        };
-        var result = await _serviceService.GetByCodeAsync(query);
+        var result = await _serviceService.GetByProviderIdAsync(providerId);
         return Ok(result);
+    }
+
+    [HttpGet("services/{id:guid}")]
+    [ProducesResponseType(typeof(ServiceResult<ProviderServiceDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ServiceResult<ProviderServiceDto>>> GetById(
+        [FromRoute] Guid id)
+    {
+        var result = await _serviceService.GetByIdAsync(id);
+        return result.Status switch
+        {
+            200 => Ok(result),
+            404 => NotFound(result),
+            _ => StatusCode(result.Status, result)
+        };
+    }
+
+    [HttpDelete("services/{id:guid}")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ServiceResult>> Delete(
+        [FromRoute] Guid id)
+    {
+        var result = await _serviceService.DeleteAsync(id);
+        return result.Status switch
+        {
+            200 => Ok(result),
+            404 => NotFound(result),
+            _ => StatusCode(result.Status, result)
+        };
     }
 }
+
