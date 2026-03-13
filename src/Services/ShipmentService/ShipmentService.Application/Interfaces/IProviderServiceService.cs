@@ -9,6 +9,9 @@ namespace ShipmentService.Application.Interfaces;
 public interface IProviderServiceService
 {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
     Task<ServiceResult<IEnumerable<ProviderServiceDto>>> GetAllAsync();
     Task<ServiceResult<IEnumerable<ProviderServiceDto>>> GetByProviderIdAsync(Guid providerId);
     Task<ServiceResult<ProviderServiceDto>> GetByIdAsync(Guid id);
@@ -16,10 +19,13 @@ public interface IProviderServiceService
     Task<ServiceResult<ProviderServiceDto>> UpdateAsync(Guid id, UpdateProviderServiceDto dto);
     Task<ServiceResult> DeleteAsync(Guid id);
     Task<ServiceResult<ProviderServiceDto>> GetByShopIdAndCodeAsync(Guid shopId, string code);
+<<<<<<< HEAD
 =======
     Task<ServiceResult<ProviderServiceDto>> CreateAsync(Guid providerId, CreateProviderServiceDto dto);
     Task<ServiceResult<ProviderServiceDto>> UpdateAsync(Guid serviceId, UpdateProviderServiceDto dto);
     Task<ServiceResult<ProviderServicePagedDto>> GetPagedAsync(GetServicesQueryDto query);
     Task<ServiceResult<ProviderServicePagedDto>> GetByCodeAsync(GetServicesByCodeQueryDto query);
 >>>>>>> develop
+=======
+>>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
 }

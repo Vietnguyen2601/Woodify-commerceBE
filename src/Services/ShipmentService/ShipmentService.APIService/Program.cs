@@ -76,6 +76,9 @@ builder.Services.AddShipmentServices();
 builder.Services.AddValidators();
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
 // ── GHN Shipping API Client ───────────────────────────────────────────────────
 builder.Services.AddGhnApiClient(builder.Configuration);
 
@@ -85,10 +88,13 @@ builder.Services.AddExternalServiceClients(builder.Configuration);
 // ── Event Consumers ───────────────────────────────────────────────────────────
 builder.Services.AddSingleton<OrderEventConsumer>();
 builder.Services.AddSingleton<ShopEventConsumer>();
+<<<<<<< HEAD
 =======
 // ── In-Memory Cache ───────────────────────────────────────────────────────────
 builder.Services.AddMemoryCache();
 >>>>>>> develop
+=======
+>>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
 
 // ── RabbitMQ (with retry) ─────────────────────────────────────────────────────
 var rabbitMQSettings = new RabbitMQSettings

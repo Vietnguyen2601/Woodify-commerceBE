@@ -7,6 +7,9 @@ namespace ShipmentService.APIService.Controllers;
 public class ShipmentsController : ControllerBase
 {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
     private readonly IShipmentService _shipmentService;
 
     public ShipmentsController(IShipmentService shipmentService)
@@ -80,7 +83,10 @@ public class ShipmentsController : ControllerBase
         if (result.Status != 200) return BadRequest(result);
         return Ok(result);
     }
+<<<<<<< HEAD
 =======
     // APIs will be added incrementally.
 >>>>>>> develop
+=======
+>>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
 }

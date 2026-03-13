@@ -115,6 +115,9 @@ public class ProviderServiceAppService : IProviderServiceService
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
     public async Task<ServiceResult<ProviderServiceDto>> GetByShopIdAndCodeAsync(Guid shopId, string code)
     {
         var service = await _serviceRepository.GetByShopIdAndCodeAsync(shopId, code);
@@ -125,9 +128,12 @@ public class ProviderServiceAppService : IProviderServiceService
     }
 
     public async Task<ServiceResult> DeleteAsync(Guid id)
+<<<<<<< HEAD
 =======
     public async Task<ServiceResult<ProviderServicePagedDto>> GetPagedAsync(GetServicesQueryDto query)
 >>>>>>> develop
+=======
+>>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
     {
         var page = Math.Max(1, query.Page);
         var limit = Math.Clamp(query.Limit, 1, 100);

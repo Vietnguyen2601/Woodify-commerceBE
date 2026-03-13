@@ -144,6 +144,7 @@ public class CreateProviderServiceValidator : AbstractValidator<CreateProviderSe
 public class ShippingFeePreviewValidator : AbstractValidator<ShippingFeePreviewRequest>
 {
 <<<<<<< HEAD
+<<<<<<< HEAD
     private static readonly string[] AllowedBulkyTypes = { "NORMAL", "BULKY", "SUPER_BULKY" };
 =======
     private static readonly string[] AllowedCodes = { "ECO", "STD", "EXP", "SUP" };
@@ -153,6 +154,12 @@ public class ShippingFeePreviewValidator : AbstractValidator<ShippingFeePreviewR
     public ShippingFeePreviewValidator()
     {
 <<<<<<< HEAD
+=======
+    private static readonly string[] AllowedBulkyTypes = { "NORMAL", "BULKY", "SUPER_BULKY" };
+
+    public ShippingFeePreviewValidator()
+    {
+>>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
         RuleFor(x => x.ShopId)
             .NotEmpty().WithMessage("shop_id là bắt buộc.");
 
@@ -162,6 +169,7 @@ public class ShippingFeePreviewValidator : AbstractValidator<ShippingFeePreviewR
 
         RuleFor(x => x.TotalWeightGrams)
             .GreaterThan(0).WithMessage("total_weight_grams phải lớn hơn 0.");
+<<<<<<< HEAD
 =======
         RuleFor(x => x.Code)
             .MaximumLength(10).WithMessage("Code cannot exceed 10 characters")
@@ -178,6 +186,8 @@ public class ShippingFeePreviewValidator : AbstractValidator<ShippingFeePreviewR
             .WithMessage($"SpeedLevel must be one of: {string.Join(", ", AllowedSpeedLevels)}")
             .When(x => x.SpeedLevel != null);
 >>>>>>> develop
+=======
+>>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
 
         RuleFor(x => x.BulkyType)
             .NotEmpty().WithMessage("bulky_type là bắt buộc.")

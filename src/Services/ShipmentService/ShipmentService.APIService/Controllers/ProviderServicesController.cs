@@ -48,6 +48,7 @@ public class ProviderServicesController : ControllerBase
     {
         var result = await _serviceService.UpdateAsync(serviceId, dto);
 
+<<<<<<< HEAD
         return result.Status switch
         {
             200 => Ok(result),
@@ -94,6 +95,8 @@ public class ProviderServicesController : ControllerBase
         return Ok(result);
     }
 
+=======
+>>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
     [HttpGet("GetByShopAndCode/{shopId:guid}/{code}")]
     public async Task<ActionResult<ServiceResult<ProviderServiceDto>>> GetByShopAndCode(Guid shopId, string code)
     {
@@ -114,19 +117,29 @@ public class ProviderServicesController : ControllerBase
     [HttpPut("UpdateService/{id:guid}")]
     public async Task<ActionResult<ServiceResult<ProviderServiceDto>>> Update(Guid id, [FromBody] UpdateProviderServiceDto dto)
     {
-        var result = await _providerServiceService.UpdateAsync(id, dto);
-        if (result.Status == 404) return NotFound(result);
-        if (result.Status != 200) return BadRequest(result);
+        var query = new GetServicesQueryDto
+        {
+            ProviderId = provider_id,
+            Page = page,
+            Limit = limit
+        };
+        var result = await _serviceService.GetPagedAsync(query);
         return Ok(result);
     }
 
     [HttpDelete("DeleteService/{id:guid}")]
     public async Task<ActionResult<ServiceResult>> Delete(Guid id)
     {
+<<<<<<< HEAD
         var result = await _providerServiceService.DeleteAsync(id);
         if (result.Status == 404) return NotFound(result);
         if (result.Status != 200) return BadRequest(result);
 =======
+=======
+        if (string.IsNullOrWhiteSpace(code))
+            return BadRequest(ServiceResult<ProviderServicePagedDto>.BadRequest("query param 'code' is required."));
+
+>>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
         var query = new GetServicesByCodeQueryDto
         {
             Code = code,
@@ -134,7 +147,10 @@ public class ProviderServicesController : ControllerBase
             Limit = limit
         };
         var result = await _serviceService.GetByCodeAsync(query);
+<<<<<<< HEAD
 >>>>>>> develop
+=======
+>>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
         return Ok(result);
     }
 }

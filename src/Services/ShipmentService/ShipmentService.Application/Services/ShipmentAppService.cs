@@ -1,4 +1,7 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using ShipmentService.Application.Constants;
@@ -10,15 +13,21 @@ using ShipmentService.Infrastructure.Cache;
 using ShipmentService.Infrastructure.ExternalProviders;
 using ShipmentService.Infrastructure.Repositories.IRepositories;
 using Shared.Results;
+<<<<<<< HEAD
 =======
 using ShipmentService.Application.Interfaces;
 >>>>>>> develop
+=======
+>>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
 
 namespace ShipmentService.Application.Services;
 
 public class ShipmentAppService : IShipmentService
 {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
     private const double BulkySurchargeRate = 0.20;
     private const double SuperBulkySurchargeRate = 0.50;
     private const double BulkyVolumeThreshold = 100_000.0; // cm³
@@ -415,8 +424,11 @@ public class ShipmentAppService : IShipmentService
             return ServiceResult.InternalServerError($"{ShipmentMessages.ShipmentDeleteError}: {ex.Message}");
         }
     }
+<<<<<<< HEAD
 =======
     // Methods will be added incrementally.
 >>>>>>> develop
+=======
+>>>>>>> e9d308fc572a492ff112cf3ae8de135376051391
 }
 
