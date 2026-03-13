@@ -6,7 +6,7 @@ using Shared.Results;
 namespace ShipmentService.APIService.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/shipping")]
 public class ShippingProvidersController : ControllerBase
 {
     private readonly IShippingProviderService _providerService;
@@ -35,26 +35,36 @@ public class ShippingProvidersController : ControllerBase
     public async Task<ActionResult<ServiceResult<ShippingProviderDto>>> Create([FromBody] CreateShippingProviderDto dto)
     {
         var result = await _providerService.CreateAsync(dto);
-        if (result.Status == 201)
-            return CreatedAtAction(nameof(GetById), new { id = result.Data?.ProviderId }, result);
-        return BadRequest(result);
+
+        return result.Status switch
+        {
+            201 => StatusCode(201, result),
+            409 => Conflict(result),
+            400 => BadRequest(result),
+            _ => StatusCode(result.Status, result)
+        };
     }
 
     [HttpPut("UpdateProvider/{id:guid}")]
     public async Task<ActionResult<ServiceResult<ShippingProviderDto>>> Update(Guid id, [FromBody] UpdateShippingProviderDto dto)
     {
-        var result = await _providerService.UpdateAsync(id, dto);
-        if (result.Status == 404) return NotFound(result);
-        if (result.Status != 200) return BadRequest(result);
+        var query = new GetProvidersQueryDto { Page = page, Limit = limit };
+        var result = await _providerService.GetPagedAsync(query);
         return Ok(result);
     }
 
     [HttpDelete("DeleteProvider/{id:guid}")]
     public async Task<ActionResult<ServiceResult>> Delete(Guid id)
     {
-        var result = await _providerService.DeleteAsync(id);
-        if (result.Status == 404) return NotFound(result);
-        if (result.Status != 200) return BadRequest(result);
-        return Ok(result);
+        var result = await _providerService.UpdateAsync(providerId, dto);
+
+        return result.Status switch
+        {
+            200 => Ok(result),
+            404 => NotFound(result),
+            409 => Conflict(result),
+            400 => BadRequest(result),
+            _ => StatusCode(result.Status, result)
+        };
     }
 }

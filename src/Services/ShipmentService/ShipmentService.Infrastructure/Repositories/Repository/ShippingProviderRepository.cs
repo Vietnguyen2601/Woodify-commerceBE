@@ -27,6 +27,18 @@ public class ShippingProviderRepository : GenericRepository<ShippingProvider>, I
             .ToListAsync();
     }
 
+    public async Task<bool> ExistsByNameAsync(string name)
+    {
+        return await _dbSet.AnyAsync(p => p.Name.ToLower() == name.ToLower());
+    }
+
+    public async Task<bool> ExistsByNameExcludingIdAsync(string name, Guid excludedProviderId)
+    {
+        return await _dbSet.AnyAsync(p =>
+            p.Name.ToLower() == name.ToLower() &&
+            p.ProviderId != excludedProviderId);
+    }
+
     public override async Task<bool> ExistsAsync(Guid id)
     {
         return await _dbSet.AnyAsync(p => p.ProviderId == id);

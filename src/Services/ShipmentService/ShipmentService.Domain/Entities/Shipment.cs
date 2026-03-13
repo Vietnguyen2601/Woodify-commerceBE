@@ -31,7 +31,7 @@ public class Shipment
     public DateTime? PickedUpAt { get; set; }
     public DateTime? DeliveryEstimatedAt { get; set; }
 
-    public string Status { get; set; } = "PENDING";
+    public string Status { get; set; } = "DRAFT";
     // DRAFT, PENDING, PICKUP_SCHEDULED, PICKED_UP, IN_TRANSIT,
     // OUT_FOR_DELIVERY, DELIVERED, DELIVERY_FAILED, RETURNING, RETURNED, CANCELLED
 

@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using ShipmentService.Application.Constants;
 using ShipmentService.Application.DTOs;
 using ShipmentService.Application.Interfaces;
@@ -9,41 +11,50 @@ namespace ShipmentService.Application.Services;
 
 public class ProviderServiceAppService : IProviderServiceService
 {
-    private readonly IProviderServiceRepository _serviceRepository;
+    private const string CacheKeyAllServices = "provider_services:all";
+    private static string ProviderServicesCacheKey(Guid providerId) => $"provider_services:{providerId}";
 
-    public ProviderServiceAppService(IProviderServiceRepository serviceRepository)
+    private readonly IProviderServiceRepository _serviceRepository;
+    private readonly IShippingProviderRepository _providerRepository;
+    private readonly IShipmentRepository _shipmentRepository;
+    private readonly IMemoryCache _cache;
+
+    public ProviderServiceAppService(
+        IProviderServiceRepository serviceRepository,
+        IShippingProviderRepository providerRepository,
+        IShipmentRepository shipmentRepository,
+        IMemoryCache cache)
     {
         _serviceRepository = serviceRepository;
+        _providerRepository = providerRepository;
+        _shipmentRepository = shipmentRepository;
+        _cache = cache;
     }
 
-    public async Task<ServiceResult<IEnumerable<ProviderServiceDto>>> GetAllAsync()
-    {
-        var services = await _serviceRepository.GetAllAsync();
-        return ServiceResult<IEnumerable<ProviderServiceDto>>.Success(services.Select(s => s.ToDto()));
-    }
-
-    public async Task<ServiceResult<IEnumerable<ProviderServiceDto>>> GetByProviderIdAsync(Guid providerId)
-    {
-        var services = await _serviceRepository.GetByProviderIdAsync(providerId);
-        return ServiceResult<IEnumerable<ProviderServiceDto>>.Success(services.Select(s => s.ToDto()));
-    }
-
-    public async Task<ServiceResult<ProviderServiceDto>> GetByIdAsync(Guid id)
-    {
-        var service = await _serviceRepository.GetByIdAsync(id);
-        if (service == null)
-            return ServiceResult<ProviderServiceDto>.NotFound(ShipmentMessages.ServiceNotFound);
-
-        return ServiceResult<ProviderServiceDto>.Success(service.ToDto());
-    }
-
-    public async Task<ServiceResult<ProviderServiceDto>> CreateAsync(CreateProviderServiceDto dto)
+    public async Task<ServiceResult<ProviderServiceDto>> CreateAsync(Guid providerId, CreateProviderServiceDto dto)
     {
         try
         {
-            var service = dto.ToModel();
+            var providerExists = await _providerRepository.ExistsAsync(providerId);
+            if (!providerExists)
+                return ServiceResult<ProviderServiceDto>.NotFound(ShipmentMessages.ProviderNotFound);
+
+            var codeExists = await _serviceRepository.ExistsByCodeForProviderAsync(providerId, dto.Code);
+            if (codeExists)
+                return ServiceResult<ProviderServiceDto>.Conflict(
+                    $"A service with code '{dto.Code}' already exists for this provider.");
+
+            var service = dto.ToModel(providerId);
             await _serviceRepository.CreateAsync(service);
-            return ServiceResult<ProviderServiceDto>.Created(service.ToDto(), ShipmentMessages.ServiceCreated);
+
+            var created = await _serviceRepository.GetByIdAsync(service.ServiceId);
+
+            _cache.Remove(CacheKeyAllServices);
+            _cache.Remove(ProviderServicesCacheKey(providerId));
+
+            return ServiceResult<ProviderServiceDto>.Created(
+                created!.ToDto(),
+                ShipmentMessages.ServiceCreated);
         }
         catch (OperationCanceledException)
         {
@@ -51,27 +62,41 @@ public class ProviderServiceAppService : IProviderServiceService
         }
         catch (ArgumentException ex)
         {
-            return ServiceResult<ProviderServiceDto>.InternalServerError($"{ShipmentMessages.ServiceCreateError}: {ex.Message}");
+            return ServiceResult<ProviderServiceDto>.InternalServerError(
+                $"{ShipmentMessages.ServiceCreateError}: {ex.Message}");
         }
         catch (InvalidOperationException ex)
         {
-            return ServiceResult<ProviderServiceDto>.InternalServerError($"{ShipmentMessages.ServiceCreateError}: {ex.Message}");
+            return ServiceResult<ProviderServiceDto>.InternalServerError(
+                $"{ShipmentMessages.ServiceCreateError}: {ex.Message}");
         }
     }
 
-    public async Task<ServiceResult<ProviderServiceDto>> UpdateAsync(Guid id, UpdateProviderServiceDto dto)
+    public async Task<ServiceResult<ProviderServiceDto>> UpdateAsync(Guid serviceId, UpdateProviderServiceDto dto)
     {
         try
         {
-            var service = await _serviceRepository.GetByIdAsync(id);
-            if (service == null)
+            var service = await _serviceRepository.GetByIdAsync(serviceId);
+            if (service is null)
                 return ServiceResult<ProviderServiceDto>.NotFound(ShipmentMessages.ServiceNotFound);
+
+            bool softDeleting = dto.IsActive.HasValue && !dto.IsActive.Value && service.IsActive;
+            if (softDeleting)
+            {
+                var hasActiveShipments = await _shipmentRepository.HasNonTerminalByServiceIdAsync(serviceId);
+                if (hasActiveShipments)
+                    return ServiceResult<ProviderServiceDto>.Conflict(ShipmentMessages.ServiceHasActiveShipments);
+            }
 
             dto.MapToUpdate(service);
             await _serviceRepository.UpdateAsync(service);
 
-            var updated = await _serviceRepository.GetByIdAsync(id);
-            return ServiceResult<ProviderServiceDto>.Success(updated!.ToDto(), ShipmentMessages.ServiceUpdated);
+            _cache.Remove(CacheKeyAllServices);
+            _cache.Remove(ProviderServicesCacheKey(service.ProviderId));
+
+            return ServiceResult<ProviderServiceDto>.Success(
+                service.ToDto(),
+                ShipmentMessages.ServiceUpdated);
         }
         catch (OperationCanceledException)
         {
@@ -79,11 +104,13 @@ public class ProviderServiceAppService : IProviderServiceService
         }
         catch (ArgumentException ex)
         {
-            return ServiceResult<ProviderServiceDto>.InternalServerError($"{ShipmentMessages.ServiceUpdateError}: {ex.Message}");
+            return ServiceResult<ProviderServiceDto>.InternalServerError(
+                $"{ShipmentMessages.ServiceUpdateError}: {ex.Message}");
         }
         catch (InvalidOperationException ex)
         {
-            return ServiceResult<ProviderServiceDto>.InternalServerError($"{ShipmentMessages.ServiceUpdateError}: {ex.Message}");
+            return ServiceResult<ProviderServiceDto>.InternalServerError(
+                $"{ShipmentMessages.ServiceUpdateError}: {ex.Message}");
         }
     }
 
@@ -98,26 +125,50 @@ public class ProviderServiceAppService : IProviderServiceService
 
     public async Task<ServiceResult> DeleteAsync(Guid id)
     {
-        try
-        {
-            var service = await _serviceRepository.GetByIdAsync(id);
-            if (service == null)
-                return ServiceResult.NotFound(ShipmentMessages.ServiceNotFound);
+        var page = Math.Max(1, query.Page);
+        var limit = Math.Clamp(query.Limit, 1, 100);
 
-            await _serviceRepository.RemoveAsync(service);
-            return ServiceResult.Success(ShipmentMessages.ServiceDeleted);
-        }
-        catch (OperationCanceledException)
+        var q = _serviceRepository.GetAllQueryable()
+            .Include(ps => ps.ShippingProvider)
+            .AsQueryable();
+
+        if (query.ProviderId.HasValue)
+            q = q.Where(ps => ps.ProviderId == query.ProviderId.Value);
+
+        q = q.OrderBy(ps => ps.ProviderId).ThenBy(ps => ps.Code);
+
+        var total = await q.CountAsync();
+        var items = await q.Skip((page - 1) * limit).Take(limit).ToListAsync();
+
+        var result = new ProviderServicePagedDto
         {
-            throw;
-        }
-        catch (ArgumentException ex)
+            Services = items.Select(ps => ps.ToDto()).ToList(),
+            Pagination = new PaginationResultDto { Page = page, Limit = limit, Total = total }
+        };
+
+        return ServiceResult<ProviderServicePagedDto>.Success(result);
+    }
+
+    public async Task<ServiceResult<ProviderServicePagedDto>> GetByCodeAsync(GetServicesByCodeQueryDto query)
+    {
+        var page = Math.Max(1, query.Page);
+        var limit = Math.Clamp(query.Limit, 1, 100);
+
+        var q = _serviceRepository.GetAllQueryable()
+            .Include(ps => ps.ShippingProvider)
+            .Where(ps => ps.Code == query.Code.ToUpper())
+            .OrderBy(ps => ps.ProviderId)
+            .AsQueryable();
+
+        var total = await q.CountAsync();
+        var items = await q.Skip((page - 1) * limit).Take(limit).ToListAsync();
+
+        var result = new ProviderServicePagedDto
         {
-            return ServiceResult.InternalServerError($"{ShipmentMessages.ServiceDeleteError}: {ex.Message}");
-        }
-        catch (InvalidOperationException ex)
-        {
-            return ServiceResult.InternalServerError($"{ShipmentMessages.ServiceDeleteError}: {ex.Message}");
-        }
+            Services = items.Select(ps => ps.ToDto()).ToList(),
+            Pagination = new PaginationResultDto { Page = page, Limit = limit, Total = total }
+        };
+
+        return ServiceResult<ProviderServicePagedDto>.Success(result);
     }
 }

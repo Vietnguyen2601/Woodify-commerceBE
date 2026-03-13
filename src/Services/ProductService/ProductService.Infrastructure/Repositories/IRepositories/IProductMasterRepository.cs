@@ -13,4 +13,11 @@ public interface IProductMasterRepository : IGenericRepository<ProductMaster>
     Task<List<ProductMaster>> GetByShopIdAsync(Guid shopId);
     Task<List<ProductMaster>> GetByStatusAsync(ProductStatus status);
     Task<(List<ProductMaster> Products, int TotalCount)> SearchAsync(ProductSearchParameters searchParams);
+    Task<(List<ProductMaster> Products, int TotalCount)> GetPendingApprovalQueueAsync(
+        Guid? categoryId = null, 
+        Guid? shopId = null, 
+        DateTime? submittedFrom = null, 
+        DateTime? submittedTo = null,
+        int page = 1,
+        int pageSize = 20);
 }

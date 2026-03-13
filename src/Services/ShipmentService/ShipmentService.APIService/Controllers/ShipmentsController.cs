@@ -1,7 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using ShipmentService.Application.DTOs;
-using ShipmentService.Application.Interfaces;
-using Shared.Results;
 
 namespace ShipmentService.APIService.Controllers;
 

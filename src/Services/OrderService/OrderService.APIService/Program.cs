@@ -1,4 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Serilog;
+using Serilog.Events;
+using Serilog.Sinks.SystemConsole.Themes;
 using Shared.Messaging;
 using OrderService.Infrastructure.Data.Context;
 using OrderService.Infrastructure.Data.Seeders;
@@ -6,7 +9,25 @@ using OrderService.APIService.Extensions;
 using OrderService.Application.Consumers;
 using OrderService.Application.Services;
 
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .Enrich.WithProperty("Service", "Order")
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{Service}] {Message:lj}{NewLine}{Exception}",
+        theme: AnsiConsoleTheme.Code)
+    .CreateBootstrapLogger();
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((ctx, _, cfg) => cfg
+    .ReadFrom.Configuration(ctx.Configuration)
+    .Enrich.FromLogContext()    .Enrich.WithProperty("Service", "Order")    .Filter.ByExcluding(logEvent =>
+        logEvent.Exception is { } ex && (
+            ex.ToString().Contains("57P01", StringComparison.Ordinal) ||
+            ex.Message.Contains("transient failure", StringComparison.OrdinalIgnoreCase)))
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}",
+        theme: AnsiConsoleTheme.Code));
 
 // Add CORS configuration
 builder.Services.AddCors(options =>
@@ -107,12 +128,54 @@ catch (Exception ex)
     Console.WriteLine($"Failed to start Product Event Consumer: {ex.Message}");
 }
 
-app.UseSwagger();
-    app.UseSwaggerUI(c =>
+app.UseSerilogRequestLogging(opts =>
+{
+    opts.MessageTemplate =
+        "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+    opts.GetLevel = (httpCtx, _, ex) =>
+        ex != null || httpCtx.Response.StatusCode >= 500 ? Serilog.Events.LogEventLevel.Error   :
+        httpCtx.Response.StatusCode >= 400               ? Serilog.Events.LogEventLevel.Warning :
+                                                           Serilog.Events.LogEventLevel.Information;
+});
+
+// ── Clean DB-disconnect handler: log 1 WRN line instead of full stack trace ───
+app.UseExceptionHandler(errApp => errApp.Run(async ctx =>
+{
+    var ex = ctx.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
+    var logger = ctx.RequestServices.GetRequiredService<ILogger<Program>>();
+    var root = ((ex?.InnerException ?? ex)?.Message ?? "Unknown error")
+        .Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries)
+        .FirstOrDefault() ?? "Unknown error";
+
+    if (ex is not null && (
+        ex.Message.Contains("transient failure", StringComparison.OrdinalIgnoreCase) ||
+        (ex.InnerException?.ToString() ?? ex.ToString()).Contains("57P01", StringComparison.Ordinal)))
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Order Service API v1");
-        c.RoutePrefix = "";
-    });
+        logger.LogWarning("[DB] Connection lost — {Error}. Service will recover on next request.", root);
+        ctx.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+    }
+    else
+    {
+        logger.LogError("[{ExType}] {Message}", ex?.GetType().Name ?? "Exception", root);
+        ctx.Response.StatusCode = StatusCodes.Status500InternalServerError;
+    }
+
+    ctx.Response.ContentType = "application/json";
+    await ctx.Response.WriteAsync(
+        System.Text.Json.JsonSerializer.Serialize(new
+        {
+            error = ctx.Response.StatusCode == 503
+                ? "Service temporarily unavailable. Please retry."
+                : "An unexpected error occurred."
+        }));
+}));
+
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Order Service API v1");
+    c.RoutePrefix = "";
+});
 
 // Enable CORS
 app.UseCors("AllowAll");

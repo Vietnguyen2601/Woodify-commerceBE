@@ -37,6 +37,28 @@ public class ShipmentRepository : GenericRepository<Shipment>, IShipmentReposito
             .ToListAsync();
     }
 
+    private static readonly string[] TerminalStatuses =
+    [
+        "DELIVERED", "RETURNED", "CANCELLED", "DELIVERY_FAILED"
+    ];
+
+    public async Task<bool> HasNonTerminalByProviderIdAsync(Guid providerId)
+    {
+        return await _dbSet
+            .Include(s => s.ProviderService)
+            .AnyAsync(s =>
+                s.ProviderService != null &&
+                s.ProviderService.ProviderId == providerId &&
+                !TerminalStatuses.Contains(s.Status));
+    }
+
+    public async Task<bool> HasNonTerminalByServiceIdAsync(Guid serviceId)
+    {
+        return await _dbSet.AnyAsync(s =>
+            s.ProviderServiceId == serviceId &&
+            !TerminalStatuses.Contains(s.Status));
+    }
+
     public override async Task<List<Shipment>> GetAllAsync()
     {
         return await _dbSet

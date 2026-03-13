@@ -25,12 +25,15 @@ public static class ShippingProviderMapper
     {
         if (dto == null) throw new ArgumentNullException(nameof(dto));
 
+        var now = DateTime.UtcNow;
         return new ShippingProvider
         {
             Name = dto.Name,
             SupportPhone = dto.SupportPhone,
             SupportEmail = dto.SupportEmail,
-            IsActive = dto.IsActive
+            IsActive = dto.IsActive,
+            CreatedAt = now,
+            UpdatedAt = now
         };
     }
 
