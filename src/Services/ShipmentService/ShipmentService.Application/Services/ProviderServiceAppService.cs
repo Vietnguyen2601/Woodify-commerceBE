@@ -159,7 +159,12 @@ public class ProviderServiceAppService : IProviderServiceService
         {
             throw;
         }
-        catch (Exception ex)
+        catch (ArgumentException ex)
+        {
+            return ServiceResult.InternalServerError(
+                $"{ShipmentMessages.ServiceDeleteError}: {ex.Message}");
+        }
+        catch (InvalidOperationException ex)
         {
             return ServiceResult.InternalServerError(
                 $"{ShipmentMessages.ServiceDeleteError}: {ex.Message}");
