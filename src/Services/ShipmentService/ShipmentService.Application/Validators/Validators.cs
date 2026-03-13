@@ -70,6 +70,10 @@ public class CreateShippingProviderValidator : AbstractValidator<CreateShippingP
             .NotEmpty().WithMessage("Name is required")
             .MaximumLength(200).WithMessage("Name cannot exceed 200 characters");
 
+        RuleFor(x => x.SupportPhone)
+            .Matches(@"^\+?[0-9]{7,15}$").WithMessage("SupportPhone is not a valid phone number")
+            .When(x => !string.IsNullOrEmpty(x.SupportPhone));
+
         RuleFor(x => x.SupportEmail)
             .EmailAddress().WithMessage("SupportEmail is not valid")
             .When(x => !string.IsNullOrEmpty(x.SupportEmail));
@@ -86,6 +90,10 @@ public class UpdateShippingProviderValidator : AbstractValidator<UpdateShippingP
             .MaximumLength(200).WithMessage("Name cannot exceed 200 characters")
             .When(x => x.Name != null);
 
+        RuleFor(x => x.SupportPhone)
+            .Matches(@"^\+?[0-9]{7,15}$").WithMessage("SupportPhone is not a valid phone number")
+            .When(x => !string.IsNullOrEmpty(x.SupportPhone));
+
         RuleFor(x => x.SupportEmail)
             .EmailAddress().WithMessage("SupportEmail is not valid")
             .When(x => !string.IsNullOrEmpty(x.SupportEmail));
@@ -96,23 +104,24 @@ public class UpdateShippingProviderValidator : AbstractValidator<UpdateShippingP
 
 public class CreateProviderServiceValidator : AbstractValidator<CreateProviderServiceDto>
 {
+    private static readonly string[] AllowedCodes = { "ECO", "STD", "EXP", "SUP" };
     private static readonly string[] AllowedSpeedLevels = { "ECONOMY", "STANDARD", "EXPRESS", "SUPER_EXPRESS" };
 
     public CreateProviderServiceValidator()
     {
-        RuleFor(x => x.ProviderId)
-            .NotEmpty().WithMessage("ProviderId is required");
-
         RuleFor(x => x.Code)
             .NotEmpty().WithMessage("Code is required")
-            .MaximumLength(20).WithMessage("Code cannot exceed 20 characters");
+            .MaximumLength(10).WithMessage("Code cannot exceed 10 characters")
+            .Must(c => AllowedCodes.Contains(c.ToUpperInvariant()))
+            .WithMessage("Code must be one of: ECO, STD, EXP, SUP")
+            .When(x => !string.IsNullOrEmpty(x.Code));
 
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Name is required")
-            .MaximumLength(100).WithMessage("Name cannot exceed 100 characters");
+            .MaximumLength(200).WithMessage("Name cannot exceed 200 characters");
 
         RuleFor(x => x.SpeedLevel)
-            .Must(s => s == null || AllowedSpeedLevels.Contains(s))
+            .Must(s => s == null || AllowedSpeedLevels.Contains(s.ToUpperInvariant()))
             .WithMessage($"SpeedLevel must be one of: {string.Join(", ", AllowedSpeedLevels)}")
             .When(x => x.SpeedLevel != null);
 
@@ -134,10 +143,16 @@ public class CreateProviderServiceValidator : AbstractValidator<CreateProviderSe
 
 public class ShippingFeePreviewValidator : AbstractValidator<ShippingFeePreviewRequest>
 {
+<<<<<<< HEAD
     private static readonly string[] AllowedBulkyTypes = { "NORMAL", "BULKY", "SUPER_BULKY" };
+=======
+    private static readonly string[] AllowedCodes = { "ECO", "STD", "EXP", "SUP" };
+    private static readonly string[] AllowedSpeedLevels = { "ECONOMY", "STANDARD", "EXPRESS", "SUPER_EXPRESS" };
+>>>>>>> develop
 
     public ShippingFeePreviewValidator()
     {
+<<<<<<< HEAD
         RuleFor(x => x.ShopId)
             .NotEmpty().WithMessage("shop_id là bắt buộc.");
 
@@ -147,6 +162,22 @@ public class ShippingFeePreviewValidator : AbstractValidator<ShippingFeePreviewR
 
         RuleFor(x => x.TotalWeightGrams)
             .GreaterThan(0).WithMessage("total_weight_grams phải lớn hơn 0.");
+=======
+        RuleFor(x => x.Code)
+            .MaximumLength(10).WithMessage("Code cannot exceed 10 characters")
+            .Must(c => AllowedCodes.Contains(c.ToUpperInvariant()))
+            .WithMessage("Code must be one of: ECO, STD, EXP, SUP")
+            .When(x => !string.IsNullOrEmpty(x.Code));
+
+        RuleFor(x => x.Name)
+            .MaximumLength(200).WithMessage("Name cannot exceed 200 characters")
+            .When(x => x.Name != null);
+
+        RuleFor(x => x.SpeedLevel)
+            .Must(s => s == null || AllowedSpeedLevels.Contains(s.ToUpperInvariant()))
+            .WithMessage($"SpeedLevel must be one of: {string.Join(", ", AllowedSpeedLevels)}")
+            .When(x => x.SpeedLevel != null);
+>>>>>>> develop
 
         RuleFor(x => x.BulkyType)
             .NotEmpty().WithMessage("bulky_type là bắt buộc.")

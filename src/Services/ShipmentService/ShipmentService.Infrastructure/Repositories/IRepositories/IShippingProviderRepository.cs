@@ -9,4 +9,6 @@ namespace ShipmentService.Infrastructure.Repositories.IRepositories;
 public interface IShippingProviderRepository : IGenericRepository<ShippingProvider>
 {
     Task<List<ShippingProvider>> GetAllActiveAsync();
+    Task<bool> ExistsByNameAsync(string name);
+    Task<bool> ExistsByNameExcludingIdAsync(string name, Guid excludedProviderId);
 }

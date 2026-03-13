@@ -28,3 +28,25 @@ public class ShippingProviderDto
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }
+
+// ── Paged list ───────────────────────────────────────────────────────────────
+
+public class GetProvidersQueryDto
+{
+    public int Page { get; set; } = 1;
+
+    public int Limit { get; set; } = 20;
+}
+
+public class PaginationResultDto
+{
+    public int Page { get; set; }
+    public int Limit { get; set; }
+    public int Total { get; set; }
+}
+
+public class ShippingProviderPagedDto
+{
+    public List<ShippingProviderDto> Providers { get; set; } = [];
+    public PaginationResultDto Pagination { get; set; } = new();
+}

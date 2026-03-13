@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using ShipmentService.Application.Constants;
@@ -9,11 +10,15 @@ using ShipmentService.Infrastructure.Cache;
 using ShipmentService.Infrastructure.ExternalProviders;
 using ShipmentService.Infrastructure.Repositories.IRepositories;
 using Shared.Results;
+=======
+using ShipmentService.Application.Interfaces;
+>>>>>>> develop
 
 namespace ShipmentService.Application.Services;
 
 public class ShipmentAppService : IShipmentService
 {
+<<<<<<< HEAD
     private const double BulkySurchargeRate = 0.20;
     private const double SuperBulkySurchargeRate = 0.50;
     private const double BulkyVolumeThreshold = 100_000.0; // cm³
@@ -410,4 +415,8 @@ public class ShipmentAppService : IShipmentService
             return ServiceResult.InternalServerError($"{ShipmentMessages.ShipmentDeleteError}: {ex.Message}");
         }
     }
+=======
+    // Methods will be added incrementally.
+>>>>>>> develop
 }
+

@@ -14,9 +14,11 @@ public static class ProductVersionMapper
             VersionId = version.VersionId,
             ProductId = version.ProductId,
             SellerSku = version.SellerSku,
+            VersionNumber = version.VersionNumber,
             VersionName = version.VersionName,
             Price = version.Price,
             StockQuantity = version.StockQuantity,
+            WoodType = version.WoodType,
             WeightGrams = version.WeightGrams,
             LengthCm = version.LengthCm,
             WidthCm = version.WidthCm,
@@ -38,9 +40,11 @@ public static class ProductVersionMapper
         {
             ProductId = dto.ProductId,
             SellerSku = dto.SellerSku,
+            VersionNumber = dto.VersionNumber,
             VersionName = dto.VersionName,
             Price = dto.Price,
             StockQuantity = dto.StockQuantity,
+            WoodType = dto.WoodType,
             WeightGrams = dto.WeightGrams,
             LengthCm = dto.LengthCm,
             WidthCm = dto.WidthCm,
@@ -60,9 +64,6 @@ public static class ProductVersionMapper
         {
             throw new ArgumentNullException(nameof(version), "ProductVersion cannot be null.");
         }
-
-        if (dto.SellerSku != null)
-            version.SellerSku = dto.SellerSku;
         
         if (dto.VersionName != null)
             version.VersionName = dto.VersionName;
@@ -72,6 +73,9 @@ public static class ProductVersionMapper
         
         if (dto.StockQuantity.HasValue)
             version.StockQuantity = dto.StockQuantity.Value;
+        
+        if (dto.WoodType != null)
+            version.WoodType = dto.WoodType;
         
         if (dto.WeightGrams.HasValue)
             version.WeightGrams = dto.WeightGrams.Value;
@@ -84,9 +88,8 @@ public static class ProductVersionMapper
         
         if (dto.HeightCm.HasValue)
             version.HeightCm = dto.HeightCm.Value;
-        
-        if (dto.IsActive.HasValue)
-            version.IsActive = dto.IsActive.Value;
+
+        version.UpdatedAt = DateTime.UtcNow;
 
         version.UpdatedAt = DateTime.UtcNow;
     }

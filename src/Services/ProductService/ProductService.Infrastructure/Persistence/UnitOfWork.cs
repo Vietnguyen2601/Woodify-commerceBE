@@ -2,6 +2,7 @@ using ProductService.Infrastructure.Data.Context;
 using ProductService.Infrastructure.Repositories;
 using ProductService.Infrastructure.Repositories.Repository;
 using ProductService.Infrastructure.Repositories.IRepositories;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace ProductService.Infrastructure.Persistence;
@@ -54,6 +55,11 @@ public class UnitOfWork : IUnitOfWork
             await _transaction.DisposeAsync();
             _transaction = null;
         }
+    }
+
+    public void MarkAsModified<T>(T entity) where T : class
+    {
+        _context.Entry(entity).State = EntityState.Modified;
     }
 
     public void Dispose()

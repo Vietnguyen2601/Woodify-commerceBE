@@ -4,10 +4,9 @@ namespace ShipmentService.Application.DTOs;
 
 public class CreateProviderServiceDto
 {
-    public Guid ProviderId { get; set; }
-    public string Code { get; set; } = string.Empty;   // ECO, STD, EXP, SUP
-    public string Name { get; set; } = string.Empty;   // Tiết kiệm, Nhanh, Hỏa tốc
-    public string? SpeedLevel { get; set; }             // ECONOMY, STANDARD, EXPRESS
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? SpeedLevel { get; set; }
     public int? EstimatedDaysMin { get; set; }
     public int? EstimatedDaysMax { get; set; }
     public bool IsActive { get; set; } = true;
@@ -39,4 +38,24 @@ public class ProviderServiceDto
     public double? MultiplierFee { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+}
+
+public class GetServicesQueryDto
+{
+    public Guid? ProviderId { get; set; }
+    public int Page { get; set; } = 1;
+    public int Limit { get; set; } = 20;
+}
+
+public class GetServicesByCodeQueryDto
+{
+    public string Code { get; set; } = string.Empty;
+    public int Page { get; set; } = 1;
+    public int Limit { get; set; } = 20;
+}
+
+public class ProviderServicePagedDto
+{
+    public List<ProviderServiceDto> Services { get; set; } = [];
+    public PaginationResultDto Pagination { get; set; } = new();
 }
