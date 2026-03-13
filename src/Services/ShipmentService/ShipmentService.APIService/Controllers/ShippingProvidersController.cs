@@ -16,10 +16,22 @@ public class ShippingProvidersController : ControllerBase
         _providerService = providerService;
     }
 
-    [HttpPost("providers")]
-    [ProducesResponseType(typeof(ServiceResult<ShippingProviderDto>), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [HttpGet("GetAllProviders")]
+    public async Task<ActionResult<ServiceResult<IEnumerable<ShippingProviderDto>>>> GetAll()
+    {
+        var result = await _providerService.GetAllAsync();
+        return Ok(result);
+    }
+
+    [HttpGet("GetProviderById/{id:guid}")]
+    public async Task<ActionResult<ServiceResult<ShippingProviderDto>>> GetById(Guid id)
+    {
+        var result = await _providerService.GetByIdAsync(id);
+        if (result.Status == 404) return NotFound(result);
+        return Ok(result);
+    }
+
+    [HttpPost("CreateProvider")]
     public async Task<ActionResult<ServiceResult<ShippingProviderDto>>> Create([FromBody] CreateShippingProviderDto dto)
     {
         var result = await _providerService.CreateAsync(dto);
@@ -33,25 +45,16 @@ public class ShippingProvidersController : ControllerBase
         };
     }
 
-    [HttpGet("providers")]
-    [ProducesResponseType(typeof(ServiceResult<ShippingProviderPagedDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<ServiceResult<ShippingProviderPagedDto>>> GetAll(
-        [FromQuery] int page = 1,
-        [FromQuery] int limit = 20)
+    [HttpPut("UpdateProvider/{id:guid}")]
+    public async Task<ActionResult<ServiceResult<ShippingProviderDto>>> Update(Guid id, [FromBody] UpdateShippingProviderDto dto)
     {
         var query = new GetProvidersQueryDto { Page = page, Limit = limit };
         var result = await _providerService.GetPagedAsync(query);
         return Ok(result);
     }
 
-    [HttpPatch("providers/{provider_id:guid}")]
-    [ProducesResponseType(typeof(ServiceResult<ShippingProviderDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<ServiceResult<ShippingProviderDto>>> Update(
-        [FromRoute(Name = "provider_id")] Guid providerId,
-        [FromBody] UpdateShippingProviderDto dto)
+    [HttpDelete("DeleteProvider/{id:guid}")]
+    public async Task<ActionResult<ServiceResult>> Delete(Guid id)
     {
         var result = await _providerService.UpdateAsync(providerId, dto);
 

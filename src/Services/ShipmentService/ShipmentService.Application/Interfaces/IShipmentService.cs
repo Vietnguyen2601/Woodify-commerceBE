@@ -8,5 +8,12 @@ namespace ShipmentService.Application.Interfaces;
 /// </summary>
 public interface IShipmentService
 {
-    // APIs will be added incrementally.
+    Task<ServiceResult<IEnumerable<ShipmentDto>>> GetAllAsync();
+    Task<ServiceResult<ShipmentDto>> GetByIdAsync(Guid id);
+    Task<ServiceResult<IEnumerable<ShipmentDto>>> GetByOrderIdAsync(Guid orderId);
+    Task<ServiceResult<ShipmentDto>> CreateAsync(CreateShipmentDto dto);
+    Task<ServiceResult<ShipmentDto>> UpdateAsync(Guid id, UpdateShipmentDto dto);
+    Task<ServiceResult<ShipmentDto>> UpdateStatusAsync(Guid id, UpdateShipmentStatusDto dto);
+    Task<ServiceResult<ShipmentDto>> UpdatePickupAsync(Guid id, UpdateShipmentPickupDto dto);
+    Task<ServiceResult> DeleteAsync(Guid id);
 }

@@ -27,9 +27,8 @@ public static class ShopDbSeeder
                     Name = "Nguyễn Văn Shop",
                     Description = "Cửa hàng gỗ chất lượng cao với mục đích cung cấp nội thất gỗ tự nhiên",
                     Rating = 4.5m,
-                    FollowerCount = 0,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    Status = ShopService.Domain.Enums.ShopStatus.ACTIVE,
+                    CreatedAt = DateTime.UtcNow
                 },
                 new()
                 {
@@ -38,9 +37,8 @@ public static class ShopDbSeeder
                     Name = "Trần Thị Antique",
                     Description = "Chuyên cung cấp những sản phẩm gỗ vintage và trang trí hiện đại",
                     Rating = 4.8m,
-                    FollowerCount = 0,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    Status = ShopService.Domain.Enums.ShopStatus.ACTIVE,
+                    CreatedAt = DateTime.UtcNow
                 },
                 new()
                 {
@@ -49,9 +47,8 @@ public static class ShopDbSeeder
                     Name = "Gỗ Tự Nhiên Premium",
                     Description = "Bán các sản phẩm gỗ tự nhiên nhập khẩu từ châu Âu",
                     Rating = 4.7m,
-                    FollowerCount = 0,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    Status = ShopService.Domain.Enums.ShopStatus.ACTIVE,
+                    CreatedAt = DateTime.UtcNow
                 },
                 new()
                 {
@@ -60,9 +57,8 @@ public static class ShopDbSeeder
                     Name = "Nội Thất Sang Trọng",
                     Description = "Thiết kế và cung cấp nội thất gỗ cao cấp theo yêu cầu",
                     Rating = 4.9m,
-                    FollowerCount = 0,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    Status = ShopService.Domain.Enums.ShopStatus.ACTIVE,
+                    CreatedAt = DateTime.UtcNow
                 },
                 new()
                 {
@@ -71,9 +67,8 @@ public static class ShopDbSeeder
                     Name = "Gỗ Lâm Đồng",
                     Description = "Chuyên bán sản phẩm gỗ từ Lâm Đồng, chất lượng tốt giá hợp lý",
                     Rating = 4.3m,
-                    FollowerCount = 0,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    Status = ShopService.Domain.Enums.ShopStatus.ACTIVE,
+                    CreatedAt = DateTime.UtcNow
                 }
             };
 

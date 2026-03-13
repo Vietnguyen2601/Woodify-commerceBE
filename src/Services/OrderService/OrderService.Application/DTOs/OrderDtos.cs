@@ -7,7 +7,7 @@ public class CreateOrderFromCartDto
 {
     public Guid AccountId { get; set; }
     public Guid ShopId { get; set; }
-    public Guid? DeliveryAddressId { get; set; }
+    public string? DeliveryAddressId { get; set; }
     public Guid? VoucherId { get; set; }
     public Guid? Payment { get; set; }
 }
@@ -18,24 +18,24 @@ public class CreateOrderFromCartDto
 public class OrderDto
 {
     public Guid OrderId { get; set; }
-    
+
     public Guid AccountId { get; set; }
     public Guid ShopId { get; set; }
-    
+
     public double SubtotalCents { get; set; }
     public double TotalAmountCents { get; set; }
-    
+
     public Guid? VoucherId { get; set; }
-    
+
     public Guid? Payment { get; set; }
-    
+
     public string Status { get; set; } = string.Empty;
-    
+
     public string? DeliveryAddressId { get; set; }
-    
+
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
-    
+
     public List<OrderItemDto> OrderItems { get; set; } = new List<OrderItemDto>();
 }
 
@@ -47,17 +47,17 @@ public class OrderItemDto
     public Guid OrderItemId { get; set; }
     public Guid OrderId { get; set; }
     public Guid VersionId { get; set; }
-    
+
     public long UnitPriceCents { get; set; }
     public int Quantity { get; set; }
     public long DiscountCents { get; set; }
     public double TaxCents { get; set; }
     public double LineTotalCents { get; set; }
-    
+
     public Guid? ShipmentId { get; set; }
-    
+
     public string Status { get; set; } = string.Empty;
-    
+
     public DateTime CreatedAt { get; set; }
 }
 

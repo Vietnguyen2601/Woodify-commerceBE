@@ -48,22 +48,25 @@ public class ProviderServicesController : ControllerBase
     {
         var result = await _serviceService.UpdateAsync(serviceId, dto);
 
-        return result.Status switch
-        {
-            200 => Ok(result),
-            404 => NotFound(result),
-            409 => Conflict(result),
-            400 => BadRequest(result),
-            _ => StatusCode(result.Status, result)
-        };
+    [HttpGet("GetByShopAndCode/{shopId:guid}/{code}")]
+    public async Task<ActionResult<ServiceResult<ProviderServiceDto>>> GetByShopAndCode(Guid shopId, string code)
+    {
+        var result = await _providerServiceService.GetByShopIdAndCodeAsync(shopId, code);
+        if (result.Status == 404) return NotFound(result);
+        return Ok(result);
     }
 
-    [HttpGet("services")]
-    [ProducesResponseType(typeof(ServiceResult<ProviderServicePagedDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<ServiceResult<ProviderServicePagedDto>>> GetAll(
-        [FromQuery] Guid? provider_id,
-        [FromQuery] int page = 1,
-        [FromQuery] int limit = 20)
+    [HttpPost("CreateService")]
+    public async Task<ActionResult<ServiceResult<ProviderServiceDto>>> Create([FromBody] CreateProviderServiceDto dto)
+    {
+        var result = await _providerServiceService.CreateAsync(dto);
+        if (result.Status == 201)
+            return CreatedAtAction(nameof(GetById), new { id = result.Data?.ServiceId }, result);
+        return BadRequest(result);
+    }
+
+    [HttpPut("UpdateService/{id:guid}")]
+    public async Task<ActionResult<ServiceResult<ProviderServiceDto>>> Update(Guid id, [FromBody] UpdateProviderServiceDto dto)
     {
         var query = new GetServicesQueryDto
         {
@@ -75,13 +78,8 @@ public class ProviderServicesController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("services/by-code")]
-    [ProducesResponseType(typeof(ServiceResult<ProviderServicePagedDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<ServiceResult<ProviderServicePagedDto>>> GetByCode(
-        [FromQuery] string code,
-        [FromQuery] int page = 1,
-        [FromQuery] int limit = 20)
+    [HttpDelete("DeleteService/{id:guid}")]
+    public async Task<ActionResult<ServiceResult>> Delete(Guid id)
     {
         if (string.IsNullOrWhiteSpace(code))
             return BadRequest(ServiceResult<ProviderServicePagedDto>.BadRequest("query param 'code' is required."));

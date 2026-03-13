@@ -114,7 +114,16 @@ public class ProviderServiceAppService : IProviderServiceService
         }
     }
 
-    public async Task<ServiceResult<ProviderServicePagedDto>> GetPagedAsync(GetServicesQueryDto query)
+    public async Task<ServiceResult<ProviderServiceDto>> GetByShopIdAndCodeAsync(Guid shopId, string code)
+    {
+        var service = await _serviceRepository.GetByShopIdAndCodeAsync(shopId, code);
+        if (service == null)
+            return ServiceResult<ProviderServiceDto>.NotFound(ShipmentMessages.ServiceNotFound);
+
+        return ServiceResult<ProviderServiceDto>.Success(service.ToDto());
+    }
+
+    public async Task<ServiceResult> DeleteAsync(Guid id)
     {
         var page = Math.Max(1, query.Page);
         var limit = Math.Clamp(query.Limit, 1, 100);

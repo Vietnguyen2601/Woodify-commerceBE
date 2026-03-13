@@ -13,7 +13,7 @@ public class ShopDbContext : DbContext
     public DbSet<Shop> Shops { get; set; }
     public DbSet<ShopFollower> ShopFollowers { get; set; }
 
-     private static string? GetConnectionString(string connectionStringName)
+    private static string? GetConnectionString(string connectionStringName)
     {
         var rootEnvPath = FindEnvFile();
         if (rootEnvPath != null && File.Exists(rootEnvPath))
@@ -75,21 +75,33 @@ public class ShopDbContext : DbContext
         {
             entity.ToTable("shops");
             entity.HasKey(e => e.ShopId);
-            
+
             entity.Property(e => e.ShopId).HasColumnName("shop_id");
-            entity.Property(e => e.OwnerAccountId).HasColumnName("owner_account_id");
-            entity.Property(e => e.Name).HasColumnName("name").IsRequired().HasMaxLength(200);
-            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(1000);
-            entity.Property(e => e.Rating).HasColumnName("rating");
-            entity.Property(e => e.CreatedAt).HasColumnName("createdat");
-            entity.Property(e => e.UpdatedAt).HasColumnName("updatedat");
-            entity.Property(e => e.Status).HasColumnName("status");
-            entity.Property(e => e.FollowerCount).HasColumnName("follower_count");
-            
+            entity.Property(e => e.OwnerAccountId).HasColumnName("owner_account_id").IsRequired();
+            entity.Property(e => e.Name).HasColumnName("name").IsRequired();
+            entity.Property(e => e.Description).HasColumnName("description");
+            entity.Property(e => e.LogoUrl).HasColumnName("logo_url");
+            entity.Property(e => e.CoverImageUrl).HasColumnName("cover_image_url");
+            entity.Property(e => e.DefaultPickupAddress).HasColumnName("default_pickup_address");
+            entity.Property(e => e.DefaultProvider).HasColumnName("default_provider");
+            entity.Property(e => e.Rating)
+                .HasColumnName("rating")
+                .HasColumnType("decimal(3,2)")
+                .HasDefaultValue(0m);
+            entity.Property(e => e.ReviewCount).HasColumnName("review_count").HasDefaultValue(0);
+            entity.Property(e => e.TotalProducts).HasColumnName("total_products").HasDefaultValue(0);
+            entity.Property(e => e.TotalOrders).HasColumnName("total_orders").HasDefaultValue(0);
+            entity.Property(e => e.Status)
+                .HasColumnName("status")
+                .HasConversion<string>()
+                .HasDefaultValue(Domain.Enums.ShopStatus.INACTIVE);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
             // Index
             entity.HasIndex(e => e.OwnerAccountId);
             entity.HasIndex(e => e.Name);
-            
+
             // Relationship
             entity.HasMany(s => s.Followers)
                 .WithOne(f => f.Shop)
@@ -101,11 +113,11 @@ public class ShopDbContext : DbContext
         {
             entity.ToTable("shop_followers");
             entity.HasKey(e => e.ShopFollowerId);
-            
+
             entity.Property(e => e.ShopFollowerId).HasColumnName("shop_follower_id");
             entity.Property(e => e.ShopId).HasColumnName("shop_id");
             entity.Property(e => e.AccountId).HasColumnName("account_id");
-            entity.Property(e => e.CreatedAt).HasColumnName("createdat");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
         });
     }
 }

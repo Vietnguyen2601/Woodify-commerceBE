@@ -247,7 +247,7 @@ services:
       - RabbitMQ_Port=${RabbitMQ_Port}
       - RabbitMQ_Username=${RabbitMQ_Username}
       - RabbitMQ_Password=${RabbitMQ_Password}
-      - ProductService_Url=http://woodify-product-service:5012
+      # - ProductService_Url=http://woodify-product-service:5012
     depends_on:
       postgres:
         condition: service_healthy

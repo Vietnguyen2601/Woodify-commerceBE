@@ -71,4 +71,9 @@ public class ShipmentRepository : GenericRepository<Shipment>, IShipmentReposito
     {
         return await _dbSet.AnyAsync(s => s.ShipmentId == id);
     }
+
+    public async Task<bool> ExistsByTrackingNumberAsync(string trackingNumber)
+    {
+        return await _dbSet.AnyAsync(s => s.TrackingNumber == trackingNumber);
+    }
 }

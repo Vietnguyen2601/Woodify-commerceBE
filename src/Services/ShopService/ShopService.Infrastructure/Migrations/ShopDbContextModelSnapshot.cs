@@ -29,40 +29,73 @@ namespace ShopService.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("shop_id");
 
+                    b.Property<string>("CoverImageUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("cover_image_url");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("createdat");
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DefaultPickupAddress")
+                        .HasColumnType("text")
+                        .HasColumnName("default_pickup_address");
+
+                    b.Property<Guid?>("DefaultProvider")
+                        .HasColumnType("uuid")
+                        .HasColumnName("default_provider");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
+                        .HasColumnType("text")
                         .HasColumnName("description");
 
-                    b.Property<int>("FollowerCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("follower_count");
+                    b.Property<string>("LogoUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("logo_url");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasColumnType("text")
                         .HasColumnName("name");
 
                     b.Property<Guid>("OwnerAccountId")
                         .HasColumnType("uuid")
                         .HasColumnName("owner_account_id");
 
-                    b.Property<decimal?>("Rating")
-                        .HasColumnType("numeric")
+                    b.Property<decimal>("Rating")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(3,2)")
+                        .HasDefaultValue(0m)
                         .HasColumnName("rating");
 
-                    b.Property<int>("Status")
+                    b.Property<int>("ReviewCount")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("review_count");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("INACTIVE")
                         .HasColumnName("status");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<int>("TotalOrders")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("total_orders");
+
+                    b.Property<int>("TotalProducts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("total_products");
+
+                    b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updatedat");
+                        .HasColumnName("updated_at");
 
                     b.HasKey("ShopId");
 
@@ -86,7 +119,7 @@ namespace ShopService.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("createdat");
+                        .HasColumnName("created_at");
 
                     b.Property<Guid>("ShopId")
                         .HasColumnType("uuid")

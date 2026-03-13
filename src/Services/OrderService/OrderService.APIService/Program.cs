@@ -7,6 +7,7 @@ using OrderService.Infrastructure.Data.Context;
 using OrderService.Infrastructure.Data.Seeders;
 using OrderService.APIService.Extensions;
 using OrderService.Application.Consumers;
+using OrderService.Application.Services;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
@@ -68,10 +69,14 @@ for (int i = 0; i < 5; i++)
         var consumer = new RabbitMQConsumer(rabbitMQSettings);
         builder.Services.AddSingleton(consumer);
         
-        // Register ProductEventConsumer
+        var publisher = new RabbitMQPublisher(rabbitMQSettings);
+        builder.Services.AddSingleton(publisher);
+        
+        // Register OrderEventPublisher and ProductEventConsumer
+        builder.Services.AddSingleton<OrderEventPublisher>();
         builder.Services.AddSingleton<ProductEventConsumer>();
         
-        Console.WriteLine("RabbitMQ Consumer connected successfully");
+        Console.WriteLine("RabbitMQ Publisher and Consumer connected successfully");
         rabbitMQAvailable = true;
         break;
     }

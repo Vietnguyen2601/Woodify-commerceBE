@@ -35,18 +35,19 @@ public class ProviderServiceRepository : GenericRepository<ProviderService>, IPr
             .ToListAsync();
     }
 
-    public async Task<bool> HasActiveByProviderIdAsync(Guid providerId)
+    public async Task<ProviderService?> GetByCodeAsync(string code)
     {
-        return await _dbSet.AnyAsync(ps =>
-            ps.ProviderId == providerId &&
-            ps.IsActive);
+        return await _dbSet
+            .Include(ps => ps.ShippingProvider)
+            .FirstOrDefaultAsync(ps => ps.Code == code && ps.IsActive);
     }
 
-    public async Task<bool> ExistsByCodeForProviderAsync(Guid providerId, string code)
+    public async Task<ProviderService?> GetByShopIdAndCodeAsync(Guid shopId, string code)
     {
-        return await _dbSet.AnyAsync(ps =>
-            ps.ProviderId == providerId &&
-            ps.Code.ToLower() == code.ToLower());
+        // shopId reserved for future shop-to-provider mapping; currently looks up by code only
+        return await _dbSet
+            .Include(ps => ps.ShippingProvider)
+            .FirstOrDefaultAsync(ps => ps.Code == code && ps.IsActive);
     }
 
     public override async Task<List<ProviderService>> GetAllAsync()

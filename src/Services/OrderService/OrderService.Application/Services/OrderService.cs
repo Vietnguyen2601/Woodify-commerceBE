@@ -3,6 +3,7 @@ using OrderService.Application.Interfaces;
 using OrderService.Domain.Entities;
 using OrderService.Infrastructure.Repositories.IRepositories;
 using Shared.Results;
+using Shared.Events;
 
 namespace OrderService.Application.Services;
 
@@ -12,17 +13,20 @@ public class OrderService : IOrderService
     private readonly ICartRepository _cartRepository;
     private readonly ICartItemRepository _cartItemRepository;
     private readonly IProductVersionCacheRepository _productCacheRepository;
+    private readonly OrderEventPublisher _orderEventPublisher;
 
     public OrderService(
         IOrderRepository orderRepository,
         ICartRepository cartRepository,
         ICartItemRepository cartItemRepository,
-        IProductVersionCacheRepository productCacheRepository)
+        IProductVersionCacheRepository productCacheRepository,
+        OrderEventPublisher orderEventPublisher)
     {
         _orderRepository = orderRepository;
         _cartRepository = cartRepository;
         _cartItemRepository = cartItemRepository;
         _productCacheRepository = productCacheRepository;
+        _orderEventPublisher = orderEventPublisher;
     }
 
     public async Task<ServiceResult<OrderDto>> CreateOrderFromCartAsync(CreateOrderFromCartDto dto)
@@ -38,12 +42,12 @@ public class OrderService : IOrderService
 
             // 2. Validate all cart items comprehensively
             var validationResult = await ValidateCartItemsForCheckoutAsync(cart.CartItems.ToList());
-            
+
             if (!validationResult.IsValid)
             {
-                var errorDetails = validationResult.InvalidItems.Select(item => 
+                var errorDetails = validationResult.InvalidItems.Select(item =>
                     $"Version {item.VersionId}: {item.Reason} - {item.Details}").ToList();
-                
+
                 return ServiceResult<OrderDto>.BadRequest(
                     errorDetails,
                     $"Cannot create order. {validationResult.InvalidItemsCount} of {validationResult.TotalItems} item(s) invalid."
@@ -55,9 +59,9 @@ public class OrderService : IOrderService
                 .Select(ci => ci.CartItemId)
                 .Except(validationResult.InvalidItems.Select(ii => ii.CartItemId))
                 .ToHashSet();
-            
+
             var validItems = cart.CartItems.Where(ci => validCartItemIds.Contains(ci.CartItemId)).ToList();
-            
+
             if (!validItems.Any())
             {
                 return ServiceResult<OrderDto>.BadRequest("No valid items to create order");
@@ -78,7 +82,7 @@ public class OrderService : IOrderService
                 VoucherId = dto.VoucherId,
                 Payment = dto.Payment,
                 Status = OrderStatus.PENDING,
-                DeliveryAddressId = dto.DeliveryAddressId?.ToString(),
+                DeliveryAddressId = dto.DeliveryAddressId,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -105,16 +109,27 @@ public class OrderService : IOrderService
             // 7. Save order to database
             await _orderRepository.CreateAsync(order);
 
-            // 8. Clear cart after successful order creation
+            // 8. Publish OrderCreated event to RabbitMQ for ShipmentService
+            _orderEventPublisher.PublishOrderCreated(new OrderCreatedEvent
+            {
+                OrderId = order.OrderId,
+                ShopId = order.ShopId,
+                AccountId = order.AccountId,
+                DeliveryAddressId = order.DeliveryAddressId,
+                TotalAmountCents = order.TotalAmountCents,
+                CreatedAt = order.CreatedAt
+            });
+
+            // 9. Clear cart after successful order creation
             var cartItemsToRemove = cart.CartItems.ToList();
             foreach (var cartItem in cartItemsToRemove)
             {
                 await _cartItemRepository.RemoveAsync(cartItem);
             }
 
-            // 9. Map to DTO and return
+            // 10. Map to DTO and return
             var orderDto = MapToOrderDto(order);
-            
+
             return ServiceResult<OrderDto>.Success(orderDto, "Order created successfully");
         }
         catch (Exception ex)
@@ -128,7 +143,7 @@ public class OrderService : IOrderService
         try
         {
             var order = await _orderRepository.GetOrderWithItemsAsync(orderId);
-            
+
             if (order == null)
             {
                 return ServiceResult<OrderDto>.NotFound("Order not found");
@@ -148,9 +163,9 @@ public class OrderService : IOrderService
         try
         {
             var orders = await _orderRepository.GetOrdersByAccountIdAsync(accountId);
-            
+
             var orderDtos = orders.Select(o => MapToOrderDto(o)).ToList();
-            
+
             return ServiceResult<List<OrderDto>>.Success(orderDtos);
         }
         catch (Exception ex)
@@ -207,7 +222,7 @@ public class OrderService : IOrderService
         foreach (var cartItem in cartItems)
         {
             var productCache = await _productCacheRepository.GetByVersionIdAsync(cartItem.VersionId);
-            
+
             // Validate 1: Product version exists in cache
             if (productCache == null)
             {
@@ -246,7 +261,7 @@ public class OrderService : IOrderService
                 });
                 continue;
             }
-            
+
             // Validate 2b: Product version is active
             if (!productCache.IsActive)
             {
@@ -259,7 +274,7 @@ public class OrderService : IOrderService
                 });
                 continue;
             }
-            
+
             // Validate 2c: Check stock availability
             if (productCache.StockQuantity < cartItem.Quantity && !productCache.AllowBackorder)
             {
@@ -291,7 +306,7 @@ public class OrderService : IOrderService
             {
                 var priceDifference = productCache.Price - cartItem.Price;
                 var percentageChange = Math.Abs(decimal.Parse((priceDifference / cartItem.Price * 100).ToString()));
-                
+
                 result.InvalidItems.Add(new InvalidCartItemDto
                 {
                     CartItemId = cartItem.CartItemId,

@@ -7,5 +7,6 @@ public enum ShopStatus
 {
     ACTIVE,
     INACTIVE,
-    SUSPENDED
+    SUSPENDED,
+    BANNED
 }
