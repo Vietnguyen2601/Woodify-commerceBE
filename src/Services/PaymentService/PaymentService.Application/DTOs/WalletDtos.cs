@@ -91,21 +91,6 @@ public class WalletTopUpRequest
     /// Phương thức thanh toán: PayOS, MoMo, VNPay (bắt buộc)
     /// </summary>
     public string Method { get; set; } = string.Empty;
-
-    /// <summary>
-    /// URL redirect thành công (tùy chọn - sẽ load từ config nếu không cung cấp)
-    /// </summary>
-    public string? ReturnUrl { get; set; }
-
-    /// <summary>
-    /// URL redirect hủy bỏ (tùy chọn - sẽ load từ config nếu không cung cấp)
-    /// </summary>
-    public string? CancelUrl { get; set; }
-
-    /// <summary>
-    /// Ghi chú
-    /// </summary>
-    public string? Note { get; set; }
 }
 
 #endregion

@@ -148,9 +148,9 @@ public class WalletTopUpService
             _logger.LogInformation("Processing PayOS top-up for wallet: {WalletId}, amount: {Amount}",
                 request.WalletId, request.Amount);
 
-            // Use provided URLs or load from config
-            var returnUrl = request.ReturnUrl ?? _callbackOptions.ReturnUrl;
-            var cancelUrl = request.CancelUrl ?? _callbackOptions.CancelUrl;
+            // Use URLs from config
+            var returnUrl = _callbackOptions.ReturnUrl;
+            var cancelUrl = _callbackOptions.CancelUrl;
 
             // Generate unique order code
             var orderCode = GenerateOrderCode();
@@ -261,15 +261,6 @@ public class WalletTopUpService
 
         if (string.IsNullOrWhiteSpace(request.Method))
             return ValidationResult.Invalid("Phương thức thanh toán không được để trống");
-
-        // Validate URLs if provided
-        if (!string.IsNullOrWhiteSpace(request.ReturnUrl) &&
-            !Uri.TryCreate(request.ReturnUrl, UriKind.Absolute, out _))
-            return ValidationResult.Invalid($"ReturnUrl không hợp lệ: {request.ReturnUrl}");
-
-        if (!string.IsNullOrWhiteSpace(request.CancelUrl) &&
-            !Uri.TryCreate(request.CancelUrl, UriKind.Absolute, out _))
-            return ValidationResult.Invalid($"CancelUrl không hợp lệ: {request.CancelUrl}");
 
         return ValidationResult.Valid();
     }
