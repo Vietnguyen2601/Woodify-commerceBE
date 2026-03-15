@@ -2,11 +2,12 @@ using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.SystemConsole.Themes;
+using PaymentService.Application.DTOs;
 using PaymentService.Application.Interfaces;
 using PaymentService.Application.Services;
 using PaymentService.Application.Consumers;
+using PaymentService.APIService.Services;
 using PaymentService.Infrastructure.Data;
-using PaymentService.Infrastructure.Data.Seeders;
 using PaymentService.Infrastructure.PayOs;
 using PaymentService.Infrastructure.Repositories;
 using Shared.Messaging;
@@ -119,6 +120,26 @@ builder.Services.AddScoped<IWalletRepository, WalletRepository>();
 // ==========================================
 builder.Services.AddScoped<IPaymentAppService, PaymentAppService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
+builder.Services.AddScoped<WalletTopUpService>();
+builder.Services.AddScoped<IPayOsWebhookHandler, PayOsWebhookHandler>();
+// ==========================================
+// 6.1 Background Services (Auto Payment Polling)
+// ==========================================
+// Đăng ký Singleton để có thể inject IPaymentPollingTrigger vào Application Services
+builder.Services.AddSingleton<PaymentStatusPollingHostedService>();
+builder.Services.AddSingleton<IPaymentPollingTrigger>(sp =>
+    sp.GetRequiredService<PaymentStatusPollingHostedService>());
+builder.Services.AddHostedService(sp =>
+    sp.GetRequiredService<PaymentStatusPollingHostedService>());
+
+// ==========================================
+// 6.5 Payment Callback Configuration
+// ==========================================
+builder.Services.Configure<PaymentCallbackOptions>(options =>
+{
+    options.ReturnUrl = Environment.GetEnvironmentVariable("PAYMENT_CALLBACK_RETURN_URL")!;
+    options.CancelUrl = Environment.GetEnvironmentVariable("PAYMENT_CALLBACK_CANCEL_URL")!;
+});
 
 // ==========================================
 // 7. RabbitMQ (Optional - existing configuration)
@@ -180,9 +201,6 @@ using (var scope = app.Services.CreateScope())
     try
     {
         dbContext.Database.Migrate();
-        
-        // Seed initial data
-        await PaymentDbSeeder.SeedAsync(dbContext);
     }
     catch (Exception ex)
     {

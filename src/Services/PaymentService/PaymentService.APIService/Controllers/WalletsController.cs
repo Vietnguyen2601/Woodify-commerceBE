@@ -111,6 +111,31 @@ public class WalletsController : ControllerBase
     }
 
     /// <summary>
+    /// Nạp tiền vào ví qua Payment Gateway (PayOS, MoMo, VNPay,...)
+    /// </summary>
+    [HttpPost("topup")]
+    [ProducesResponseType(typeof(ServiceResult<WalletTopUpResponse>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ServiceResult<WalletTopUpResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ServiceResult<WalletTopUpResponse>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ServiceResult<WalletTopUpResponse>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ServiceResult<WalletTopUpResponse>>> TopUpWallet(
+        [FromBody] WalletTopUpRequest request)
+    {
+        _logger.LogInformation("TopUpWallet request - WalletId: {WalletId}, Amount: {Amount}, Method: {Method}",
+            request.WalletId, request.Amount, request.Method);
+
+        var result = await _walletService.TopUpAsync(request);
+
+        return result.Status switch
+        {
+            201 => CreatedAtAction(nameof(GetWallet), new { walletId = request.WalletId }, result),
+            400 => BadRequest(result),
+            404 => NotFound(result),
+            _ => StatusCode(result.Status, result)
+        };
+    }
+
+    /// <summary>
     /// Trừ tiền từ ví
     /// </summary>
     [HttpPost("{walletId:guid}/debit")]
@@ -156,4 +181,5 @@ public class WalletsController : ControllerBase
             _ => StatusCode(result.Status, result)
         };
     }
+
 }

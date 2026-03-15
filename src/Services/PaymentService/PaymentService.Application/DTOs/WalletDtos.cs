@@ -72,6 +72,42 @@ public class DebitWalletRequest
     public Guid? RelatedPaymentId { get; set; }
 }
 
+/// <summary>
+/// Request nạp tiền vào ví qua Payment Gateway
+/// </summary>
+public class WalletTopUpRequest
+{
+    /// <summary>
+    /// ID Ví (bắt buộc)
+    /// </summary>
+    public Guid WalletId { get; set; }
+
+    /// <summary>
+    /// Số tiền nạp (VND, bắt buộc)
+    /// </summary>
+    public long Amount { get; set; }
+
+    /// <summary>
+    /// Phương thức thanh toán: PayOS, MoMo, VNPay (bắt buộc)
+    /// </summary>
+    public string Method { get; set; } = string.Empty;
+
+    /// <summary>
+    /// URL redirect thành công (tùy chọn - sẽ load từ config nếu không cung cấp)
+    /// </summary>
+    public string? ReturnUrl { get; set; }
+
+    /// <summary>
+    /// URL redirect hủy bỏ (tùy chọn - sẽ load từ config nếu không cung cấp)
+    /// </summary>
+    public string? CancelUrl { get; set; }
+
+    /// <summary>
+    /// Ghi chú
+    /// </summary>
+    public string? Note { get; set; }
+}
+
 #endregion
 
 #region Response DTOs
@@ -152,6 +188,57 @@ public class WalletTransactionResult
     public bool Success { get; set; }
     public Guid TransactionId { get; set; }
     public long NewBalance { get; set; }
+    public string? Message { get; set; }
+}
+
+/// <summary>
+/// Response tạo link nạp tiền
+/// </summary>
+public class WalletTopUpResponse
+{
+    /// <summary>
+    /// ID Payment được tạo
+    /// </summary>
+    public Guid PaymentId { get; set; }
+
+    /// <summary>
+    /// Order code duy nhất cho giao dịch này
+    /// </summary>
+    public long OrderCode { get; set; }
+
+    /// <summary>
+    /// URL redirect thanh toán (từ Payment Gateway)
+    /// </summary>
+    public string PaymentUrl { get; set; } = string.Empty;
+
+    /// <summary>
+    /// QR Code URL (nếu có)
+    /// </summary>
+    public string? QrCodeUrl { get; set; }
+
+    /// <summary>
+    /// Số tiền nạp (VND)
+    /// </summary>
+    public long Amount { get; set; }
+
+    /// <summary>
+    /// Trạng thái: PENDING, PROCESSING, COMPLETED, FAILED
+    /// </summary>
+    public string Status { get; set; } = "PENDING";
+
+    /// <summary>
+    /// Phí giao dịch
+    /// </summary>
+    public long Fee { get; set; } = 0;
+
+    /// <summary>
+    /// Thời gian tạo
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// Ghi chú thêm
+    /// </summary>
     public string? Message { get; set; }
 }
 

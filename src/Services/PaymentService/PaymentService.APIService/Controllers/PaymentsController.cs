@@ -13,13 +13,16 @@ namespace PaymentService.APIService.Controllers;
 public class PaymentsController : ControllerBase
 {
     private readonly IPaymentAppService _paymentAppService;
+    private readonly IPayOsWebhookHandler _webhookHandler;
     private readonly ILogger<PaymentsController> _logger;
 
     public PaymentsController(
         IPaymentAppService paymentAppService,
+        IPayOsWebhookHandler webhookHandler,
         ILogger<PaymentsController> logger)
     {
         _paymentAppService = paymentAppService;
+        _webhookHandler = webhookHandler;
         _logger = logger;
     }
 
@@ -71,33 +74,24 @@ public class PaymentsController : ControllerBase
     /// Cần đăng ký URL này trên PayOS Dashboard.
     /// </remarks>
     [HttpPost("payos/webhook")]
-    [ProducesResponseType(typeof(ServiceResult<WebhookProcessResult>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ServiceResult<WebhookProcessResult>), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ServiceResult<WebhookProcessResult>), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<ServiceResult<WebhookProcessResult>>> HandleWebhook(
-        [FromBody] PayOsWebhookRequest webhook)
+    [ProducesResponseType(typeof(PayOsWebhookResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PayOsWebhookResponse), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PayOsWebhookResponse>> HandleWebhook(
+        [FromBody] PayOsWebhookData webhook)
     {
-        _logger.LogInformation("PayOS webhook received. Code: {Code}, OrderCode: {OrderCode}",
-            webhook.Code, webhook.Data?.OrderCode);
+        _logger.LogInformation("PayOS webhook received. OrderCode: {OrderCode}, Status: {Status}",
+            webhook.Data?.OrderCode, webhook.Data?.Status);
 
-        // Đọc raw body để log và verify signature
-        string? rawBody = null;
-        Request.Body.Position = 0;
-        using (var reader = new StreamReader(Request.Body))
+        var result = await _webhookHandler.HandleWebhookAsync(webhook);
+        
+        // PayOS expects 200 OK with code "00" for success, or code "01" for failure
+        if (result.Code == "00")
         {
-            rawBody = await reader.ReadToEndAsync();
+            return Ok(result);
         }
-
-        var result = await _paymentAppService.ProcessWebhookAsync(webhook, rawBody);
-
-        return result.Status switch
-        {
-            200 => Ok(result),
-            400 => BadRequest(result),
-            401 => Unauthorized(result),
-            404 => NotFound(result),
-            _ => StatusCode(result.Status, result)
-        };
+        
+        _logger.LogWarning("Webhook handler returned error: {Code} - {Desc}", result.Code, result.Desc);
+        return StatusCode(StatusCodes.Status400BadRequest, result);
     }
 
     /// <summary>

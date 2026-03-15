@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using PaymentService.Application.DTOs;
 using PaymentService.Application.Interfaces;
 using PaymentService.Infrastructure.PayOs.Models;
 
@@ -147,7 +148,7 @@ public class PayOsService : IPayOsService
     {
         try
         {
-            _logger.LogInformation("Querying PayOS payment info for orderCode: {OrderCode}", orderCode);
+            _logger.LogDebug("Querying PayOS payment info for orderCode: {OrderCode}", orderCode);
 
             var response = await _httpClient.GetAsync($"/v2/payment-requests/{orderCode}");
             var responseContent = await response.Content.ReadAsStringAsync();
@@ -165,7 +166,7 @@ public class PayOsService : IPayOsService
 
             if (payOsResponse?.IsSuccess == true && payOsResponse.Data != null)
             {
-                _logger.LogInformation("PayOS payment info retrieved. Status: {Status}",
+                _logger.LogDebug("PayOS payment info retrieved. Status: {Status}",
                     payOsResponse.Data.Status);
 
                 return new PayOsPaymentInfoResult

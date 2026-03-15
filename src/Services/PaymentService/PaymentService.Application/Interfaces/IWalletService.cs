@@ -38,4 +38,6 @@ public interface IWalletService
     /// </summary>
     Task<ServiceResult<WalletTransactionListResponse>> GetTransactionsAsync(
         Guid walletId, int page = 1, int pageSize = 20);
+
+    Task<ServiceResult<WalletTopUpResponse>> TopUpAsync(WalletTopUpRequest request);
 }
