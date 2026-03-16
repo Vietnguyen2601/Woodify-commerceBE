@@ -10,4 +10,5 @@ public interface IOrderRepository : IGenericRepository<Order>
 {
     Task<Order?> GetOrderWithItemsAsync(Guid orderId);
     Task<List<Order>> GetOrdersByAccountIdAsync(Guid accountId);
+    Task<List<Order>> GetOrdersByShopIdAsync(Guid shopId);
 }

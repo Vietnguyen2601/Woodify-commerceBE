@@ -28,6 +28,15 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
             .ToListAsync();
     }
 
+    public async Task<List<Order>> GetOrdersByShopIdAsync(Guid shopId)
+    {
+        return await _dbSet
+            .Include(o => o.OrderItems)
+            .Where(o => o.ShopId == shopId)
+            .OrderByDescending(o => o.CreatedAt)
+            .ToListAsync();
+    }
+
     public override async Task<Order?> GetByIdAsync(Guid id)
     {
         return await _dbSet

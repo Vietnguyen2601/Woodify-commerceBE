@@ -7,11 +7,11 @@ public class CreateShipmentValidator : AbstractValidator<CreateShipmentDto>
 {
     public CreateShipmentValidator()
     {
+        RuleFor(x => x.ShopId)
+            .NotEmpty().WithMessage("ShopId is required");
+
         RuleFor(x => x.OrderId)
             .NotEmpty().WithMessage("OrderId is required");
-
-        RuleFor(x => x.ProviderServiceCode)
-            .NotEmpty().WithMessage("ProviderServiceCode is required");
     }
 }
 

@@ -85,7 +85,7 @@ public class OrderDbContext : DbContext
         {
             entity.ToTable("carts");
             entity.HasKey(e => e.CartId);
-            
+
             entity.Property(e => e.CartId).HasColumnName("cart_id");
             entity.Property(e => e.AccountId).HasColumnName("account_id").IsRequired();
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
@@ -101,7 +101,7 @@ public class OrderDbContext : DbContext
         {
             entity.ToTable("cart_items");
             entity.HasKey(e => e.CartItemId);
-            
+
             entity.Property(e => e.CartItemId).HasColumnName("cart_item_id");
             entity.Property(e => e.CartId).HasColumnName("cart_id").IsRequired();
             entity.Property(e => e.VersionId).HasColumnName("version_id").IsRequired();
@@ -127,42 +127,42 @@ public class OrderDbContext : DbContext
         {
             entity.ToTable("product_version_cache");
             entity.HasKey(e => e.VersionId);
-            
+
             entity.Property(e => e.VersionId).HasColumnName("version_id");
             entity.Property(e => e.ProductId).HasColumnName("product_id").IsRequired();
             entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
-            
+
             // Product Master Info
             entity.Property(e => e.ProductName).HasColumnName("product_name").HasMaxLength(500).IsRequired();
             entity.Property(e => e.ProductDescription).HasColumnName("product_description").HasMaxLength(2000);
             entity.Property(e => e.ProductStatus).HasColumnName("product_status").HasMaxLength(50);
-            
+
             // Version Info
             entity.Property(e => e.SellerSku).HasColumnName("seller_sku").HasMaxLength(255).IsRequired();
             entity.Property(e => e.VersionNumber).HasColumnName("version_number");
             entity.Property(e => e.VersionName).HasColumnName("version_name").HasMaxLength(255);
-            
+
             // Pricing
             entity.Property(e => e.Price).HasColumnName("price").HasColumnType("decimal(18,2)").IsRequired();
             entity.Property(e => e.Currency).HasColumnName("currency").HasMaxLength(10);
-            
+
             // Stock
             entity.Property(e => e.StockQuantity).HasColumnName("stock_quantity").HasDefaultValue(0);
-            
+
             // Shipping Dimensions
             entity.Property(e => e.WoodType).HasColumnName("wood_type").HasMaxLength(200);
             entity.Property(e => e.WeightGrams).HasColumnName("weight_grams");
             entity.Property(e => e.LengthCm).HasColumnName("length_cm").HasColumnType("decimal(10,2)");
             entity.Property(e => e.WidthCm).HasColumnName("width_cm").HasColumnType("decimal(10,2)");
             entity.Property(e => e.HeightCm).HasColumnName("height_cm").HasColumnType("decimal(10,2)");
-            
+
             // Status
             entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
-            
+
             // Soft Delete
             entity.Property(e => e.IsDeleted).HasColumnName("is_deleted").IsRequired().HasDefaultValue(false);
             entity.Property(e => e.DeletedAt).HasColumnName("deleted_at");
-            
+
             // Sync tracking
             entity.Property(e => e.LastUpdated).HasColumnName("last_updated").IsRequired();
 
@@ -180,7 +180,7 @@ public class OrderDbContext : DbContext
         {
             entity.ToTable("orders");
             entity.HasKey(e => e.OrderId);
-            
+
             entity.Property(e => e.OrderId).HasColumnName("order_id");
             entity.Property(e => e.AccountId).HasColumnName("account_id").IsRequired();
             entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
@@ -192,7 +192,7 @@ public class OrderDbContext : DbContext
                 .HasConversion<string>()
                 .HasMaxLength(50)
                 .HasDefaultValue(OrderStatus.PENDING);
-            entity.Property(e => e.DeliveryAddressId).HasColumnName("delivery_address_id");
+            entity.Property(e => e.DeliveryAddress).HasColumnName("delivery_address");
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 
@@ -209,7 +209,7 @@ public class OrderDbContext : DbContext
         {
             entity.ToTable("order_items");
             entity.HasKey(e => e.OrderItemId);
-            
+
             entity.Property(e => e.OrderItemId).HasColumnName("order_item_id");
             entity.Property(e => e.OrderId).HasColumnName("order_id").IsRequired();
             entity.Property(e => e.VersionId).HasColumnName("version_id").IsRequired();

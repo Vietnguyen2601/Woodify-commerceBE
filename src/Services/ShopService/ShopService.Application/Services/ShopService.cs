@@ -45,6 +45,24 @@ public class ShopService : IShopService
             await _unitOfWork.Shops.AddAsync(shop);
             await _unitOfWork.SaveChangesAsync();
 
+            // 🔔 Publish ShopCreated event
+            if (_rabbitPublisher != null)
+            {
+                var shopCreatedEvent = new ShopCreatedEvent
+                {
+                    ShopId = shop.ShopId,
+                    ShopName = shop.Name,
+                    OwnerId = shop.OwnerAccountId,
+                    DefaultPickupAddress = shop.DefaultPickupAddress,
+                    DefaultProvider = shop.DefaultProvider,
+                    DefaultProviderServiceCode = null,
+                    CreatedAt = shop.CreatedAt
+                };
+
+                _rabbitPublisher.Publish("shop.events", "shop.created", shopCreatedEvent);
+                Console.WriteLine($"[ShopService] Published ShopCreated event: ShopId={shop.ShopId}, ShopName={shop.Name}");
+            }
+
             var response = new RegisterShopResponseDto
             {
                 ShopId = shop.ShopId,
@@ -91,6 +109,26 @@ public class ShopService : IShopService
             shop.MapToShopInfo(dto);
             _unitOfWork.Shops.Update(shop);
             await _unitOfWork.SaveChangesAsync();
+
+            // 🔔 Publish ShopUpdated event
+            if (_rabbitPublisher != null)
+            {
+                var shopUpdatedEvent = new ShopUpdatedEvent
+                {
+                    ShopId = shop.ShopId,
+                    ShopName = shop.Name,
+                    ShopPhone = null,
+                    ShopEmail = null,
+                    ShopAddress = null,
+                    DefaultPickupAddress = shop.DefaultPickupAddress,
+                    DefaultProvider = shop.DefaultProvider,
+                    DefaultProviderServiceCode = null,
+                    UpdatedAt = shop.UpdatedAt ?? DateTime.UtcNow
+                };
+
+                _rabbitPublisher.Publish("shop.events", "shop.updated", shopUpdatedEvent);
+                Console.WriteLine($"[ShopService] Published ShopUpdated event: ShopId={shop.ShopId}, ShopName={shop.Name}");
+            }
 
             var response = new UpdateShopInfoResponseDto
             {
@@ -256,10 +294,14 @@ public class ShopService : IShopService
                     ShopId = shop.ShopId,
                     ShopName = shop.Name,
                     OwnerId = shop.OwnerAccountId,
+                    DefaultPickupAddress = shop.DefaultPickupAddress,
+                    DefaultProvider = shop.DefaultProvider,
+                    DefaultProviderServiceCode = null,
                     CreatedAt = shop.CreatedAt
                 };
 
-                _rabbitPublisher.PublishToQueue("shop.created", shopCreatedEvent);
+                _rabbitPublisher.Publish("shop.events", "shop.created", shopCreatedEvent);
+                Console.WriteLine($"[ShopService] Published ShopCreated event: ShopId={shop.ShopId}, ShopName={shop.Name}");
             }
 
             return ServiceResult<ShopDto>.Created(shop.ToDto(), "Shop created successfully");
@@ -285,6 +327,25 @@ public class ShopService : IShopService
             shop.MapToUpdate(dto);
             _unitOfWork.Shops.Update(shop);
             await _unitOfWork.SaveChangesAsync();
+
+            // 🔔 Publish ShopUpdated event
+            if (_rabbitPublisher != null)
+            {
+                var shopUpdatedEvent = new ShopUpdatedEvent
+                {
+                    ShopId = shop.ShopId,
+                    ShopName = shop.Name,
+                    ShopPhone = null,
+                    ShopEmail = null,
+                    ShopAddress = null,
+                    DefaultPickupAddress = shop.DefaultPickupAddress,
+                    DefaultProviderServiceCode = shop.DefaultProvider?.ToString(),
+                    UpdatedAt = shop.UpdatedAt ?? DateTime.UtcNow
+                };
+
+                _rabbitPublisher.Publish("shop.events", "shop.updated", shopUpdatedEvent);
+                Console.WriteLine($"[ShopService] Published ShopUpdated event: ShopId={shop.ShopId}, ShopName={shop.Name}");
+            }
 
             return ServiceResult<ShopDto>.Success(shop.ToDto(), "Shop updated successfully");
         }

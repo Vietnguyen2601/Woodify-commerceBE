@@ -1,5 +1,6 @@
 using Shared.Events;
 using Shared.Messaging;
+using ShipmentService.Infrastructure.Cache;
 
 namespace ShipmentService.Application.Consumers;
 
@@ -10,10 +11,14 @@ namespace ShipmentService.Application.Consumers;
 public class ShopEventConsumer
 {
     private readonly RabbitMQConsumer _rabbitMQConsumer;
+    private readonly IShopInfoCacheRepository _shopInfoCache;
 
-    public ShopEventConsumer(RabbitMQConsumer rabbitMQConsumer)
+    public ShopEventConsumer(
+        RabbitMQConsumer rabbitMQConsumer,
+        IShopInfoCacheRepository shopInfoCache)
     {
         _rabbitMQConsumer = rabbitMQConsumer;
+        _shopInfoCache = shopInfoCache;
     }
 
     public void StartListening()
@@ -44,22 +49,20 @@ public class ShopEventConsumer
         {
             Console.WriteLine($"[ShipmentService] Received ShopUpdated event: ShopId={evt.ShopId}, ShopName={evt.ShopName}");
 
-            // TODO: Cache shop info locally (address, contact info for shipping calculations)
-            // Store shop location, phone, email for calculating shipping routes
-            var shopInfo = new
+            // Cache shop info locally (address, contact info for shipping calculations)
+            var shopInfo = new ShopInfoCache
             {
-                evt.ShopId,
-                evt.ShopName,
-                evt.ShopPhone,
-                evt.ShopEmail,
-                Address = $"{evt.ShopAddress}, {evt.ShopWard}, {evt.ShopDistrict}, {evt.ShopCity}, {evt.ShopProvince}",
-                evt.UpdatedAt
+                ShopId = evt.ShopId,
+                ShopName = evt.ShopName,
+                DefaultPickupAddress = evt.DefaultPickupAddress,
+                DefaultProvider = evt.DefaultProvider,
+                DefaultProviderServiceCode = evt.DefaultProviderServiceCode ?? "STD",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = evt.UpdatedAt
             };
 
-            // This would typically update a ShopInfoCache or similar repository
-            Console.WriteLine($"[ShipmentService] Shop info cached: {shopInfo.ShopName} at {shopInfo.Address}");
-
-            await Task.CompletedTask; // Placeholder for actual cache update
+            await _shopInfoCache.SaveShopInfoAsync(shopInfo);
+            Console.WriteLine($"[ShipmentService] Shop info cached: {shopInfo.ShopName}, Provider: {evt.DefaultProvider}, Code: {shopInfo.DefaultProviderServiceCode}");
         }
         catch (Exception ex)
         {
@@ -73,10 +76,20 @@ public class ShopEventConsumer
         {
             Console.WriteLine($"[ShipmentService] Received ShopCreated event: ShopId={evt.ShopId}, ShopName={evt.ShopName}");
 
-            // TODO: Initialize shop info in cache
-            Console.WriteLine($"[ShipmentService] New shop registered: {evt.ShopName}");
+            // Initialize shop info in cache
+            var shopInfo = new ShopInfoCache
+            {
+                ShopId = evt.ShopId,
+                ShopName = evt.ShopName,
+                DefaultPickupAddress = evt.DefaultPickupAddress,
+                DefaultProvider = evt.DefaultProvider,
+                DefaultProviderServiceCode = evt.DefaultProviderServiceCode ?? "STD",
+                CreatedAt = evt.CreatedAt,
+                UpdatedAt = null
+            };
 
-            await Task.CompletedTask; // Placeholder for actual cache initialization
+            await _shopInfoCache.SaveShopInfoAsync(shopInfo);
+            Console.WriteLine($"[ShipmentService] New shop cached: {evt.ShopName}, Provider: {evt.DefaultProvider}, Code: {shopInfo.DefaultProviderServiceCode}");
         }
         catch (Exception ex)
         {

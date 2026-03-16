@@ -16,8 +16,8 @@ public static class ShipmentMapper
             TrackingNumber = shipment.TrackingNumber,
             ProviderServiceCode = shipment.ProviderService?.Code,
             ShippingProviderName = shipment.ProviderService?.ShippingProvider?.Name,
-            PickupAddressId = shipment.PickupAddressId,
-            DeliveryAddressId = shipment.DeliveryAddressId,
+            PickupAddress = shipment.PickupAddressId,
+            DeliveryAddress = shipment.DeliveryAddressId,
             TotalWeightGrams = shipment.TotalWeightGrams,
             BulkyType = shipment.BulkyType,
             FinalShippingFeeCents = shipment.FinalShippingFeeCents,
@@ -39,9 +39,8 @@ public static class ShipmentMapper
         {
             OrderId = dto.OrderId,
             // TrackingNumber, ProviderServiceId, BulkyType, FinalShippingFeeCents, DeliveryEstimatedAt are set by the service
-            PickupAddressId = dto.PickupAddressId,
-            DeliveryAddressId = dto.DeliveryAddressId,
-            IsFreeShipping = dto.IsFreeShipping
+            PickupAddressId = dto.PickupAddress,
+            DeliveryAddressId = dto.DeliveryAddress
         };
     }
 
@@ -52,8 +51,8 @@ public static class ShipmentMapper
 
         if (dto.TrackingNumber != null) shipment.TrackingNumber = dto.TrackingNumber;
         if (dto.ProviderServiceId.HasValue) shipment.ProviderServiceId = dto.ProviderServiceId;
-        if (dto.PickupAddressId != null) shipment.PickupAddressId = dto.PickupAddressId;
-        if (dto.DeliveryAddressId != null) shipment.DeliveryAddressId = dto.DeliveryAddressId;
+        if (dto.PickupAddress != null) shipment.PickupAddressId = dto.PickupAddress;
+        if (dto.DeliveryAddress != null) shipment.DeliveryAddressId = dto.DeliveryAddress;
         if (dto.TotalWeightGrams.HasValue) shipment.TotalWeightGrams = dto.TotalWeightGrams.Value;
         if (dto.BulkyType != null) shipment.BulkyType = dto.BulkyType;
         if (dto.FinalShippingFeeCents.HasValue) shipment.FinalShippingFeeCents = dto.FinalShippingFeeCents.Value;

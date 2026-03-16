@@ -11,4 +11,6 @@ public interface IOrderService
     Task<ServiceResult<OrderDto>> CreateOrderFromCartAsync(CreateOrderFromCartDto dto);
     Task<ServiceResult<OrderDto>> GetOrderByIdAsync(Guid orderId);
     Task<ServiceResult<List<OrderDto>>> GetOrdersByAccountIdAsync(Guid accountId);
+    Task<ServiceResult<List<OrderWithProductDetailsDto>>> GetOrdersByShopIdAsync(Guid shopId);
+    Task<ServiceResult<OrderDto>> UpdateOrderStatusAsync(UpdateOrderStatusDto dto);
 }

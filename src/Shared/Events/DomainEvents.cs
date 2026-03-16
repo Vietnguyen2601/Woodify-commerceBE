@@ -2,13 +2,16 @@ namespace Shared.Events;
 
 /// <summary>
 /// Event khi Shop được tạo mới
-/// ShopService publish → AccountService consume
+/// ShopService publish → AccountService consume, ShipmentService consume
 /// </summary>
 public class ShopCreatedEvent
 {
     public Guid ShopId { get; set; }
     public string ShopName { get; set; } = string.Empty;
     public Guid OwnerId { get; set; }
+    public string? DefaultPickupAddress { get; set; }
+    public Guid? DefaultProvider { get; set; }
+    public string? DefaultProviderServiceCode { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 
@@ -36,6 +39,9 @@ public class ShopUpdatedEvent
     public string? ShopDistrict { get; set; }
     public string? ShopWard { get; set; }
     public string? ShopProvince { get; set; }
+    public string? DefaultPickupAddress { get; set; }
+    public Guid? DefaultProvider { get; set; }
+    public string? DefaultProviderServiceCode { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
 
@@ -49,7 +55,7 @@ public class OrderCreatedEvent
     public Guid OrderId { get; set; }
     public Guid ShopId { get; set; }
     public Guid AccountId { get; set; }
-    public string? DeliveryAddressId { get; set; }
+    public string? DeliveryAddress { get; set; }
     public double TotalAmountCents { get; set; }
     public DateTime CreatedAt { get; set; }
 }

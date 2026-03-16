@@ -4,20 +4,15 @@
 public class ShippingFeePreviewRequest
 {
     public Guid ShopId { get; set; }
-    public string ProviderServiceCode { get; set; } = string.Empty;
-    public double TotalWeightGrams { get; set; }
+    public Guid OrderId { get; set; }
+    public string? ProviderServiceCode { get; set; }
 
-    /// <summary>NORMAL | BULKY (+20%) | SUPER_BULKY (+50%)</summary>
-    public string BulkyType { get; set; } = "NORMAL";
+    /// <summary>Pickup address (optional - not used in mock calculation)</summary>
+    public string? PickupAddress { get; set; }
 
-    /// <summary>GHN pickup address: "{from_district_id}" e.g. "1442"</summary>
-    public string PickupAddressId { get; set; } = string.Empty;
+    /// <summary>Delivery address (optional - not used in mock calculation)</summary>
+    public string? DeliveryAddress { get; set; }
 
-    /// <summary>GHN delivery address: "{district_id}_{ward_code}" e.g. "1444_21105"</summary>
-    public string DeliveryAddressId { get; set; } = string.Empty;
-
-    /// <summary>Order subtotal in cents - used to check freeship threshold.</summary>
-    public long? SubtotalCents { get; set; }
     public Guid? VoucherId { get; set; }
 }
 

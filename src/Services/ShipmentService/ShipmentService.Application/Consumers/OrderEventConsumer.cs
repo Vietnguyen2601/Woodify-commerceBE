@@ -54,7 +54,7 @@ public class OrderEventConsumer
                 OrderId = evt.OrderId,
                 ShopId = evt.ShopId,
                 AccountId = evt.AccountId,
-                DeliveryAddressId = evt.DeliveryAddressId,
+                DeliveryAddress = evt.DeliveryAddress,
                 TotalAmountCents = evt.TotalAmountCents,
                 CreatedAt = evt.CreatedAt
             };

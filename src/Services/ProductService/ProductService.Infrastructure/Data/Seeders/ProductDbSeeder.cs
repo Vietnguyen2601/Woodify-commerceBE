@@ -95,10 +95,9 @@ public static class ProductDbSeeder
         // Seed ProductMasters và ProductVersions nếu chưa có
         if (!dbContext.ProductMasters.Any())
         {
-            // Các seller ID cần được lấy từ IdentityService
-            // Sử dụng các GUIDs ngẫu nhiên cho demo
-            var seller01Id = Guid.NewGuid();
-            var seller02Id = Guid.NewGuid();
+            // Sử dụng các GUIDs từ Seller accounts đã được tạo
+            var seller01Id = new Guid("f4a5b6c7-d8e9-4f0a-1b2c-3d4e5f6a7b8c"); // Shop của Seller 01
+            var seller02Id = new Guid("a5b6c7d8-e9f0-4a1b-2c3d-4e5f6a7b8c9d"); // Shop của Seller 02
 
             var livingRoomCat = dbContext.Categories.FirstOrDefault(c => c.Name == "Nội thất phòng khách");
             var bedroomCat = dbContext.Categories.FirstOrDefault(c => c.Name == "Nội thất phòng ngủ");
@@ -109,9 +108,10 @@ public static class ProductDbSeeder
 
             var productMasters = new List<ProductMaster>
             {
+                // Seller 01 - Product 1
                 new()
                 {
-                    ProductId = Guid.NewGuid(),
+                    ProductId = new Guid("b6c7d8e9-f0a1-4b2c-3d4e-5f6a7b8c9d0e"),
                     ShopId = seller01Id,
                     CategoryId = livingRoomCat?.CategoryId ?? Guid.NewGuid(),
                     Name = "Ghế Sofa Gỗ Óc Chó Cao Cấp",
@@ -124,9 +124,10 @@ public static class ProductDbSeeder
                     UpdatedAt = DateTime.UtcNow.AddDays(-5),
                     PublishedAt = DateTime.UtcNow.AddDays(-5)
                 },
+                // Seller 01 - Product 2
                 new()
                 {
-                    ProductId = Guid.NewGuid(),
+                    ProductId = new Guid("c7d8e9f0-a1b2-4c3d-4e5f-6a7b8c9d0e1f"),
                     ShopId = seller01Id,
                     CategoryId = bedroomCat?.CategoryId ?? Guid.NewGuid(),
                     Name = "Giường Ngủ Gỗ Sồi 1m8",
@@ -139,10 +140,11 @@ public static class ProductDbSeeder
                     UpdatedAt = DateTime.UtcNow.AddDays(-10),
                     PublishedAt = DateTime.UtcNow.AddDays(-10)
                 },
+                // Seller 02 - Product 1
                 new()
                 {
-                    ProductId = Guid.NewGuid(),
-                    ShopId = seller01Id,
+                    ProductId = new Guid("d8e9f0a1-b2c3-4d4e-5f6a-7b8c9d0e1f2a"),
+                    ShopId = seller02Id,
                     CategoryId = diningCat?.CategoryId ?? Guid.NewGuid(),
                     Name = "Bàn Ăn Gỗ Teak 6 Ghế",
                     GlobalSku = "WOOD-TABLE-001",
@@ -154,9 +156,10 @@ public static class ProductDbSeeder
                     UpdatedAt = DateTime.UtcNow.AddDays(-15),
                     PublishedAt = DateTime.UtcNow.AddDays(-15)
                 },
+                // Seller 02 - Product 2
                 new()
                 {
-                    ProductId = Guid.NewGuid(),
+                    ProductId = new Guid("e9f0a1b2-c3d4-4e5f-6a7b-8c9d0e1f2a3b"),
                     ShopId = seller02Id,
                     CategoryId = officeCat?.CategoryId ?? Guid.NewGuid(),
                     Name = "Bàn Làm Việc Gỗ Ash Hiện Đại",
@@ -168,83 +171,26 @@ public static class ProductDbSeeder
                     CreatedAt = DateTime.UtcNow.AddDays(-20),
                     UpdatedAt = DateTime.UtcNow.AddDays(-8),
                     PublishedAt = DateTime.UtcNow.AddDays(-8)
-                },
-                new()
-                {
-                    ProductId = Guid.NewGuid(),
-                    ShopId = seller02Id,
-                    CategoryId = decorCat?.CategoryId ?? Guid.NewGuid(),
-                    Name = "Khung Gương Gỗ Hương Tròn",
-                    GlobalSku = "WOOD-DECOR-001",
-                    Description = "Khung gương trang trí được chạm khắc tinh xảo từ gỗ hương. Đường kính: 60cm",
-                    Status = ProductStatus.PUBLISHED,
-                    ModerationStatus = ModerationStatus.APPROVED,
-                    ModeratedAt = DateTime.UtcNow.AddDays(-12),
-                    CreatedAt = DateTime.UtcNow.AddDays(-25),
-                    UpdatedAt = DateTime.UtcNow.AddDays(-12),
-                    PublishedAt = DateTime.UtcNow.AddDays(-12)
-                },
-new()
-                {
-                    ProductId = Guid.NewGuid(),
-                    ShopId = seller02Id,
-                    CategoryId = outdoorCat?.CategoryId ?? Guid.NewGuid(),
-                    Name = "Bàn Ghế Sân Vườn Gỗ Lim",
-                    GlobalSku = null,
-                    Description = "Bộ bàn ghế sân vườn 4 chỗ ngồi, gỗ lim chống mối mọt tự nhiên",
-                    Status = ProductStatus.PENDING_APPROVAL,
-                    ModerationStatus = ModerationStatus.PENDING,
-                    CreatedAt = DateTime.UtcNow.AddDays(-2),
-                    UpdatedAt = DateTime.UtcNow.AddDays(-2)
-                },
-                new()
-                {
-                    ProductId = Guid.NewGuid(),
-                    ShopId = seller01Id,
-                    CategoryId = livingRoomCat?.CategoryId ?? Guid.NewGuid(),
-                    Name = "Kệ Tivi Gỗ Tần Bì",
-                    GlobalSku = "WOOD-TV-001",
-                    Description = "Kệ tivi gỗ tần bì thiết kế tối giản, nhiều ngăn lưu trữ. Kích thước: 1.8m x 0.4m x 0.5m",
-                    Status = ProductStatus.APPROVED,
-                    ModerationStatus = ModerationStatus.APPROVED,
-                    ModeratedAt = DateTime.UtcNow.AddDays(-1),
-                    CreatedAt = DateTime.UtcNow.AddDays(-3),
-                    UpdatedAt = DateTime.UtcNow.AddDays(-1)
-                },
-                new()
-                {
-                    ProductId = Guid.NewGuid(),
-                    ShopId = seller02Id,
-                    CategoryId = bedroomCat?.CategoryId ?? Guid.NewGuid(),
-                    Name = "Tủ Quần Áo Gỗ Sồi Trắng",
-                    GlobalSku = null,
-                    Description = "Tủ quần áo gỗ sồi trắng 4 cánh, thiết kế hiện đại với gương toàn thân",
-                    Status = ProductStatus.REJECTED,
-                    ModerationStatus = ModerationStatus.REJECTED,
-                    ModeratedAt = DateTime.UtcNow.AddDays(-1),
-                    CreatedAt = DateTime.UtcNow.AddDays(-4),
-                    UpdatedAt = DateTime.UtcNow.AddDays(-1)
                 }
             };
 
             dbContext.ProductMasters.AddRange(productMasters);
             await dbContext.SaveChangesAsync();
 
-            // Seed ProductVersions cho các sản phẩm đã được tạo
-            var sofa = productMasters.FirstOrDefault(p => p.Name == "Ghế Sofa Gỗ Óc Chó Cao Cấp");
-            var bed = productMasters.FirstOrDefault(p => p.Name == "Giường Ngủ Gỗ Sồi 1m8");
-            var table = productMasters.FirstOrDefault(p => p.Name == "Bàn Ăn Gỗ Teak 6 Ghế");
-            var desk = productMasters.FirstOrDefault(p => p.Name == "Bàn Làm Việc Gỗ Ash Hiện Đại");
-            var mirror = productMasters.FirstOrDefault(p => p.Name == "Khung Gương Gỗ Hương Tròn");
-            var tvStand = productMasters.FirstOrDefault(p => p.Name == "Kệ Tivi Gỗ Tần Bì");
+            // Seed ProductVersions: 2 versions cho mỗi product
+            var sofa = productMasters.FirstOrDefault(p => p.ProductId == new Guid("b6c7d8e9-f0a1-4b2c-3d4e-5f6a7b8c9d0e"));
+            var bed = productMasters.FirstOrDefault(p => p.ProductId == new Guid("c7d8e9f0-a1b2-4c3d-4e5f-6a7b8c9d0e1f"));
+            var table = productMasters.FirstOrDefault(p => p.ProductId == new Guid("d8e9f0a1-b2c3-4d4e-5f6a-7b8c9d0e1f2a"));
+            var desk = productMasters.FirstOrDefault(p => p.ProductId == new Guid("e9f0a1b2-c3d4-4e5f-6a7b-8c9d0e1f2a3b"));
 
             var productVersions = new List<ProductVersion>();
 
+            // Sofa - Version 1 & 2
             if (sofa != null)
             {
                 productVersions.Add(new ProductVersion
                 {
-                    VersionId = Guid.NewGuid(),
+                    VersionId = new Guid("f0a1b2c3-d4e5-4f6a-7b8c-9d0e1f2a3b4c"),
                     ProductId = sofa.ProductId,
                     SellerSku = "SOFA-OC-CHO-V1",
                     VersionNumber = 1,
@@ -257,16 +203,35 @@ new()
                     WidthCm = 90,
                     HeightCm = 80,
                     IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow.AddDays(-25),
+                    UpdatedAt = DateTime.UtcNow.AddDays(-25)
+                });
+                productVersions.Add(new ProductVersion
+                {
+                    VersionId = new Guid("a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"),
+                    ProductId = sofa.ProductId,
+                    SellerSku = "SOFA-OC-CHO-V2",
+                    VersionNumber = 2,
+                    VersionName = "Phiên bản sang trọng",
+                    Price = 32000000, // 32,000,000 VND
+                    StockQuantity = 5,
+                    WoodType = "Óc Chó",
+                    WeightGrams = 90000,
+                    LengthCm = 200,
+                    WidthCm = 100,
+                    HeightCm = 85,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow.AddDays(-20),
+                    UpdatedAt = DateTime.UtcNow.AddDays(-20)
                 });
             }
 
+            // Bed - Version 1 & 2
             if (bed != null)
             {
                 productVersions.Add(new ProductVersion
                 {
-                    VersionId = Guid.NewGuid(),
+                    VersionId = new Guid("b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e"),
                     ProductId = bed.ProductId,
                     SellerSku = "BED-SOI-1M8-V1",
                     VersionNumber = 1,
@@ -279,16 +244,35 @@ new()
                     WidthCm = 180,
                     HeightCm = 40,
                     IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow.AddDays(-40),
+                    UpdatedAt = DateTime.UtcNow.AddDays(-40)
+                });
+                productVersions.Add(new ProductVersion
+                {
+                    VersionId = new Guid("c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f"),
+                    ProductId = bed.ProductId,
+                    SellerSku = "BED-SOI-1M8-V2",
+                    VersionNumber = 2,
+                    VersionName = "Giường cao cấp ngoại nhập",
+                    Price = 22000000, // 22,000,000 VND
+                    StockQuantity = 8,
+                    WoodType = "Sồi",
+                    WeightGrams = 125000,
+                    LengthCm = 200,
+                    WidthCm = 180,
+                    HeightCm = 45,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow.AddDays(-35),
+                    UpdatedAt = DateTime.UtcNow.AddDays(-35)
                 });
             }
 
+            // Table - Version 1 & 2
             if (table != null)
             {
                 productVersions.Add(new ProductVersion
                 {
-                    VersionId = Guid.NewGuid(),
+                    VersionId = new Guid("d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a"),
                     ProductId = table.ProductId,
                     SellerSku = "TABLE-TEAK-6G-V1",
                     VersionNumber = 1,
@@ -301,16 +285,35 @@ new()
                     WidthCm = 90,
                     HeightCm = 75,
                     IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow.AddDays(-55),
+                    UpdatedAt = DateTime.UtcNow.AddDays(-55)
+                });
+                productVersions.Add(new ProductVersion
+                {
+                    VersionId = new Guid("e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b"),
+                    ProductId = table.ProductId,
+                    SellerSku = "TABLE-TEAK-6G-V2",
+                    VersionNumber = 2,
+                    VersionName = "Combo bàn ăn mở rộng",
+                    Price = 38000000, // 38,000,000 VND
+                    StockQuantity = 5,
+                    WoodType = "Teak",
+                    WeightGrams = 100000,
+                    LengthCm = 180,
+                    WidthCm = 100,
+                    HeightCm = 75,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow.AddDays(-50),
+                    UpdatedAt = DateTime.UtcNow.AddDays(-50)
                 });
             }
 
+            // Desk - Version 1 & 2
             if (desk != null)
             {
                 productVersions.Add(new ProductVersion
                 {
-                    VersionId = Guid.NewGuid(),
+                    VersionId = new Guid("f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c"),
                     ProductId = desk.ProductId,
                     SellerSku = "DESK-ASH-MOD-V1",
                     VersionNumber = 1,
@@ -323,52 +326,26 @@ new()
                     WidthCm = 60,
                     HeightCm = 75,
                     IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow.AddDays(-15),
+                    UpdatedAt = DateTime.UtcNow.AddDays(-15)
                 });
-            }
-
-            if (mirror != null)
-            {
                 productVersions.Add(new ProductVersion
                 {
-                    VersionId = Guid.NewGuid(),
-                    ProductId = mirror.ProductId,
-                    SellerSku = "MIRROR-HUONG-V1",
-                    VersionNumber = 1,
-                    VersionName = "Khung gương tròn 60cm",
-                    Price = 4500000, // 4,500,000 VND
-                    StockQuantity = 25,
-                    WoodType = "Hương",
-                    WeightGrams = 8000,
-                    LengthCm = 60,
-                    WidthCm = 60,
-                    HeightCm = 5,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                });
-            }
-
-            if (tvStand != null)
-            {
-                productVersions.Add(new ProductVersion
-                {
-                    VersionId = Guid.NewGuid(),
-                    ProductId = tvStand.ProductId,
-                    SellerSku = "TV-STAND-ASH-V1",
-                    VersionNumber = 1,
-                    VersionName = "Kệ tivi 1m8",
-                    Price = 9500000, // 9,500,000 VND
+                    VersionId = new Guid("a7b8c9d0-e1f2-4a3b-4c5d-6e7f8a9b0c1d"),
+                    ProductId = desk.ProductId,
+                    SellerSku = "DESK-ASH-MOD-V2",
+                    VersionNumber = 2,
+                    VersionName = "Bàn làm việc Premium",
+                    Price = 12000000, // 12,000,000 VND
                     StockQuantity = 12,
-                    WoodType = "Tần Bì",
-                    WeightGrams = 45000,
-                    LengthCm = 180,
-                    WidthCm = 40,
-                    HeightCm = 50,
+                    WoodType = "Ash",
+                    WeightGrams = 38000,
+                    LengthCm = 160,
+                    WidthCm = 70,
+                    HeightCm = 75,
                     IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow.AddDays(-10),
+                    UpdatedAt = DateTime.UtcNow.AddDays(-10)
                 });
             }
 
