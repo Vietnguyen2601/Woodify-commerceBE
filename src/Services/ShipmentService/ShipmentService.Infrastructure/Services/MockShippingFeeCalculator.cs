@@ -21,6 +21,29 @@ public class MockShippingFeeCalculator : IShippingFeeCalculator
         _serviceMapping = new Dictionary<string, int>(DefaultServiceMapping);
     }
 
+    /// <summary>
+    /// Sanitize a string before logging to prevent log forging via control characters.
+    /// Removes CR/LF and other non-printable control characters.
+    /// </summary>
+    private static string SanitizeForLog(string? input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return string.Empty;
+
+        Span<char> buffer = stackalloc char[input.Length];
+        int idx = 0;
+        foreach (char c in input)
+        {
+            // Keep printable characters; drop control chars like \r, \n, etc.
+            if (!char.IsControl(c) || c == '\t')
+            {
+                buffer[idx++] = c;
+            }
+        }
+
+        return new string(buffer.Slice(0, idx));
+    }
+
     public async Task<ShippingFeeResult> CalculateAsync(int serviceId, int weightGrams)
     {
         // MOCK SHIPPING FEE CALCULATION (No external API, no district/ward logic)
@@ -57,7 +80,8 @@ public class MockShippingFeeCalculator : IShippingFeeCalculator
         if (_serviceMapping.TryGetValue(providerServiceCode.ToUpperInvariant(), out int id))
             return id;
 
-        _logger.LogWarning("Không tìm thấy mapping service_id cho code '{Code}', dùng default 5.", providerServiceCode);
+        var safeCodeForLog = SanitizeForLog(providerServiceCode);
+        _logger.LogWarning("Không tìm thấy mapping service_id cho code '{Code}', dùng default 5.", safeCodeForLog);
         return 5; // Standard fallback
     }
 }

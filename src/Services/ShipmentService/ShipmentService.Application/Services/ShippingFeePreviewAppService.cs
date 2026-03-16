@@ -64,9 +64,13 @@ public class ShippingFeePreviewAppService : IShippingFeePreviewService
 
         if (providerService == null)
         {
+            var safeProviderServiceCode = providerServiceCode
+                ?.Replace("\r", string.Empty)
+                .Replace("\n", string.Empty);
+
             _logger.LogWarning(
                 "ProviderService không tìm thấy hoặc không active: code='{Code}'",
-                providerServiceCode);
+                safeProviderServiceCode);
             return ServiceResult<ShippingFeePreviewResponse>.BadRequest(
                 ShipmentMessages.FeePreviewServiceNotAvailable);
         }
@@ -87,7 +91,11 @@ public class ShippingFeePreviewAppService : IShippingFeePreviewService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Lỗi khi tính phí ship: service={Code}", request.ProviderServiceCode);
+            var safeProviderServiceCode = request.ProviderServiceCode
+                ?.Replace("\r", string.Empty)
+                .Replace("\n", string.Empty);
+
+            _logger.LogError(ex, "Lỗi khi tính phí ship: service={Code}", safeProviderServiceCode);
             return ServiceResult<ShippingFeePreviewResponse>.InternalServerError(
                 ShipmentMessages.FeePreviewProviderError);
         }
