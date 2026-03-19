@@ -56,6 +56,28 @@ public class OrderCreatedEvent
     public Guid ShopId { get; set; }
     public Guid AccountId { get; set; }
     public string? DeliveryAddress { get; set; }
+    public double SubtotalCents { get; set; }
     public double TotalAmountCents { get; set; }
+    public string? ProviderServiceCode { get; set; }
+    public Guid? VoucherId { get; set; }
+
+    /// <summary>Tổng cân nặng của tất cả items trong order (grams)</summary>
+    public int TotalWeightGrams { get; set; }
+
     public DateTime CreatedAt { get; set; }
+}
+
+/// <summary>
+/// Event khi Shipping Fee được tính toán xong
+/// ShipmentService publish → OrderService consume
+/// Exchange: "shipment.events" / Routing key: "shippingfee.calculated"
+/// </summary>
+public class ShippingFeeCalculatedEvent
+{
+    public Guid OrderId { get; set; }
+    public Guid ShopId { get; set; }
+    public long ShippingFeeCents { get; set; }
+    public string? ProviderServiceCode { get; set; }
+    public bool IsFreeShipping { get; set; }
+    public DateTime CalculatedAt { get; set; }
 }

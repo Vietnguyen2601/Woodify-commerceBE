@@ -1,9 +1,12 @@
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
+using OrderService.Application.Helpers;
 using OrderService.Domain.Entities;
 using OrderService.Infrastructure.Repositories.IRepositories;
 using Shared.Results;
 using Shared.Events;
+using Shared.Constants;
+using PaymentService.Application.Interfaces;
 
 namespace OrderService.Application.Services;
 
@@ -14,19 +17,28 @@ public class OrderService : IOrderService
     private readonly ICartItemRepository _cartItemRepository;
     private readonly IProductVersionCacheRepository _productCacheRepository;
     private readonly OrderEventPublisher _orderEventPublisher;
+    private readonly IPayOsService _payOsService;
+    private readonly string _paymentReturnUrl;
+    private readonly string _paymentCancelUrl;
 
     public OrderService(
         IOrderRepository orderRepository,
         ICartRepository cartRepository,
         ICartItemRepository cartItemRepository,
         IProductVersionCacheRepository productCacheRepository,
-        OrderEventPublisher orderEventPublisher)
+        OrderEventPublisher orderEventPublisher,
+        IPayOsService payOsService)
     {
         _orderRepository = orderRepository;
         _cartRepository = cartRepository;
         _cartItemRepository = cartItemRepository;
         _productCacheRepository = productCacheRepository;
         _orderEventPublisher = orderEventPublisher;
+        _payOsService = payOsService;
+
+        // TODO: Lấy từ appsettings
+        _paymentReturnUrl = "http://localhost:3000/payment/success";
+        _paymentCancelUrl = "http://localhost:3000/payment/cancel";
     }
 
     public async Task<ServiceResult<OrderDto>> CreateOrderFromCartAsync(CreateOrderFromCartDto dto)
@@ -115,9 +127,21 @@ public class OrderService : IOrderService
                 var shopId = shopGroup.Key;
                 var shopItems = shopGroup.Value;
 
-                // Calculate totals for this shop
+                // Calculate subtotal for this shop
                 double subtotalCents = shopItems.Sum(item => item.Price * item.Quantity);
-                double totalAmountCents = subtotalCents;
+
+                // ✨ Calculate total weight FOR THIS SHOP (not total for all shops)
+                int totalWeightGrams = await CalculateTotalWeightAsync(shopItems);
+
+                // ✨ Calculate shipping fee immediately using ShippingServiceConstants
+                int serviceId = ShippingServiceConstants.GetServiceId(dto.ProviderServiceCode);
+                string bucketType = ShippingServiceConstants.GetBucketType(totalWeightGrams);
+                long baseFee = ShippingServiceConstants.GetBaseFee(serviceId, bucketType);
+                long weightSurcharge = (totalWeightGrams / ShippingServiceConstants.WEIGHT_SURCHARGE_UNIT) * ShippingServiceConstants.WEIGHT_SURCHARGE_PER_UNIT;
+                long shippingFeeCents = baseFee + weightSurcharge;
+
+                // Total amount = Subtotal + Shipping fee
+                double totalAmountCents = subtotalCents + shippingFeeCents;
 
                 // Create Order entity for this shop
                 var order = new Order
@@ -126,7 +150,7 @@ public class OrderService : IOrderService
                     AccountId = dto.AccountId,
                     ShopId = shopId,
                     SubtotalCents = subtotalCents,
-                    TotalAmountCents = totalAmountCents,
+                    TotalAmountCents = totalAmountCents, // ✨ Includes calculated shipping fee
                     VoucherId = dto.VoucherId,
                     Payment = dto.Payment,
                     Status = OrderStatus.PENDING,
@@ -159,13 +183,19 @@ public class OrderService : IOrderService
                 createdOrders.Add(order);
 
                 // Publish OrderCreated event to RabbitMQ for ShipmentService
+                // ✨ TotalAmountCents already includes calculated shipping fee
+                // ShipmentService can verify/log the calculation if needed
                 _orderEventPublisher.PublishOrderCreated(new OrderCreatedEvent
                 {
                     OrderId = order.OrderId,
                     ShopId = order.ShopId,
                     AccountId = order.AccountId,
                     DeliveryAddress = order.DeliveryAddress,
+                    SubtotalCents = order.SubtotalCents,
                     TotalAmountCents = order.TotalAmountCents,
+                    ProviderServiceCode = dto.ProviderServiceCode,
+                    TotalWeightGrams = totalWeightGrams,
+                    VoucherId = dto.VoucherId,
                     CreatedAt = order.CreatedAt
                 });
             }
@@ -184,6 +214,18 @@ public class OrderService : IOrderService
             // 11. Return first order (for backward compatibility)
             // In real scenario, return CreateOrderResult with list of all orders
             var orderDto = MapToOrderDto(createdOrders.First());
+
+            // 12. ✨ Create PayOS payment link for first order
+            try
+            {
+                var firstOrder = createdOrders.First();
+                await CreateAndAddPaymentUrlAsync(orderDto, firstOrder, dto);
+            }
+            catch (Exception ex)
+            {
+                // Log but don't fail - order is created even if payment creation fails
+                System.Diagnostics.Debug.WriteLine($"⚠️ Payment creation failed: {ex.Message}");
+            }
 
             return ServiceResult<OrderDto>.Success(orderDto,
                 $"Order(s) created successfully. Total orders: {createdOrders.Count}");
@@ -294,6 +336,7 @@ public class OrderService : IOrderService
             AccountId = order.AccountId,
             ShopId = order.ShopId,
             SubtotalCents = order.SubtotalCents,
+            ShippingFeeCents = order.TotalAmountCents - order.SubtotalCents, // Tính từ Total - Subtotal
             TotalAmountCents = order.TotalAmountCents,
             VoucherId = order.VoucherId,
             Payment = order.Payment,
@@ -458,6 +501,28 @@ public class OrderService : IOrderService
     }
 
     /// <summary>
+    /// Calculate total weight of cart items in grams
+    /// Truy cập product cache để lấy WeightGrams từ mỗi item
+    /// Formula: Sum(ProductCache.WeightGrams * CartItem.Quantity)
+    /// </summary>
+    private async Task<int> CalculateTotalWeightAsync(List<CartItem> cartItems)
+    {
+        int totalWeightGrams = 0;
+
+        foreach (var cartItem in cartItems)
+        {
+            var productCache = await _productCacheRepository.GetByVersionIdAsync(cartItem.VersionId);
+            if (productCache != null)
+            {
+                // Weight per item × Quantity trong cart
+                totalWeightGrams += productCache.WeightGrams * cartItem.Quantity;
+            }
+        }
+
+        return totalWeightGrams;
+    }
+
+    /// <summary>
     /// Validate: tất cả selected ids phải nằm trong cart hiện tại
     /// Trả về error message nếu có id không hợp lệ, null nếu ok
     /// </summary>
@@ -534,5 +599,44 @@ public class OrderService : IOrderService
         }
 
         return orderDto;
+    }
+
+    /// <summary>
+    /// Create PayOS payment link và add vào OrderDto
+    /// </summary>
+    private async Task CreateAndAddPaymentUrlAsync(
+        OrderDto orderDto,
+        Order order,
+        CreateOrderFromCartDto dto)
+    {
+        // Create PayOS request using helper
+        var payOsRequest = PayOsRequestHelper.CreatePayOsRequest(
+            order.OrderId,
+            order.ShopId,
+            order.TotalAmountCents,
+            buyerName: null, // Could get from account/profile
+            buyerEmail: null, // Will be generated random
+            buyerPhone: null, // Could get from account/profile
+            _paymentReturnUrl,
+            _paymentCancelUrl
+        );
+
+        // Call PayOS service to create payment link
+        var paymentResult = await _payOsService.CreatePaymentLinkAsync(payOsRequest);
+
+        if (paymentResult.IsSuccess)
+        {
+            orderDto.PaymentUrl = paymentResult.CheckoutUrl;
+            orderDto.QrCodeUrl = paymentResult.QrCodeUrl;
+            orderDto.PaymentStatus = paymentResult.Status ?? "PENDING";
+
+            System.Diagnostics.Debug.WriteLine(
+                $"✅ Payment created for order {order.OrderId}: {paymentResult.CheckoutUrl}");
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"❌ Payment creation failed: {paymentResult.ErrorMessage}");
+        }
     }
 }

@@ -48,4 +48,7 @@ public class ProductVersionDto
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+
+    /// <summary>Primary image URL (SortOrder = 0), null if no image uploaded</summary>
+    public string? ThumbnailUrl { get; set; }
 }

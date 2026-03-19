@@ -23,7 +23,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((ctx, _, cfg) => cfg
     .ReadFrom.Configuration(ctx.Configuration)
-    .Enrich.FromLogContext()    .Enrich.WithProperty("Service", "Shop")    .Filter.ByExcluding(logEvent =>
+    .Enrich.FromLogContext().Enrich.WithProperty("Service", "Shop").Filter.ByExcluding(logEvent =>
         logEvent.Exception is { } ex && (
             ex.ToString().Contains("57P01", StringComparison.Ordinal) ||
             ex.Message.Contains("transient failure", StringComparison.OrdinalIgnoreCase)))
@@ -36,9 +36,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins("http://localhost:5173", "https://localhost:5173")
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
 
@@ -93,7 +94,7 @@ using (var scope = app.Services.CreateScope())
     try
     {
         dbContext.Database.Migrate();
-        
+
         // Seed initial data
         await ShopDbSeeder.SeedAsync(dbContext);
     }
@@ -109,8 +110,8 @@ app.UseSerilogRequestLogging(opts =>
     opts.MessageTemplate =
         "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
     opts.GetLevel = (httpCtx, _, ex) =>
-        ex != null || httpCtx.Response.StatusCode >= 500 ? Serilog.Events.LogEventLevel.Error   :
-        httpCtx.Response.StatusCode >= 400               ? Serilog.Events.LogEventLevel.Warning :
+        ex != null || httpCtx.Response.StatusCode >= 500 ? Serilog.Events.LogEventLevel.Error :
+        httpCtx.Response.StatusCode >= 400 ? Serilog.Events.LogEventLevel.Warning :
                                                            Serilog.Events.LogEventLevel.Information;
 });
 

@@ -45,8 +45,9 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddShippingFeeCalculator(
         this IServiceCollection services)
     {
-        // Register mock shipping fee calculator (no external API calls)
-        services.AddScoped<IShippingFeeCalculator, MockShippingFeeCalculator>();
+        // Register mock shipping fee calculator as Singleton (stateless, safe for singleton consumers like OrderEventConsumer)
+        // MockShippingFeeCalculator is thread-safe and doesn't maintain mutable state
+        services.AddSingleton<IShippingFeeCalculator, MockShippingFeeCalculator>();
 
         return services;
     }

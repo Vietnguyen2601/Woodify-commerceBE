@@ -1,24 +1,15 @@
 using Microsoft.Extensions.Logging;
+using Shared.Constants;
 
 namespace ShipmentService.Infrastructure.Services;
 
 public class MockShippingFeeCalculator : IShippingFeeCalculator
 {
     private readonly ILogger<MockShippingFeeCalculator> _logger;
-    private readonly Dictionary<string, int> _serviceMapping;
-
-    private static readonly Dictionary<string, int> DefaultServiceMapping = new()
-    {
-        ["ECO"] = 5,
-        ["STD"] = 5,
-        ["EXP"] = 2,
-        ["SUP"] = 1,
-    };
 
     public MockShippingFeeCalculator(ILogger<MockShippingFeeCalculator> logger)
     {
         _logger = logger;
-        _serviceMapping = new Dictionary<string, int>(DefaultServiceMapping);
     }
 
     /// <summary>
@@ -46,23 +37,20 @@ public class MockShippingFeeCalculator : IShippingFeeCalculator
 
     public async Task<ShippingFeeResult> CalculateAsync(int serviceId, int weightGrams)
     {
-        // MOCK SHIPPING FEE CALCULATION (No external API, no district/ward logic)
-        // Calculate base fee by service type
-        long baseFee = serviceId switch
-        {
-            1 => 35000,  // SUP (Super Express) - 35k VND
-            2 => 28000,  // EXP (Express) - 28k VND
-            5 => 20000,  // STD/ECO (Standard/Economy) - 20k VND
-            _ => 25000   // Default - 25k VND
-        };
+        // MOCK SHIPPING FEE CALCULATION sử dụng ShippingServiceConstants
+        // Determine bucket type dựa trên weight
+        string bucketType = ShippingServiceConstants.GetBucketType(weightGrams);
 
-        // Add weight-based surcharge (2k VND per 500g)
-        long weightSurcharge = (weightGrams / 500) * 2000;
+        // Get base fee từ constants
+        long baseFee = ShippingServiceConstants.GetBaseFee(serviceId, bucketType);
+
+        // Add weight-based surcharge: mỗi 500g thêm 2,000 VND
+        long weightSurcharge = (weightGrams / ShippingServiceConstants.WEIGHT_SURCHARGE_UNIT) * ShippingServiceConstants.WEIGHT_SURCHARGE_PER_UNIT;
         long totalFee = baseFee + weightSurcharge;
 
         _logger.LogInformation(
-            "📦 Mock Shipping Fee: service_id={ServiceId}, weight={Weight}g → base={Base}đ + surcharge={Surcharge}đ = {Total}đ",
-            serviceId, weightGrams, baseFee, weightSurcharge, totalFee);
+            "📦 Mock Shipping Fee: service_id={ServiceId}, weight={Weight}g, bucket={Bucket} → base={Base}đ + surcharge={Surcharge}đ = {Total}đ",
+            serviceId, weightGrams, bucketType, baseFee, weightSurcharge, totalFee);
 
         await Task.CompletedTask; // Keep async signature
 
@@ -77,11 +65,17 @@ public class MockShippingFeeCalculator : IShippingFeeCalculator
 
     public int MapServiceCode(string providerServiceCode)
     {
-        if (_serviceMapping.TryGetValue(providerServiceCode.ToUpperInvariant(), out int id))
-            return id;
+        // Use standardized service code mapping from constants
+        int serviceId = ShippingServiceConstants.GetServiceId(providerServiceCode);
 
-        var safeCodeForLog = SanitizeForLog(providerServiceCode);
-        _logger.LogWarning("Không tìm thấy mapping service_id cho code '{Code}', dùng default 5.", safeCodeForLog);
-        return 5; // Standard fallback
+        if (serviceId == 3) // Default (STANDARD)
+        {
+            var safeCodeForLog = SanitizeForLog(providerServiceCode);
+            _logger.LogWarning(
+                "Không tìm thấy mapping service_id cho code '{Code}', dùng default STANDARD (service_id=3).",
+                safeCodeForLog);
+        }
+
+        return serviceId;
     }
 }

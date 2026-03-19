@@ -12,6 +12,11 @@ public class CreateOrderFromCartDto
     public Guid? Payment { get; set; }
 
     /// <summary>
+    /// Mã phương thức vận chuyển mà customer chọn (ví dụ: "EXPRESS", "STANDARD")
+    /// </summary>
+    public string? ProviderServiceCode { get; set; }
+
+    /// <summary>
     /// IDs của cart items cần thanh toán. Nếu null/empty → thanh toán toàn bộ cart (backward compatible)
     /// </summary>
     public Guid[]? SelectedCartItemIds { get; set; }
@@ -28,6 +33,7 @@ public class OrderDto
     public Guid ShopId { get; set; }
 
     public double SubtotalCents { get; set; }
+    public double ShippingFeeCents { get; set; }
     public double TotalAmountCents { get; set; }
 
     public Guid? VoucherId { get; set; }
@@ -37,6 +43,21 @@ public class OrderDto
     public string Status { get; set; } = string.Empty;
 
     public string? DeliveryAddress { get; set; }
+
+    /// <summary>
+    /// Payment URL từ PayOS để thanh toán trực tuyến
+    /// </summary>
+    public string? PaymentUrl { get; set; }
+
+    /// <summary>
+    /// QR Code URL từ PayOS
+    /// </summary>
+    public string? QrCodeUrl { get; set; }
+
+    /// <summary>
+    /// Trạng thái payment (PENDING, PAID, EXPIRED, CANCELLED)
+    /// </summary>
+    public string? PaymentStatus { get; set; }
 
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }

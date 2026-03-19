@@ -195,7 +195,7 @@ public static class ProductDbSeeder
                     SellerSku = "SOFA-OC-CHO-V1",
                     VersionNumber = 1,
                     VersionName = "Phiên bản tiêu chuẩn",
-                    Price = 25000000, // 25,000,000 VND
+                    Price = 10000, // 25,000,000 VND
                     StockQuantity = 10,
                     WoodType = "Óc Chó",
                     WeightGrams = 85000,
@@ -213,7 +213,7 @@ public static class ProductDbSeeder
                     SellerSku = "SOFA-OC-CHO-V2",
                     VersionNumber = 2,
                     VersionName = "Phiên bản sang trọng",
-                    Price = 32000000, // 32,000,000 VND
+                    Price = 10000, // 32,000,000 VND
                     StockQuantity = 5,
                     WoodType = "Óc Chó",
                     WeightGrams = 90000,
@@ -236,7 +236,7 @@ public static class ProductDbSeeder
                     SellerSku = "BED-SOI-1M8-V1",
                     VersionNumber = 1,
                     VersionName = "Giường có ngăn kéo",
-                    Price = 18000000, // 18,000,000 VND
+                    Price = 18000, // 18,000,000 VND
                     StockQuantity = 15,
                     WoodType = "Sồi",
                     WeightGrams = 120000,
@@ -254,7 +254,7 @@ public static class ProductDbSeeder
                     SellerSku = "BED-SOI-1M8-V2",
                     VersionNumber = 2,
                     VersionName = "Giường cao cấp ngoại nhập",
-                    Price = 22000000, // 22,000,000 VND
+                    Price = 22000, // 22,000,000 VND
                     StockQuantity = 8,
                     WoodType = "Sồi",
                     WeightGrams = 125000,
@@ -277,7 +277,7 @@ public static class ProductDbSeeder
                     SellerSku = "TABLE-TEAK-6G-V1",
                     VersionNumber = 1,
                     VersionName = "Combo bàn + 6 ghế",
-                    Price = 32000000, // 32,000,000 VND
+                    Price = 32000, // 32,000,000 VND
                     StockQuantity = 8,
                     WoodType = "Teak",
                     WeightGrams = 95000,
@@ -295,7 +295,7 @@ public static class ProductDbSeeder
                     SellerSku = "TABLE-TEAK-6G-V2",
                     VersionNumber = 2,
                     VersionName = "Combo bàn ăn mở rộng",
-                    Price = 38000000, // 38,000,000 VND
+                    Price = 38000, // 38,000,000 VND
                     StockQuantity = 5,
                     WoodType = "Teak",
                     WeightGrams = 100000,
@@ -318,7 +318,7 @@ public static class ProductDbSeeder
                     SellerSku = "DESK-ASH-MOD-V1",
                     VersionNumber = 1,
                     VersionName = "Bàn có ngăn kéo và giá sách",
-                    Price = 8500000, // 8,500,000 VND
+                    Price = 85000, // 8,500,000 VND
                     StockQuantity = 20,
                     WoodType = "Ash",
                     WeightGrams = 35000,
@@ -336,7 +336,7 @@ public static class ProductDbSeeder
                     SellerSku = "DESK-ASH-MOD-V2",
                     VersionNumber = 2,
                     VersionName = "Bàn làm việc Premium",
-                    Price = 12000000, // 12,000,000 VND
+                    Price = 12000, // 12,000,000 VND
                     StockQuantity = 12,
                     WoodType = "Ash",
                     WeightGrams = 38000,

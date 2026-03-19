@@ -15,17 +15,20 @@ public class ProductVersionService : IProductVersionService
     private readonly IProductMasterRepository _productMasterRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ProductEventPublisher _eventPublisher;
+    private readonly IImageUrlRepository _imageUrlRepository;
 
     public ProductVersionService(
         IProductVersionRepository productVersionRepository,
         IProductMasterRepository productMasterRepository,
         IUnitOfWork unitOfWork,
-        ProductEventPublisher eventPublisher)
+        ProductEventPublisher eventPublisher,
+        IImageUrlRepository imageUrlRepository)
     {
         _productVersionRepository = productVersionRepository;
         _productMasterRepository = productMasterRepository;
         _unitOfWork = unitOfWork;
         _eventPublisher = eventPublisher;
+        _imageUrlRepository = imageUrlRepository;
     }
 
     public async Task<ServiceResult<ProductVersionDto>> GetByIdAsync(Guid id)
@@ -33,8 +36,10 @@ public class ProductVersionService : IProductVersionService
         var version = await _productVersionRepository.GetByIdAsync(id);
         if (version == null)
             return ServiceResult<ProductVersionDto>.NotFound("Product version not found");
-        
-        return ServiceResult<ProductVersionDto>.Success(version.ToDto());
+
+        var dto = version.ToDto();
+        dto.ThumbnailUrl = (await _imageUrlRepository.GetPrimaryImageAsync("PRODUCT_VERSION", id))?.OriginalUrl;
+        return ServiceResult<ProductVersionDto>.Success(dto);
     }
 
     public async Task<ServiceResult<ProductVersionDto>> GetBySellerSkuAsync(string sellerSku)
@@ -42,23 +47,29 @@ public class ProductVersionService : IProductVersionService
         var version = await _productVersionRepository.GetBySellerSkuAsync(sellerSku);
         if (version == null)
             return ServiceResult<ProductVersionDto>.NotFound("Product version not found");
-        
-        return ServiceResult<ProductVersionDto>.Success(version.ToDto());
+
+        var dto = version.ToDto();
+        dto.ThumbnailUrl = (await _imageUrlRepository.GetPrimaryImageAsync("PRODUCT_VERSION", version.VersionId))?.OriginalUrl;
+        return ServiceResult<ProductVersionDto>.Success(dto);
     }
 
     public async Task<ServiceResult<IEnumerable<ProductVersionDto>>> GetAllAsync()
     {
         var versions = await _productVersionRepository.GetAllAsync();
-        var versionDtos = versions.Select(v => v.ToDto());
-        
+        var versionList = versions.ToList();
+        var thumbnailMap = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT_VERSION", versionList.Select(v => v.VersionId));
+        var versionDtos = versionList.Select(v => { var dto = v.ToDto(); dto.ThumbnailUrl = thumbnailMap.GetValueOrDefault(v.VersionId); return dto; });
+
         return ServiceResult<IEnumerable<ProductVersionDto>>.Success(versionDtos);
     }
 
     public async Task<ServiceResult<IEnumerable<ProductVersionDto>>> GetByProductIdAsync(Guid productId)
     {
         var versions = await _productVersionRepository.GetByProductIdAsync(productId);
-        var versionDtos = versions.Select(v => v.ToDto());
-        
+        var versionList = versions.ToList();
+        var thumbnailMap = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT_VERSION", versionList.Select(v => v.VersionId));
+        var versionDtos = versionList.Select(v => { var dto = v.ToDto(); dto.ThumbnailUrl = thumbnailMap.GetValueOrDefault(v.VersionId); return dto; });
+
         return ServiceResult<IEnumerable<ProductVersionDto>>.Success(versionDtos);
     }
 
@@ -67,8 +78,10 @@ public class ProductVersionService : IProductVersionService
         var version = await _productVersionRepository.GetLatestVersionByProductIdAsync(productId);
         if (version == null)
             return ServiceResult<ProductVersionDto>.NotFound("No version found for this product");
-        
-        return ServiceResult<ProductVersionDto>.Success(version.ToDto());
+
+        var dto = version.ToDto();
+        dto.ThumbnailUrl = (await _imageUrlRepository.GetPrimaryImageAsync("PRODUCT_VERSION", version.VersionId))?.OriginalUrl;
+        return ServiceResult<ProductVersionDto>.Success(dto);
     }
 
     public async Task<ServiceResult<ProductVersionDto>> GetDefaultVersionByProductIdAsync(Guid productId)
@@ -76,23 +89,29 @@ public class ProductVersionService : IProductVersionService
         var version = await _productVersionRepository.GetDefaultVersionByProductIdAsync(productId);
         if (version == null)
             return ServiceResult<ProductVersionDto>.NotFound("No default version found for this product");
-        
-        return ServiceResult<ProductVersionDto>.Success(version.ToDto());
+
+        var dto = version.ToDto();
+        dto.ThumbnailUrl = (await _imageUrlRepository.GetPrimaryImageAsync("PRODUCT_VERSION", version.VersionId))?.OriginalUrl;
+        return ServiceResult<ProductVersionDto>.Success(dto);
     }
 
     public async Task<ServiceResult<IEnumerable<ProductVersionDto>>> GetInactiveVersionsAsync()
     {
         var versions = await _productVersionRepository.GetInactiveVersionsAsync();
-        var versionDtos = versions.Select(v => v.ToDto());
-        
+        var versionList = versions.ToList();
+        var thumbnailMap = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT_VERSION", versionList.Select(v => v.VersionId));
+        var versionDtos = versionList.Select(v => { var dto = v.ToDto(); dto.ThumbnailUrl = thumbnailMap.GetValueOrDefault(v.VersionId); return dto; });
+
         return ServiceResult<IEnumerable<ProductVersionDto>>.Success(versionDtos);
     }
 
     public async Task<ServiceResult<IEnumerable<ProductVersionDto>>> GetActiveVersionsAsync()
     {
         var versions = await _productVersionRepository.GetActiveVersionsAsync();
-        var versionDtos = versions.Select(v => v.ToDto());
-        
+        var versionList = versions.ToList();
+        var thumbnailMap = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT_VERSION", versionList.Select(v => v.VersionId));
+        var versionDtos = versionList.Select(v => { var dto = v.ToDto(); dto.ThumbnailUrl = thumbnailMap.GetValueOrDefault(v.VersionId); return dto; });
+
         return ServiceResult<IEnumerable<ProductVersionDto>>.Success(versionDtos);
     }
 
@@ -105,10 +124,6 @@ public class ProductVersionService : IProductVersionService
             if (product == null)
                 return ServiceResult<ProductVersionDto>.NotFound($"Product with ID {dto.ProductId} not found");
 
-            // Only allow creating versions for DRAFT products
-            if (product.Status != Domain.Entities.ProductStatus.DRAFT)
-                return ServiceResult<ProductVersionDto>.BadRequest("Can only create versions for products in DRAFT status");
-
             // Check if SellerSku already exists
             var existingSku = await _productVersionRepository.GetBySellerSkuAsync(dto.SellerSku);
             if (existingSku != null)
@@ -120,7 +135,7 @@ public class ProductVersionService : IProductVersionService
 
             // Check if this is the first version (GlobalSku is empty or null)
             bool isFirstVersion = string.IsNullOrEmpty(product.GlobalSku);
-            
+
             // Create a new tracked instance for update
             var productToUpdate = new Domain.Entities.ProductMaster
             {
@@ -144,7 +159,7 @@ public class ProductVersionService : IProductVersionService
                 var globalSku = await GenerateGlobalSkuAsync(product.ProductId, product.CategoryId);
                 productToUpdate.GlobalSku = globalSku;
             }
-            
+
             await _productMasterRepository.UpdateAsync(productToUpdate);
 
             // Publish event to OrderService
@@ -196,7 +211,7 @@ public class ProductVersionService : IProductVersionService
         // Lấy Category để rút gọn tên
         var category = await _unitOfWork.Categories.GetByIdAsync(categoryId);
         string categoryCode = "XX"; // Default nếu không tìm thấy category
-        
+
         if (category != null && !string.IsNullOrEmpty(category.Name))
         {
             // Rút gọn category name thành 2-3 ký tự viết hoa
@@ -210,8 +225,8 @@ public class ProductVersionService : IProductVersionService
             else
             {
                 // Nếu chỉ 1 từ, lấy 2-3 ký tự đầu
-                categoryCode = category.Name.Length >= 3 
-                    ? category.Name.Substring(0, 3).ToUpper() 
+                categoryCode = category.Name.Length >= 3
+                    ? category.Name.Substring(0, 3).ToUpper()
                     : category.Name.ToUpper();
             }
         }
@@ -261,10 +276,10 @@ public class ProductVersionService : IProductVersionService
 
             // Save all changes - this will save both version and product
             await _unitOfWork.SaveChangesAsync();
-            
+
             // Get updated data
             var updatedVersion = version.ToDto();
-            
+
             // Publish event to OrderService with CURRENT product status
             _eventPublisher.PublishProductVersionUpdated(new ProductVersionUpdatedEvent
             {
@@ -289,7 +304,7 @@ public class ProductVersionService : IProductVersionService
                 UpdatedAt = version.UpdatedAt ?? DateTime.UtcNow,
                 EventType = "Updated"
             });
-            
+
             return ServiceResult<ProductVersionDto>.Success(updatedVersion, "Product version updated successfully");
         }
         catch (Exception ex)
@@ -305,16 +320,16 @@ public class ProductVersionService : IProductVersionService
             var version = await _productVersionRepository.GetByIdAsync(id);
             if (version == null)
                 return ServiceResult.NotFound("Product version not found");
-            
+
             if (!version.IsActive)
                 return ServiceResult.BadRequest("Product version is already inactive");
-            
+
             // Deactivate
             version.IsActive = false;
             version.UpdatedAt = DateTime.UtcNow;
-            
+
             await _productVersionRepository.UpdateAsync(version);
-            
+
             // Get product info for event
             var product = await _productMasterRepository.GetByIdAsync(version.ProductId);
             if (product != null)
@@ -344,7 +359,7 @@ public class ProductVersionService : IProductVersionService
                     EventType = "Updated"
                 });
             }
-            
+
             return ServiceResult.Success("Product version deactivated successfully");
         }
         catch (Exception ex)
@@ -360,16 +375,16 @@ public class ProductVersionService : IProductVersionService
             var version = await _productVersionRepository.GetByIdAsync(id);
             if (version == null)
                 return ServiceResult.NotFound("Product version not found");
-            
+
             if (version.IsActive)
                 return ServiceResult.BadRequest("Product version is already active");
-            
+
             // Activate
             version.IsActive = true;
             version.UpdatedAt = DateTime.UtcNow;
-            
+
             await _productVersionRepository.UpdateAsync(version);
-            
+
             // Get product info for event
             var product = await _productMasterRepository.GetByIdAsync(version.ProductId);
             if (product != null)
@@ -399,7 +414,7 @@ public class ProductVersionService : IProductVersionService
                     EventType = "Updated"
                 });
             }
-            
+
             return ServiceResult.Success("Product version activated successfully");
         }
         catch (Exception ex)

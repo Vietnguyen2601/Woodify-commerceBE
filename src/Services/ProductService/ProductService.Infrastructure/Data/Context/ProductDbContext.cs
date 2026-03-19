@@ -19,6 +19,7 @@ public class ProductDbContext : DbContext
     public DbSet<ProductVersion> ProductVersions { get; set; }
     public DbSet<Category> Categories { get; set; }
     public DbSet<ProductReview> ProductReviews { get; set; }
+    public DbSet<ImageUrl> ImageUrls { get; set; }
 
     private static string GetConnectionString(string connectionStringName)
     {
@@ -85,22 +86,22 @@ public class ProductDbContext : DbContext
         {
             entity.ToTable("product_master");
             entity.HasKey(e => e.ProductId);
-            
+
             entity.Property(e => e.ProductId).HasColumnName("product_id");
             entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
             entity.Property(e => e.CategoryId).HasColumnName("category_id").IsRequired();
-            
+
             entity.Property(e => e.Name).HasColumnName("name").IsRequired();
             entity.Property(e => e.GlobalSku).HasColumnName("global_sku").HasMaxLength(255);
-            
+
             entity.Property(e => e.Description).HasColumnName("description");
-            
+
             entity.Property(e => e.Status)
                 .HasColumnName("status")
                 .HasConversion<string>()
                 .HasDefaultValue(ProductStatus.DRAFT)
                 .IsRequired();
-            
+
             // Moderation fields
             entity.Property(e => e.ModerationStatus)
                 .HasColumnName("moderation_status")
@@ -108,7 +109,7 @@ public class ProductDbContext : DbContext
                 .HasDefaultValue(ModerationStatus.PENDING)
                 .IsRequired();
             entity.Property(e => e.ModeratedAt).HasColumnName("moderated_at");
-            
+
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
             entity.Property(e => e.PublishedAt).HasColumnName("published_at");
@@ -134,7 +135,7 @@ public class ProductDbContext : DbContext
         {
             entity.ToTable("product_versions");
             entity.HasKey(e => e.VersionId);
-            
+
             entity.Property(e => e.VersionId).HasColumnName("version_id");
             entity.Property(e => e.ProductId).HasColumnName("product_id").IsRequired();
             entity.Property(e => e.SellerSku).HasColumnName("seller_sku").IsRequired().HasMaxLength(255);
@@ -201,7 +202,7 @@ public class ProductDbContext : DbContext
         {
             entity.ToTable("product_reviews");
             entity.HasKey(e => e.ReviewId);
-            
+
             entity.Property(e => e.ReviewId).HasColumnName("review_id");
             entity.Property(e => e.VersionId).HasColumnName("version_id").IsRequired();
             entity.Property(e => e.OrderId).HasColumnName("order_id").IsRequired();
@@ -226,9 +227,30 @@ public class ProductDbContext : DbContext
             entity.HasIndex(e => e.OrderId);
             entity.HasIndex(e => e.IsVisible);
             entity.HasIndex(e => e.CreatedAt);
-            
+
             // Unique constraint: một user chỉ review một order một lần
             entity.HasIndex(e => new { e.OrderId, e.AccountId }).IsUnique();
+        });
+
+        // ========================================
+        // Cấu hình bảng image_urls
+        // ========================================
+        modelBuilder.Entity<ImageUrl>(entity =>
+        {
+            entity.ToTable("image_urls");
+            entity.HasKey(e => e.ImageId);
+
+            entity.Property(e => e.ImageId).HasColumnName("image_id");
+            entity.Property(e => e.ImageType).HasColumnName("image_type").IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ReferenceId).HasColumnName("reference_id").IsRequired();
+            entity.Property(e => e.SortOrder).HasColumnName("sort_order").HasDefaultValue(0);
+            entity.Property(e => e.OriginalUrl).HasColumnName("original_url").IsRequired();
+            entity.Property(e => e.PublicId).HasColumnName("public_id").HasMaxLength(512);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
+
+            entity.HasIndex(e => new { e.ImageType, e.ReferenceId });
+            entity.HasIndex(e => e.ReferenceId);
+            entity.HasIndex(e => e.CreatedAt);
         });
     }
 

@@ -14,7 +14,7 @@ public class Order
 
     // Tiền gốc - tiền sau các phí thêm và giảm giá
     public double SubtotalCents { get; set; }
-    public double TotalAmountCents { get; set; }
+    public double TotalAmountCents { get; set; } // = SubtotalCents + ShippingFee + Voucher
 
     public Guid? VoucherId { get; set; }
 

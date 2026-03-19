@@ -15,17 +15,20 @@ public class ProductMasterService : IProductMasterService
     private readonly IProductVersionRepository _productVersionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ProductEventPublisher _eventPublisher;
+    private readonly IImageUrlRepository _imageUrlRepository;
 
     public ProductMasterService(
         IProductMasterRepository productMasterRepository,
         IProductVersionRepository productVersionRepository,
         IUnitOfWork unitOfWork,
-        ProductEventPublisher eventPublisher)
+        ProductEventPublisher eventPublisher,
+        IImageUrlRepository imageUrlRepository)
     {
         _productMasterRepository = productMasterRepository;
         _productVersionRepository = productVersionRepository;
         _unitOfWork = unitOfWork;
         _eventPublisher = eventPublisher;
+        _imageUrlRepository = imageUrlRepository;
     }
 
     public async Task<ServiceResult<ProductMasterDto>> GetByIdAsync(Guid id)
@@ -33,8 +36,10 @@ public class ProductMasterService : IProductMasterService
         var product = await _productMasterRepository.GetByIdAsync(id);
         if (product == null)
             return ServiceResult<ProductMasterDto>.NotFound("Product not found");
-        
-        return ServiceResult<ProductMasterDto>.Success(product.ToDto());
+
+        var dto = product.ToDto();
+        dto.ThumbnailUrl = (await _imageUrlRepository.GetPrimaryImageAsync("PRODUCT", id))?.OriginalUrl;
+        return ServiceResult<ProductMasterDto>.Success(dto);
     }
 
     public async Task<ServiceResult<ProductMasterDto>> GetByGlobalSkuAsync(string globalSku)
@@ -42,23 +47,27 @@ public class ProductMasterService : IProductMasterService
         var product = await _productMasterRepository.GetByGlobalSkuAsync(globalSku);
         if (product == null)
             return ServiceResult<ProductMasterDto>.NotFound("Product not found");
-        
+
         return ServiceResult<ProductMasterDto>.Success(product.ToDto());
     }
 
     public async Task<ServiceResult<IEnumerable<ProductMasterDto>>> GetAllAsync()
     {
         var products = await _productMasterRepository.GetAllAsync();
-        var productDtos = products.Select(p => p.ToDto());
-        
+        var productList = products.ToList();
+        var thumbnailMap = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT", productList.Select(p => p.ProductId));
+        var productDtos = productList.Select(p => { var dto = p.ToDto(); dto.ThumbnailUrl = thumbnailMap.GetValueOrDefault(p.ProductId); return dto; });
+
         return ServiceResult<IEnumerable<ProductMasterDto>>.Success(productDtos);
     }
 
     public async Task<ServiceResult<IEnumerable<ProductMasterDto>>> GetByShopIdAsync(Guid shopId)
     {
         var products = await _productMasterRepository.GetByShopIdAsync(shopId);
-        var productDtos = products.Select(p => p.ToDto());
-        
+        var productList = products.ToList();
+        var thumbnailMap = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT", productList.Select(p => p.ProductId));
+        var productDtos = productList.Select(p => { var dto = p.ToDto(); dto.ThumbnailUrl = thumbnailMap.GetValueOrDefault(p.ProductId); return dto; });
+
         return ServiceResult<IEnumerable<ProductMasterDto>>.Success(productDtos);
     }
 
@@ -114,16 +123,16 @@ public class ProductMasterService : IProductMasterService
             // Check for changes in buyer-facing content (name, description, category)
             if (!string.IsNullOrEmpty(dto.Name) && dto.Name != product.Name)
                 buyerFacingContentChanged = true;
-            
+
             if (dto.Description != null && dto.Description != product.Description)
                 buyerFacingContentChanged = true;
-            
+
             if (dto.CategoryId.HasValue && dto.CategoryId.Value != product.CategoryId)
                 buyerFacingContentChanged = true;
 
             // Determine if we need to reset to PENDING_APPROVAL
             bool requiresReModeration = false;
-            
+
             // APPROVED: Allow edits but reset to PENDING_APPROVAL if buyer-facing content changes
             if (currentStatus == Domain.Entities.ProductStatus.APPROVED && buyerFacingContentChanged)
             {
@@ -147,7 +156,7 @@ public class ProductMasterService : IProductMasterService
                 product.Status = Domain.Entities.ProductStatus.PENDING_APPROVAL;
                 product.ModerationStatus = Domain.Entities.ModerationStatus.PENDING;
                 product.ModeratedAt = null;
-                
+
                 // Unpublish if was PUBLISHED
                 if (currentStatus == Domain.Entities.ProductStatus.PUBLISHED)
                 {
@@ -157,9 +166,9 @@ public class ProductMasterService : IProductMasterService
 
             // Save changes
             await _productMasterRepository.UpdateAsync(product);
-            
+
             var updatedProduct = await _productMasterRepository.GetByIdAsync(id);
-            
+
             string message = "Product updated successfully";
             if (requiresReModeration)
             {
@@ -181,13 +190,13 @@ public class ProductMasterService : IProductMasterService
             var product = await _productMasterRepository.GetByIdAsync(id);
             if (product == null)
                 return ServiceResult.NotFound("Product not found");
-            
+
             // Soft delete: Set status to DELETED and update timestamp
             product.Status = Domain.Entities.ProductStatus.DELETED;
             product.UpdatedAt = DateTime.UtcNow;
-            
+
             await _productMasterRepository.UpdateAsync(product);
-            
+
             // Publish event để thông báo cho OrderService
             _eventPublisher.PublishProductDeleted(new ProductDeletedEvent
             {
@@ -197,7 +206,7 @@ public class ProductMasterService : IProductMasterService
                 DeletedAt = product.UpdatedAt.Value,
                 EventType = "ProductDeleted"
             });
-            
+
             return ServiceResult.Success("Product deleted successfully");
         }
         catch (Exception ex)
@@ -242,8 +251,10 @@ public class ProductMasterService : IProductMasterService
         try
         {
             var archivedProducts = await _productMasterRepository.GetByStatusAsync(Domain.Entities.ProductStatus.ARCHIVED);
-            var productDtos = archivedProducts.Select(p => p.ToDto());
-            
+            var productList = archivedProducts.ToList();
+            var thumbnailMap = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT", productList.Select(p => p.ProductId));
+            var productDtos = productList.Select(p => { var dto = p.ToDto(); dto.ThumbnailUrl = thumbnailMap.GetValueOrDefault(p.ProductId); return dto; });
+
             return ServiceResult<IEnumerable<ProductMasterDto>>.Success(productDtos);
         }
         catch (Exception ex)
@@ -293,8 +304,10 @@ public class ProductMasterService : IProductMasterService
         try
         {
             var publishedProducts = await _productMasterRepository.GetByStatusAsync(Domain.Entities.ProductStatus.PUBLISHED);
-            var productDtos = publishedProducts.Select(p => p.ToDto());
-            
+            var productList = publishedProducts.ToList();
+            var thumbnailMap = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT", productList.Select(p => p.ProductId));
+            var productDtos = productList.Select(p => { var dto = p.ToDto(); dto.ThumbnailUrl = thumbnailMap.GetValueOrDefault(p.ProductId); return dto; });
+
             return ServiceResult<IEnumerable<ProductMasterDto>>.Success(productDtos);
         }
         catch (Exception ex)
@@ -321,7 +334,9 @@ public class ProductMasterService : IProductMasterService
 
             var (products, totalCount) = await _productMasterRepository.SearchAsync(searchParams);
             var productDtos = products.Select(p => p.ToDto()).ToList();
-            
+            var thumbnailMap = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT", productDtos.Select(d => d.ProductId));
+            foreach (var dto in productDtos) dto.ThumbnailUrl = thumbnailMap.GetValueOrDefault(dto.ProductId);
+
             var result = new ProductSearchResultDto
             {
                 Products = productDtos,
@@ -329,7 +344,7 @@ public class ProductMasterService : IProductMasterService
                 Page = searchDto.Page,
                 PageSize = searchDto.PageSize
             };
-            
+
             return ServiceResult<ProductSearchResultDto>.Success(result);
         }
         catch (Exception ex)
@@ -347,24 +362,24 @@ public class ProductMasterService : IProductMasterService
                 return ServiceResult<ProductMasterDto>.NotFound("Product not found");
 
             // Allow submission from DRAFT or REJECTED status
-            if (product.Status != Domain.Entities.ProductStatus.DRAFT && 
+            if (product.Status != Domain.Entities.ProductStatus.DRAFT &&
                 product.Status != Domain.Entities.ProductStatus.REJECTED)
                 return ServiceResult<ProductMasterDto>.BadRequest("Only draft or rejected products can be submitted for approval");
 
             // Pre-submit validation: Check if product has at least 1 active version
             var versions = await _productVersionRepository.GetByProductIdAsync(id);
             var activeVersions = versions.Where(v => v.IsActive).ToList();
-            
+
             if (!activeVersions.Any())
                 return ServiceResult<ProductMasterDto>.BadRequest("Product must have at least 1 active version before submission");
 
             // Transition to PENDING_APPROVAL
             product.Status = Domain.Entities.ProductStatus.PENDING_APPROVAL;
             product.ModerationStatus = Domain.Entities.ModerationStatus.PENDING;
-            
+
             // Clear previous rejection/moderation fields
             product.ModeratedAt = null;
-            
+
             product.UpdatedAt = DateTime.UtcNow;
             await _productMasterRepository.UpdateAsync(product);
 
@@ -406,8 +421,8 @@ public class ProductMasterService : IProductMasterService
                 ChangedAt = DateTime.UtcNow
             });
 
-            var message = dto.ModerationStatus == Domain.Entities.ModerationStatus.APPROVED 
-                ? "Product approved successfully" 
+            var message = dto.ModerationStatus == Domain.Entities.ModerationStatus.APPROVED
+                ? "Product approved successfully"
                 : "Product rejected";
 
             return ServiceResult<ProductMasterDto>.Success(product.ToDto(), message);
@@ -423,8 +438,10 @@ public class ProductMasterService : IProductMasterService
         try
         {
             var pendingProducts = await _productMasterRepository.GetByStatusAsync(Domain.Entities.ProductStatus.PENDING_APPROVAL);
-            var productDtos = pendingProducts.Select(p => p.ToDto());
-            
+            var productList = pendingProducts.ToList();
+            var thumbnailMap = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT", productList.Select(p => p.ProductId));
+            var productDtos = productList.Select(p => { var dto = p.ToDto(); dto.ThumbnailUrl = thumbnailMap.GetValueOrDefault(p.ProductId); return dto; });
+
             return ServiceResult<IEnumerable<ProductMasterDto>>.Success(productDtos);
         }
         catch (Exception ex)
@@ -469,6 +486,8 @@ public class ProductMasterService : IProductMasterService
 
             // Map to DTOs
             var productDtos = products.Select(p => p.ToDto()).ToList();
+            var thumbnailMap = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT", productDtos.Select(d => d.ProductId));
+            foreach (var dto in productDtos) dto.ThumbnailUrl = thumbnailMap.GetValueOrDefault(dto.ProductId);
 
             var result = new PendingApprovalQueueResultDto
             {
@@ -513,12 +532,17 @@ public class ProductMasterService : IProductMasterService
             var versions = await _productVersionRepository.GetByProductIdAsync(productId);
 
             // Filter versions based on role
-            var filteredVersions = isSellerOrAdmin 
-                ? versions 
+            var filteredVersions = isSellerOrAdmin
+                ? versions
                 : versions.Where(v => v.IsActive).ToList();
 
             // Get category name
             var category = await _unitOfWork.Categories.GetByIdAsync(product.CategoryId);
+
+            // Load images: product images + all version images in 2 queries
+            var productImages = await _imageUrlRepository.GetByTypeAndReferenceAsync("PRODUCT", productId);
+            var versionIds = filteredVersions.Select(v => v.VersionId).ToList();
+            var versionImagesMap = await _imageUrlRepository.GetImagesBatchAsync("PRODUCT_VERSION", versionIds);
 
             // Map to detail DTO
             var detailDto = new ProductMasterDetailDto
@@ -536,6 +560,7 @@ public class ProductMasterService : IProductMasterService
                 CreatedAt = product.CreatedAt,
                 UpdatedAt = product.UpdatedAt,
                 PublishedAt = product.PublishedAt,
+                Images = productImages.Select(i => i.ToDto()).ToList(),
                 Versions = filteredVersions.Select(v => new ProductVersionDetailDto
                 {
                     VersionId = v.VersionId,
@@ -549,7 +574,8 @@ public class ProductMasterService : IProductMasterService
                     WidthCm = v.WidthCm,
                     HeightCm = v.HeightCm,
                     IsActive = v.IsActive,
-                    CreatedAt = v.CreatedAt
+                    CreatedAt = v.CreatedAt,
+                    Images = (versionImagesMap.GetValueOrDefault(v.VersionId) ?? new()).Select(i => i.ToDto()).ToList()
                 }).ToList()
             };
 
@@ -567,10 +593,10 @@ public class ProductMasterService : IProductMasterService
     /// For buyer: Only returns PUBLISHED products with active versions
     /// </summary>
     public async Task<ServiceResult<ProductDetailListResultDto>> GetAllProductDetailsAsync(
-        string userRole, 
-        int page = 1, 
-        int pageSize = 20, 
-        Guid? shopId = null, 
+        string userRole,
+        int page = 1,
+        int pageSize = 20,
+        Guid? shopId = null,
         Guid? categoryId = null)
     {
         try
@@ -583,7 +609,7 @@ public class ProductMasterService : IProductMasterService
 
             // Get products based on role and filters
             IEnumerable<Domain.Entities.ProductMaster> products;
-            
+
             if (shopId.HasValue)
             {
                 products = await _productMasterRepository.GetByShopIdAsync(shopId.Value);
@@ -635,9 +661,14 @@ public class ProductMasterService : IProductMasterService
                 var versions = await _productVersionRepository.GetByProductIdAsync(product.ProductId);
 
                 // Filter versions based on role
-                var filteredVersions = isSellerOrAdmin 
-                    ? versions 
+                var filteredVersions = isSellerOrAdmin
+                    ? versions
                     : versions.Where(v => v.IsActive).ToList();
+
+                // Batch load images for this product and its versions (2 queries per product)
+                var productImages = await _imageUrlRepository.GetByTypeAndReferenceAsync("PRODUCT", product.ProductId);
+                var versionIds = filteredVersions.Select(v => v.VersionId).ToList();
+                var versionImagesMap = await _imageUrlRepository.GetImagesBatchAsync("PRODUCT_VERSION", versionIds);
 
                 var detailDto = new ProductMasterDetailDto
                 {
@@ -654,6 +685,7 @@ public class ProductMasterService : IProductMasterService
                     CreatedAt = product.CreatedAt,
                     UpdatedAt = product.UpdatedAt,
                     PublishedAt = product.PublishedAt,
+                    Images = productImages.Select(i => i.ToDto()).ToList(),
                     Versions = filteredVersions.Select(v => new ProductVersionDetailDto
                     {
                         VersionId = v.VersionId,
@@ -667,7 +699,8 @@ public class ProductMasterService : IProductMasterService
                         WidthCm = v.WidthCm,
                         HeightCm = v.HeightCm,
                         IsActive = v.IsActive,
-                        CreatedAt = v.CreatedAt
+                        CreatedAt = v.CreatedAt,
+                        Images = (versionImagesMap.GetValueOrDefault(v.VersionId) ?? new()).Select(i => i.ToDto()).ToList()
                     }).ToList()
                 };
 
