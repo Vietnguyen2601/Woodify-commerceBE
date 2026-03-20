@@ -282,7 +282,12 @@ public class ShopService : IShopService
     {
         try
         {
+            var existingShop = await _unitOfWork.Shops.GetByOwnerIdAsync(dto.OwnerAccountId);
+            if (existingShop != null)
+                return ServiceResult<ShopDto>.BadRequest("This account already has a shop.");
+
             var shop = dto.ToModel();
+            shop.Status = ShopStatus.ACTIVE;
             await _unitOfWork.Shops.AddAsync(shop);
             await _unitOfWork.SaveChangesAsync();
 
