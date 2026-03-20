@@ -149,12 +149,15 @@ services:
     container_name: woodify-shop-service
     restart: unless-stopped
     ports:
-      - "5011:8080"
+      - "5011:5011"
     env_file:
       - .env
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:8080
+      - RabbitMQ_Host=${RabbitMQ_Host}
+      - RabbitMQ_Port=${RabbitMQ_Port}
+      - RabbitMQ_Username=${RabbitMQ_Username}
+      - RabbitMQ_Password=${RabbitMQ_Password}
     volumes:
       - ./.env:/app/.env
     depends_on:
