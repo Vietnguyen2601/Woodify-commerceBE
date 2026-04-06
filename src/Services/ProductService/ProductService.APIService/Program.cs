@@ -5,6 +5,7 @@ using Serilog.Events;
 using Serilog.Sinks.SystemConsole.Themes;
 using ProductService.Application.Interfaces;
 using ProductService.Application.Services;
+using ProductService.Application.Consumers;
 using Microsoft.EntityFrameworkCore;
 using Shared.Messaging;
 using ProductService.Infrastructure.Repositories;
@@ -85,11 +86,14 @@ for (int i = 0; i < 5; i++)
         var publisher = new RabbitMQPublisher(rabbitMQSettings);
         builder.Services.AddSingleton(publisher);
         Console.WriteLine("RabbitMQ Publisher connected successfully");
-        
+
         var consumer = new RabbitMQConsumer(rabbitMQSettings);
         builder.Services.AddSingleton(consumer);
         Console.WriteLine("RabbitMQ Consumer connected successfully");
-        
+
+        // Register event consumers (require RabbitMQ)
+        builder.Services.AddSingleton<ShopEventConsumer>();
+
         rabbitMQAvailable = true;
         break;
     }
@@ -131,7 +135,7 @@ using (var scope = app.Services.CreateScope())
     {
         dbContext.Database.Migrate();
         Console.WriteLine("Database migration applied successfully");
-        
+
         // Seed initial data
         await ProductDbSeeder.SeedAsync(dbContext);
         Console.WriteLine("Database seeding completed successfully");
@@ -149,8 +153,8 @@ try
         opts.MessageTemplate =
             "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
         opts.GetLevel = (httpCtx, _, ex) =>
-            ex != null || httpCtx.Response.StatusCode >= 500 ? Serilog.Events.LogEventLevel.Error   :
-            httpCtx.Response.StatusCode >= 400               ? Serilog.Events.LogEventLevel.Warning :
+            ex != null || httpCtx.Response.StatusCode >= 500 ? Serilog.Events.LogEventLevel.Error :
+            httpCtx.Response.StatusCode >= 400 ? Serilog.Events.LogEventLevel.Warning :
                                                                Serilog.Events.LogEventLevel.Information;
     });
 
@@ -204,6 +208,17 @@ try
 
     app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "product-service" }));
     app.MapGet("/api/product/health", () => Results.Ok(new { status = "healthy", service = "product-service" }));
+
+    // Start RabbitMQ event consumers
+    try
+    {
+        ServiceCollectionExtensions.StartEventConsumers(app.Services);
+        Console.WriteLine("[ProductService] Event consumers started successfully");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[ProductService] Failed to start event consumers: {ex.Message}");
+    }
 
     app.Run();
 }

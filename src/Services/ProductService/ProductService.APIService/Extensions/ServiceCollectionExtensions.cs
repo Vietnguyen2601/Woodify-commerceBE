@@ -5,6 +5,7 @@ using ProductService.Infrastructure.Repositories.IRepositories;
 using ProductService.Infrastructure.Persistence;
 using ProductService.Application.Interfaces;
 using ProductService.Application.Services;
+using ProductService.Application.Consumers;
 using ProductService.Application.Validators;
 using ProductService.Infrastructure.Data.Context;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,7 +41,16 @@ namespace ProductService.APIService.Extensions
             // Event Publisher
             services.AddSingleton<ProductEventPublisher>();
 
+            // Shop name cache (populated by ShopEventConsumer via RabbitMQ)
+            services.AddSingleton<ShopNameCacheService>();
+
             return services;
+        }
+
+        public static void StartEventConsumers(IServiceProvider serviceProvider)
+        {
+            var shopEventConsumer = serviceProvider.GetService<ShopEventConsumer>();
+            shopEventConsumer?.StartListening();
         }
 
         public static IServiceCollection AddValidators(this IServiceCollection services)

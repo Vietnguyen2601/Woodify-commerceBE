@@ -13,8 +13,8 @@ public class ProductServiceClient : IProductServiceClient
     public ProductServiceClient(HttpClient httpClient, IConfiguration configuration)
     {
         _httpClient = httpClient;
-        _productServiceUrl = Environment.GetEnvironmentVariable("ProductService_Url") 
-                           ?? configuration["Services:ProductService:Url"] 
+        _productServiceUrl = Environment.GetEnvironmentVariable("ProductService_Url")
+                           ?? configuration["Services:ProductService:Url"]
                            ?? "http://localhost:5001";
     }
 
@@ -23,7 +23,7 @@ public class ProductServiceClient : IProductServiceClient
         try
         {
             var response = await _httpClient.GetAsync($"{_productServiceUrl}/api/ProductVersions/GetProductVersionById/{versionId}");
-            
+
             if (!response.IsSuccessStatusCode)
                 return null;
 
@@ -46,7 +46,7 @@ public class ProductServiceClient : IProductServiceClient
         try
         {
             var response = await _httpClient.GetAsync($"{_productServiceUrl}/api/ProductMasters/GetProductMasterById/{productId}");
-            
+
             if (!response.IsSuccessStatusCode)
                 return false;
 

@@ -12,6 +12,10 @@ public class OrderDbContext : DbContext
     {
     }
 
+    public OrderDbContext() : base()
+    {
+    }
+
     public DbSet<Cart> Carts { get; set; }
     public DbSet<CartItem> CartItems { get; set; }
     public DbSet<ProductVersionCache> ProductVersionCaches { get; set; }
@@ -158,6 +162,9 @@ public class OrderDbContext : DbContext
 
             // Status
             entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+
+            // Thumbnail
+            entity.Property(e => e.ThumbnailUrl).HasColumnName("thumbnail_url").HasMaxLength(2000);
 
             // Soft Delete
             entity.Property(e => e.IsDeleted).HasColumnName("is_deleted").IsRequired().HasDefaultValue(false);

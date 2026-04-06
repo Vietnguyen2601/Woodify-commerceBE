@@ -14,7 +14,7 @@ public class CartService : ICartService
     private readonly IProductVersionCacheRepository _productCacheRepository;
 
     public CartService(
-        ICartRepository cartRepository, 
+        ICartRepository cartRepository,
         ICartItemRepository cartItemRepository,
         IProductVersionCacheRepository productCacheRepository)
     {
@@ -28,7 +28,7 @@ public class CartService : ICartService
         try
         {
             var cart = await _cartRepository.GetActiveCartByAccountIdAsync(accountId);
-            
+
             if (cart == null)
             {
                 // Return empty cart if not found
@@ -41,7 +41,21 @@ public class CartService : ICartService
                 });
             }
 
-            return ServiceResult<CartDto>.Success(cart.ToDto());
+            var cartDto = cart.ToDto();
+
+            // Enrich each item with product name, version name, and thumbnail from local cache
+            foreach (var item in cartDto.Items)
+            {
+                var cache = await _productCacheRepository.GetByVersionIdAsync(item.VersionId);
+                if (cache != null)
+                {
+                    item.ProductMasterName = cache.ProductName;
+                    item.ProductVersionName = cache.VersionName;
+                    item.ThumbnailUrl = cache.ThumbnailUrl;
+                }
+            }
+
+            return ServiceResult<CartDto>.Success(cartDto);
         }
         catch (Exception ex)
         {
@@ -69,18 +83,18 @@ public class CartService : ICartService
             // Check if product has price
             if (productCache.Price <= 0)
                 return ServiceResult<CartDto>.BadRequest("Product price is not set");
-            
+
             // Check if product is active
             if (!productCache.IsActive)
                 return ServiceResult<CartDto>.BadRequest("Product version is not active");
-                
+
             // Check stock availability (unless backorder is allowed)
             if (productCache.StockQuantity < dto.Quantity && !productCache.AllowBackorder)
                 return ServiceResult<CartDto>.BadRequest($"Insufficient stock. Available: {productCache.StockQuantity}, Requested: {dto.Quantity}");
 
             // Get or create cart
             var cart = await _cartRepository.GetActiveCartByAccountIdAsync(accountId);
-            
+
             if (cart == null)
             {
                 // Create new cart
@@ -94,7 +108,7 @@ public class CartService : ICartService
 
             // Check if product already in cart
             var existingItem = await _cartItemRepository.GetByCartIdAndVersionIdAsync(cart.CartId, dto.VersionId);
-            
+
             if (existingItem != null)
             {
                 // Update quantity
@@ -117,7 +131,21 @@ public class CartService : ICartService
 
             // Reload cart with items
             var updatedCart = await _cartRepository.GetCartWithItemsAsync(cart.CartId);
-            return ServiceResult<CartDto>.Success(updatedCart!.ToDto(), "Product added to cart successfully");
+            var cartDto = updatedCart!.ToDto();
+
+            // Enrich each item with product name, version name, and thumbnail from local cache
+            foreach (var item in cartDto.Items)
+            {
+                var cache = await _productCacheRepository.GetByVersionIdAsync(item.VersionId);
+                if (cache != null)
+                {
+                    item.ProductMasterName = cache.ProductName;
+                    item.ProductVersionName = cache.VersionName;
+                    item.ThumbnailUrl = cache.ThumbnailUrl;
+                }
+            }
+
+            return ServiceResult<CartDto>.Success(cartDto, "Product added to cart successfully");
         }
         catch (Exception ex)
         {
@@ -233,7 +261,7 @@ public class CartService : ICartService
 
                 // Check if product version still exists and is valid in cache
                 var productCache = await _productCacheRepository.GetByVersionIdAsync(item.VersionId);
-                
+
                 if (productCache == null)
                 {
                     checkoutItem.IsValid = false;

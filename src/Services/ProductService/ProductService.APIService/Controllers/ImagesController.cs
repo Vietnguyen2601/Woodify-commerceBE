@@ -6,7 +6,7 @@ using Shared.Results;
 namespace ProductService.APIService.Controllers;
 
 [ApiController]
-[Route("api/images")]
+[Route("api/product/images")]
 public class ImagesController : ControllerBase
 {
     private readonly IImageUrlService _imageUrlService;

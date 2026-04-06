@@ -38,7 +38,8 @@ public class ProductVersionService : IProductVersionService
             return ServiceResult<ProductVersionDto>.NotFound("Product version not found");
 
         var dto = version.ToDto();
-        dto.ThumbnailUrl = (await _imageUrlRepository.GetPrimaryImageAsync("PRODUCT_VERSION", id))?.OriginalUrl;
+        var thumbnailMap = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT_VERSION", new[] { id });
+        dto.ThumbnailUrl = thumbnailMap.GetValueOrDefault(id);
         return ServiceResult<ProductVersionDto>.Success(dto);
     }
 
@@ -49,7 +50,8 @@ public class ProductVersionService : IProductVersionService
             return ServiceResult<ProductVersionDto>.NotFound("Product version not found");
 
         var dto = version.ToDto();
-        dto.ThumbnailUrl = (await _imageUrlRepository.GetPrimaryImageAsync("PRODUCT_VERSION", version.VersionId))?.OriginalUrl;
+        var thumbnailMap = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT_VERSION", new[] { version.VersionId });
+        dto.ThumbnailUrl = thumbnailMap.GetValueOrDefault(version.VersionId);
         return ServiceResult<ProductVersionDto>.Success(dto);
     }
 
@@ -80,7 +82,8 @@ public class ProductVersionService : IProductVersionService
             return ServiceResult<ProductVersionDto>.NotFound("No version found for this product");
 
         var dto = version.ToDto();
-        dto.ThumbnailUrl = (await _imageUrlRepository.GetPrimaryImageAsync("PRODUCT_VERSION", version.VersionId))?.OriginalUrl;
+        var thumbnailMap = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT_VERSION", new[] { version.VersionId });
+        dto.ThumbnailUrl = thumbnailMap.GetValueOrDefault(version.VersionId);
         return ServiceResult<ProductVersionDto>.Success(dto);
     }
 
@@ -91,7 +94,8 @@ public class ProductVersionService : IProductVersionService
             return ServiceResult<ProductVersionDto>.NotFound("No default version found for this product");
 
         var dto = version.ToDto();
-        dto.ThumbnailUrl = (await _imageUrlRepository.GetPrimaryImageAsync("PRODUCT_VERSION", version.VersionId))?.OriginalUrl;
+        var thumbnailMap = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT_VERSION", new[] { version.VersionId });
+        dto.ThumbnailUrl = thumbnailMap.GetValueOrDefault(version.VersionId);
         return ServiceResult<ProductVersionDto>.Success(dto);
     }
 
@@ -163,6 +167,8 @@ public class ProductVersionService : IProductVersionService
             await _productMasterRepository.UpdateAsync(productToUpdate);
 
             // Publish event to OrderService
+            var thumbnailMapCreated = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT_VERSION", new[] { version.VersionId });
+            var thumbnailUrlCreated = thumbnailMapCreated.GetValueOrDefault(version.VersionId);
             _eventPublisher.PublishProductVersionUpdated(new ProductVersionUpdatedEvent
             {
                 VersionId = version.VersionId,
@@ -183,6 +189,7 @@ public class ProductVersionService : IProductVersionService
                 WidthCm = version.WidthCm,
                 HeightCm = version.HeightCm,
                 IsActive = version.IsActive,
+                ThumbnailUrl = thumbnailUrlCreated,
                 UpdatedAt = DateTime.UtcNow,
                 EventType = "Created"
             });
@@ -281,6 +288,8 @@ public class ProductVersionService : IProductVersionService
             var updatedVersion = version.ToDto();
 
             // Publish event to OrderService with CURRENT product status
+            var thumbnailMapUpdated = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT_VERSION", new[] { version.VersionId });
+            var thumbnailUrlUpdated = thumbnailMapUpdated.GetValueOrDefault(version.VersionId);
             _eventPublisher.PublishProductVersionUpdated(new ProductVersionUpdatedEvent
             {
                 VersionId = version.VersionId,
@@ -301,6 +310,7 @@ public class ProductVersionService : IProductVersionService
                 WidthCm = version.WidthCm,
                 HeightCm = version.HeightCm,
                 IsActive = version.IsActive,
+                ThumbnailUrl = thumbnailUrlUpdated,
                 UpdatedAt = version.UpdatedAt ?? DateTime.UtcNow,
                 EventType = "Updated"
             });
@@ -335,6 +345,8 @@ public class ProductVersionService : IProductVersionService
             if (product != null)
             {
                 // Publish event to OrderService
+                var thumbnailMapDeact = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT_VERSION", new[] { version.VersionId });
+                var thumbnailUrlDeact = thumbnailMapDeact.GetValueOrDefault(version.VersionId);
                 _eventPublisher.PublishProductVersionUpdated(new ProductVersionUpdatedEvent
                 {
                     VersionId = version.VersionId,
@@ -355,6 +367,7 @@ public class ProductVersionService : IProductVersionService
                     WidthCm = version.WidthCm,
                     HeightCm = version.HeightCm,
                     IsActive = version.IsActive,
+                    ThumbnailUrl = thumbnailUrlDeact,
                     UpdatedAt = version.UpdatedAt.Value,
                     EventType = "Updated"
                 });
@@ -390,6 +403,8 @@ public class ProductVersionService : IProductVersionService
             if (product != null)
             {
                 // Publish event to OrderService
+                var thumbnailMapAct = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT_VERSION", new[] { version.VersionId });
+                var thumbnailUrlAct = thumbnailMapAct.GetValueOrDefault(version.VersionId);
                 _eventPublisher.PublishProductVersionUpdated(new ProductVersionUpdatedEvent
                 {
                     VersionId = version.VersionId,
@@ -410,6 +425,7 @@ public class ProductVersionService : IProductVersionService
                     WidthCm = version.WidthCm,
                     HeightCm = version.HeightCm,
                     IsActive = version.IsActive,
+                    ThumbnailUrl = thumbnailUrlAct,
                     UpdatedAt = version.UpdatedAt.Value,
                     EventType = "Updated"
                 });

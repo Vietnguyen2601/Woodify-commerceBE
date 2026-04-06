@@ -79,6 +79,7 @@ public class ProductMasterDto
 {
     public Guid ProductId { get; set; }
     public Guid ShopId { get; set; }
+    public string? ShopName { get; set; }
     public Guid CategoryId { get; set; }
     public string? CategoryName { get; set; }
 
@@ -109,6 +110,7 @@ public class ProductMasterDetailDto
 {
     public Guid ProductId { get; set; }
     public Guid ShopId { get; set; }
+    public string? ShopName { get; set; }
     public Guid CategoryId { get; set; }
     public string? CategoryName { get; set; }
 

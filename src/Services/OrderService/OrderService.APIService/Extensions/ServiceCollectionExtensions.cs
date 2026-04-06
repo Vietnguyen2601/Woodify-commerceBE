@@ -54,6 +54,17 @@ namespace OrderService.APIService.Extensions
                 client.Timeout = TimeSpan.FromSeconds(30);
             });
 
+            // Register event consumers
+            services.AddScoped<ProductEventConsumer>();
+            services.AddScoped<ImageUrlEventConsumer>();
+            services.AddScoped<ShippingFeeEventConsumer>();
+
+            // Register HttpClient for ProductServiceClient to query product data
+            services.AddHttpClient<IProductServiceClient, ProductServiceClient>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(10);
+            });
+
             return services;
         }
 
@@ -62,6 +73,10 @@ namespace OrderService.APIService.Extensions
             // Start Product Event Consumer
             var productConsumer = serviceProvider.GetService<ProductEventConsumer>();
             productConsumer?.StartListening();
+
+            // Start Image URL Event Consumer
+            var imageUrlConsumer = serviceProvider.GetService<ImageUrlEventConsumer>();
+            imageUrlConsumer?.StartListening();
 
             // Start Shipping Fee Event Consumer
             var shippingFeeConsumer = serviceProvider.GetService<ShippingFeeEventConsumer>();

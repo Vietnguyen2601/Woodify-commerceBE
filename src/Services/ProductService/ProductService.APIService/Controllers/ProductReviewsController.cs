@@ -6,7 +6,7 @@ using Shared.Results;
 namespace ProductService.APIService.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/product/[controller]")]
 public class ProductReviewsController : ControllerBase
 {
     private readonly IProductReviewService _productReviewService;

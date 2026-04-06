@@ -44,6 +44,9 @@ public class CartItemDto
     public int Quantity { get; set; }
     public double Price { get; set; }
     public double TotalPrice { get; set; }
+    public string? ProductMasterName { get; set; }
+    public string? ProductVersionName { get; set; }
+    public string? ThumbnailUrl { get; set; }
 }
 
 /// <summary>

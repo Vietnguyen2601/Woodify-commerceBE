@@ -3,12 +3,14 @@ using ProductService.Application.Interfaces;
 using ProductService.Domain.Entities;
 using ProductService.Infrastructure.Repositories.IRepositories;
 using Shared.Results;
+using Shared.Events;
 
 namespace ProductService.Application.Services;
 
 public class ImageUrlService : IImageUrlService
 {
     private readonly IImageUrlRepository _imageUrlRepository;
+    private readonly ProductEventPublisher _eventPublisher;
 
     private static readonly HashSet<string> ValidImageTypes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -16,9 +18,10 @@ public class ImageUrlService : IImageUrlService
         "SHOP_LOGO", "SHOP_COVER", "CATEGORY", "BANNER", "ADS"
     };
 
-    public ImageUrlService(IImageUrlRepository imageUrlRepository)
+    public ImageUrlService(IImageUrlRepository imageUrlRepository, ProductEventPublisher eventPublisher)
     {
         _imageUrlRepository = imageUrlRepository;
+        _eventPublisher = eventPublisher;
     }
 
     public async Task<ServiceResult<ImageUrlDto>> SaveImageAsync(SaveImageUrlDto dto)
@@ -48,6 +51,18 @@ public class ImageUrlService : IImageUrlService
         };
 
         await _imageUrlRepository.CreateAsync(entity);
+
+        // Publish event khi ảnh chính (sort_order = 0) của ProductVersion được upload
+        if (entity.ImageType == "PRODUCT_VERSION" && entity.SortOrder == 0)
+        {
+            _eventPublisher.PublishImageUrlUpdated(new ImageUrlUpdatedEvent
+            {
+                VersionId = entity.ReferenceId,
+                ThumbnailUrl = entity.OriginalUrl,
+                UpdatedAt = DateTime.UtcNow,
+                EventType = "ImageUrlUpdated"
+            });
+        }
 
         return ServiceResult<ImageUrlDto>.Created(ToDto(entity), "Image saved successfully");
     }
@@ -85,6 +100,22 @@ public class ImageUrlService : IImageUrlService
         }
 
         var saved = await _imageUrlRepository.BulkCreateAsync(entities);
+
+        // Publish events cho ảnh chính (sort_order = 0) của ProductVersion
+        foreach (var image in saved)
+        {
+            if (image.ImageType == "PRODUCT_VERSION" && image.SortOrder == 0)
+            {
+                _eventPublisher.PublishImageUrlUpdated(new ImageUrlUpdatedEvent
+                {
+                    VersionId = image.ReferenceId,
+                    ThumbnailUrl = image.OriginalUrl,
+                    UpdatedAt = DateTime.UtcNow,
+                    EventType = "ImageUrlUpdated"
+                });
+            }
+        }
+
         return ServiceResult<List<ImageUrlDto>>.Created(saved.Select(ToDto).ToList(),
             $"{saved.Count} image(s) saved successfully");
     }

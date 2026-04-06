@@ -6,7 +6,7 @@ using Shared.Results;
 namespace ProductService.APIService.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/product/[controller]")]
 public class ProductMastersController : ControllerBase
 {
     private readonly IProductMasterService _productMasterService;
@@ -45,7 +45,7 @@ public class ProductMastersController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("GetProductsByShopId/{shopId:guid}")]
+    [HttpGet("GetProductByShopId/{shopId:guid}")]
     public async Task<ActionResult<ServiceResult<IEnumerable<ProductMasterDto>>>> GetByShopId(Guid shopId)
     {
         var result = await _productMasterService.GetByShopIdAsync(shopId);

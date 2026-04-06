@@ -7,7 +7,7 @@ using ShopService.Application.Interfaces;
 namespace ShopService.APIService.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/shop/[controller]")]
 public class ShopsController : ControllerBase
 {
     private readonly IShopService _shopService;
