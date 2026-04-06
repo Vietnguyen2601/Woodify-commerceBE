@@ -203,12 +203,12 @@ public class ShopService : IShopService
         }
     }
 
-    public async Task<ServiceResult<IEnumerable<ShopDto>>> GetAllShopsAsync()
+    public async Task<ServiceResult<IEnumerable<ShopPublicDto>>> GetAllShopsAsync()
     {
         try
         {
             var shops = await _unitOfWork.Shops.GetActiveShopsAsync();
-            return ServiceResult<IEnumerable<ShopDto>>.Success(shops.ToDto());
+            return ServiceResult<IEnumerable<ShopPublicDto>>.Success(shops.ToPublicDto());
         }
         catch (OperationCanceledException)
         {
@@ -216,7 +216,7 @@ public class ShopService : IShopService
         }
         catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
         {
-            return ServiceResult<IEnumerable<ShopDto>>.InternalServerError($"Error retrieving shops: {ex.Message}");
+            return ServiceResult<IEnumerable<ShopPublicDto>>.InternalServerError($"Error retrieving shops: {ex.Message}");
         }
     }
 
@@ -237,15 +237,15 @@ public class ShopService : IShopService
         }
     }
 
-    public async Task<ServiceResult<ShopDto>> GetShopByIdAsync(Guid shopId)
+    public async Task<ServiceResult<ShopPublicDto>> GetShopByIdAsync(Guid shopId)
     {
         try
         {
             var shop = await _unitOfWork.Shops.GetByIdAsync(shopId);
             if (shop == null)
-                return ServiceResult<ShopDto>.NotFound("Shop not found");
+                return ServiceResult<ShopPublicDto>.NotFound("Shop not found");
 
-            return ServiceResult<ShopDto>.Success(shop.ToDto());
+            return ServiceResult<ShopPublicDto>.Success(shop.ToPublicDto());
         }
         catch (OperationCanceledException)
         {
@@ -253,19 +253,19 @@ public class ShopService : IShopService
         }
         catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
         {
-            return ServiceResult<ShopDto>.InternalServerError($"Error retrieving shop: {ex.Message}");
+            return ServiceResult<ShopPublicDto>.InternalServerError($"Error retrieving shop: {ex.Message}");
         }
     }
 
-    public async Task<ServiceResult<ShopDto>> GetShopByOwnerIdAsync(Guid ownerId)
+    public async Task<ServiceResult<ShopDetailDto>> GetShopByOwnerIdAsync(Guid ownerId)
     {
         try
         {
             var shop = await _unitOfWork.Shops.GetByOwnerIdAsync(ownerId);
             if (shop == null)
-                return ServiceResult<ShopDto>.NotFound("Shop not found for this owner");
+                return ServiceResult<ShopDetailDto>.NotFound("Shop not found for this owner");
 
-            return ServiceResult<ShopDto>.Success(shop.ToDto());
+            return ServiceResult<ShopDetailDto>.Success(shop.ToDetailDto());
         }
         catch (OperationCanceledException)
         {
@@ -273,7 +273,7 @@ public class ShopService : IShopService
         }
         catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
         {
-            return ServiceResult<ShopDto>.InternalServerError($"Error retrieving shop: {ex.Message}");
+            return ServiceResult<ShopDetailDto>.InternalServerError($"Error retrieving shop: {ex.Message}");
         }
     }
 

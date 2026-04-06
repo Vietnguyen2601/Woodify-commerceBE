@@ -30,6 +30,9 @@ public static class ShopDbSeeder
                     Rating = 4.7m,
                     Status = ShopService.Domain.Enums.ShopStatus.ACTIVE,
                     DefaultProvider = null, // Will be set after seeding providers
+                    BankName = "Vietcombank",
+                    BankAccountNumber = "1001234567",
+                    BankAccountName = "NGUYEN VAN A",
                     CreatedAt = DateTime.UtcNow.AddDays(-60)
                 },
                 // Shop của Seller 02
@@ -42,6 +45,9 @@ public static class ShopDbSeeder
                     Rating = 4.8m,
                     Status = ShopService.Domain.Enums.ShopStatus.ACTIVE,
                     DefaultProvider = null, // Will be set after seeding providers
+                    BankName = "BIDV",
+                    BankAccountNumber = "2005678901",
+                    BankAccountName = "TRAN THI B",
                     CreatedAt = DateTime.UtcNow.AddDays(-50)
                 },
                 new()
@@ -52,6 +58,9 @@ public static class ShopDbSeeder
                     Description = "Bán các sản phẩm gỗ tự nhiên nhập khẩu từ châu Âu",
                     Rating = 4.7m,
                     Status = ShopService.Domain.Enums.ShopStatus.ACTIVE,
+                    BankName = "Techcombank",
+                    BankAccountNumber = "3009123456",
+                    BankAccountName = "PHAM VAN C",
                     CreatedAt = DateTime.UtcNow
                 },
                 new()
@@ -62,6 +71,9 @@ public static class ShopDbSeeder
                     Description = "Thiết kế và cung cấp nội thất gỗ cao cấp theo yêu cầu",
                     Rating = 4.9m,
                     Status = ShopService.Domain.Enums.ShopStatus.ACTIVE,
+                    BankName = "ACB",
+                    BankAccountNumber = "4017654321",
+                    BankAccountName = "LE THI D",
                     CreatedAt = DateTime.UtcNow
                 },
                 new()
@@ -72,6 +84,9 @@ public static class ShopDbSeeder
                     Description = "Chuyên bán sản phẩm gỗ từ Lâm Đồng, chất lượng tốt giá hợp lý",
                     Rating = 4.3m,
                     Status = ShopService.Domain.Enums.ShopStatus.ACTIVE,
+                    BankName = "Agribank",
+                    BankAccountNumber = "5050789012",
+                    BankAccountName = "HOANG VAN E",
                     CreatedAt = DateTime.UtcNow
                 }
             };

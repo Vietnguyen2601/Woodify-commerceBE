@@ -5,9 +5,12 @@ namespace ShopService.Application.Mappers;
 
 public static class ShopMapper
 {
-    public static ShopDto ToDto(this Shop shop)
+    /// <summary>
+    /// Map to public DTO (ẩn thông tin ngân hàng) - dùng cho GetAllShops
+    /// </summary>
+    public static ShopPublicDto ToPublicDto(this Shop shop)
     {
-        return new ShopDto
+        return new ShopPublicDto
         {
             ShopId = shop.ShopId,
             OwnerId = shop.OwnerAccountId,
@@ -27,6 +30,73 @@ public static class ShopMapper
         };
     }
 
+    /// <summary>
+    /// Map to public DTO list (ẩn thông tin ngân hàng)
+    /// </summary>
+    public static IEnumerable<ShopPublicDto> ToPublicDto(this IEnumerable<Shop> shops)
+    {
+        return shops.Select(s => s.ToPublicDto());
+    }
+
+    /// <summary>
+    /// Map to detail DTO (hiển thị thông tin ngân hàng) - dùng cho GetShopById, GetShopByOwnerId
+    /// </summary>
+    public static ShopDetailDto ToDetailDto(this Shop shop)
+    {
+        return new ShopDetailDto
+        {
+            ShopId = shop.ShopId,
+            OwnerId = shop.OwnerAccountId,
+            Name = shop.Name,
+            Description = shop.Description,
+            LogoUrl = shop.LogoUrl,
+            CoverImageUrl = shop.CoverImageUrl,
+            DefaultPickupAddress = shop.DefaultPickupAddress,
+            DefaultProvider = shop.DefaultProvider,
+            BankName = shop.BankName,
+            BankAccountNumber = shop.BankAccountNumber,
+            BankAccountName = shop.BankAccountName,
+            Rating = shop.Rating,
+            ReviewCount = shop.ReviewCount,
+            TotalProducts = shop.TotalProducts,
+            TotalOrders = shop.TotalOrders,
+            Status = shop.Status.ToString(),
+            CreatedAt = shop.CreatedAt,
+            UpdatedAt = shop.UpdatedAt
+        };
+    }
+
+    /// <summary>
+    /// Backward compatibility - hiển thị bank info
+    /// </summary>
+    public static ShopDto ToDto(this Shop shop)
+    {
+        return new ShopDto
+        {
+            ShopId = shop.ShopId,
+            OwnerId = shop.OwnerAccountId,
+            Name = shop.Name,
+            Description = shop.Description,
+            LogoUrl = shop.LogoUrl,
+            CoverImageUrl = shop.CoverImageUrl,
+            DefaultPickupAddress = shop.DefaultPickupAddress,
+            DefaultProvider = shop.DefaultProvider,
+            BankName = shop.BankName,
+            BankAccountNumber = shop.BankAccountNumber,
+            BankAccountName = shop.BankAccountName,
+            Rating = shop.Rating,
+            ReviewCount = shop.ReviewCount,
+            TotalProducts = shop.TotalProducts,
+            TotalOrders = shop.TotalOrders,
+            Status = shop.Status.ToString(),
+            CreatedAt = shop.CreatedAt,
+            UpdatedAt = shop.UpdatedAt
+        };
+    }
+
+    /// <summary>
+    /// Backward compatibility
+    /// </summary>
     public static IEnumerable<ShopDto> ToDto(this IEnumerable<Shop> shops)
     {
         return shops.Select(s => s.ToDto());
@@ -42,7 +112,10 @@ public static class ShopMapper
             LogoUrl = dto.LogoUrl,
             CoverImageUrl = dto.CoverImageUrl,
             DefaultPickupAddress = dto.DefaultPickupAddress,
-            DefaultProvider = dto.DefaultProvider
+            DefaultProvider = dto.DefaultProvider,
+            BankName = dto.BankName,
+            BankAccountNumber = dto.BankAccountNumber,
+            BankAccountName = dto.BankAccountName
         };
     }
 
@@ -54,6 +127,9 @@ public static class ShopMapper
         shop.CoverImageUrl = dto.CoverImageUrl;
         shop.DefaultPickupAddress = dto.DefaultPickupAddress;
         shop.DefaultProvider = dto.DefaultProvider;
+        shop.BankName = dto.BankName;
+        shop.BankAccountNumber = dto.BankAccountNumber;
+        shop.BankAccountName = dto.BankAccountName;
         shop.UpdatedAt = DateTime.UtcNow;
     }
 
@@ -65,6 +141,9 @@ public static class ShopMapper
         if (dto.CoverImageUrl != null) shop.CoverImageUrl = dto.CoverImageUrl;
         if (dto.DefaultPickupAddress != null) shop.DefaultPickupAddress = dto.DefaultPickupAddress;
         if (dto.DefaultProvider.HasValue) shop.DefaultProvider = dto.DefaultProvider;
+        if (dto.BankName != null) shop.BankName = dto.BankName;
+        if (dto.BankAccountNumber != null) shop.BankAccountNumber = dto.BankAccountNumber;
+        if (dto.BankAccountName != null) shop.BankAccountName = dto.BankAccountName;
         shop.UpdatedAt = DateTime.UtcNow;
     }
 }

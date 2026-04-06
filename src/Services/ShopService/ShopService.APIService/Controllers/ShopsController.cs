@@ -18,7 +18,7 @@ public class ShopsController : ControllerBase
     }
 
     [HttpGet("GetAllShops")]
-    public async Task<ActionResult<ServiceResult<IEnumerable<ShopDto>>>> GetAllShops()
+    public async Task<ActionResult<ServiceResult<IEnumerable<ShopPublicDto>>>> GetAllShops()
     {
         var result = await _shopService.GetAllShopsAsync();
         return Ok(result);
@@ -33,7 +33,7 @@ public class ShopsController : ControllerBase
     }
 
     [HttpGet("GetShopById/{id}")]
-    public async Task<ActionResult<ServiceResult<ShopDto>>> GetShopById(Guid id)
+    public async Task<ActionResult<ServiceResult<ShopPublicDto>>> GetShopById(Guid id)
     {
         var result = await _shopService.GetShopByIdAsync(id);
 
@@ -44,7 +44,7 @@ public class ShopsController : ControllerBase
     }
 
     [HttpGet("GetShopByOwnerId/{ownerId}")]
-    public async Task<ActionResult<ServiceResult<ShopDto>>> GetShopByOwnerId(Guid ownerId)
+    public async Task<ActionResult<ServiceResult<ShopDetailDto>>> GetShopByOwnerId(Guid ownerId)
     {
         var result = await _shopService.GetShopByOwnerIdAsync(ownerId);
 

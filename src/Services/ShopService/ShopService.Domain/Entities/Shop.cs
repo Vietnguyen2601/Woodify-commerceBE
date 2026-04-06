@@ -19,6 +19,10 @@ public class Shop
     public string? DefaultPickupAddress { get; set; }
     public Guid? DefaultProvider { get; set; }
 
+    public string? BankName { get; set; }
+    public string? BankAccountNumber { get; set; }
+    public string? BankAccountName { get; set; }
+
     public decimal Rating { get; set; } = 0;
     public int ReviewCount { get; set; } = 0;
     public int TotalProducts { get; set; } = 0;
