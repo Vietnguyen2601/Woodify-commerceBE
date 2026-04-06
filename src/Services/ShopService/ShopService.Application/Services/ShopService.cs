@@ -25,7 +25,6 @@ public class ShopService : IShopService
     {
         try
         {
-            // Validate name uniqueness
             if (await _unitOfWork.Shops.ExistsWithNameAsync(dto.Name))
                 return ServiceResult<RegisterShopResponseDto>.BadRequest("A shop with this name already exists");
 
@@ -38,7 +37,7 @@ public class ShopService : IShopService
                 CoverImageUrl = dto.CoverImageUrl,
                 DefaultPickupAddress = dto.DefaultPickupAddress,
                 DefaultProvider = dto.DefaultProvider,
-                Status = ShopStatus.INACTIVE,
+                Status = ShopStatus.ACTIVE,
                 CreatedAt = DateTime.UtcNow
             };
 

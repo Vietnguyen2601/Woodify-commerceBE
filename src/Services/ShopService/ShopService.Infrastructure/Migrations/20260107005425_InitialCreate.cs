@@ -22,7 +22,7 @@ namespace ShopService.Infrastructure.Migrations
                     rating = table.Column<decimal>(type: "numeric", nullable: true),
                     createdat = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updatedat = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    status = table.Column<int>(type: "integer", nullable: false),
+                    status = table.Column<string>(type: "character varying(20)", nullable: false, defaultValue: "INACTIVE"),
                     follower_count = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>

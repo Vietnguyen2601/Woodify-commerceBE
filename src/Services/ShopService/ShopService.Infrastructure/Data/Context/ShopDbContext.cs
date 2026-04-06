@@ -93,8 +93,7 @@ public class ShopDbContext : DbContext
             entity.Property(e => e.TotalOrders).HasColumnName("total_orders").HasDefaultValue(0);
             entity.Property(e => e.Status)
                 .HasColumnName("status")
-                .HasConversion<string>()
-                .HasDefaultValue(Domain.Enums.ShopStatus.INACTIVE);
+                .HasConversion<string>();
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 
