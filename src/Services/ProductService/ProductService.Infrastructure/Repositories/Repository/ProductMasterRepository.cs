@@ -17,6 +17,7 @@ public class ProductMasterRepository : GenericRepository<ProductMaster>, IProduc
     {
         return await _dbSet
             .Include(p => p.Category)
+            .Include(p => p.Versions)
             .FirstOrDefaultAsync(p => p.ProductId == id);
     }
 
@@ -24,6 +25,7 @@ public class ProductMasterRepository : GenericRepository<ProductMaster>, IProduc
     {
         return await _dbSet
             .Include(p => p.Category)
+            .Include(p => p.Versions)
             .FirstOrDefaultAsync(p => p.GlobalSku == globalSku);
     }
 
@@ -31,6 +33,7 @@ public class ProductMasterRepository : GenericRepository<ProductMaster>, IProduc
     {
         return await _dbSet
             .Include(p => p.Category)
+            .Include(p => p.Versions)
             .Where(p => p.ShopId == shopId)
             .ToListAsync();
     }
@@ -39,6 +42,7 @@ public class ProductMasterRepository : GenericRepository<ProductMaster>, IProduc
     {
         return await _dbSet
             .Include(p => p.Category)
+            .Include(p => p.Versions)
             .Where(p => p.Status == status)
             .ToListAsync();
     }
@@ -47,6 +51,7 @@ public class ProductMasterRepository : GenericRepository<ProductMaster>, IProduc
     {
         var query = _context.ProductMasters
             .Include(p => p.Category)
+            .Include(p => p.Versions)
             .AsQueryable();
 
         // Default: Only index PUBLISHED products
@@ -114,6 +119,7 @@ public class ProductMasterRepository : GenericRepository<ProductMaster>, IProduc
         // Base query: status=PENDING_APPROVAL and moderation_status=PENDING
         var query = _context.ProductMasters
             .Include(p => p.Category)
+            .Include(p => p.Versions)
             .Where(p => p.Status == ProductStatus.PENDING_APPROVAL && 
                        p.ModerationStatus == ModerationStatus.PENDING)
             .AsQueryable();
@@ -161,6 +167,7 @@ public class ProductMasterRepository : GenericRepository<ProductMaster>, IProduc
     {
         return await _dbSet
             .Include(p => p.Category)
+            .Include(p => p.Versions)
             .ToListAsync();
     }
 

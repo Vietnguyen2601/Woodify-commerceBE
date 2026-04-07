@@ -9,6 +9,14 @@ public static class ProductMasterMapper
     {
         if (product == null) throw new ArgumentNullException(nameof(product), "ProductMaster cannot be null");
         
+        // Get first version (default version for pricing/wood type)
+        var firstVersion = product.Versions?.OrderBy(v => v.CreatedAt).FirstOrDefault();
+        
+        // Calculate total stock from all active versions
+        var totalStock = product.Versions?
+            .Where(v => v.IsActive)
+            .Sum(v => v.StockQuantity) ?? 0;
+        
         return new ProductMasterDto
         {
             ProductId = product.ProductId,
@@ -23,7 +31,10 @@ public static class ProductMasterMapper
             ModeratedAt = product.ModeratedAt,
             CreatedAt = product.CreatedAt,
             UpdatedAt = product.UpdatedAt,
-            PublishedAt = product.PublishedAt
+            PublishedAt = product.PublishedAt,
+            Price = firstVersion?.Price,
+            StockQuantity = totalStock > 0 ? totalStock : null,
+            WoodType = firstVersion?.WoodType
         };
     }
 

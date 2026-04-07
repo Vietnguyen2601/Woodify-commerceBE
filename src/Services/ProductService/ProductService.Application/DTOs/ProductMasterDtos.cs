@@ -100,6 +100,15 @@ public class ProductMasterDto
 
     /// <summary>Primary image URL (SortOrder = 0), null if no image uploaded</summary>
     public string? ThumbnailUrl { get; set; }
+
+    /// <summary>Default price (from first ProductVersion), null if no version exists</summary>
+    public double? Price { get; set; }
+
+    /// <summary>Total stock quantity (sum of all active ProductVersions), null if no active versions</summary>
+    public int? StockQuantity { get; set; }
+
+    /// <summary>Wood type (from first ProductVersion), null if no version exists</summary>
+    public string? WoodType { get; set; }
 }
 
 /// <summary>
@@ -214,3 +223,20 @@ public class PendingApprovalQueueResultDto
     public int PageSize { get; set; }
     public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
 }
+
+/// <summary>
+/// DTO for submission status information
+/// </summary>
+public class SubmissionStatusDto
+{
+    public Guid ProductId { get; set; }
+    public string ProductName { get; set; } = string.Empty;
+    public string CurrentStatus { get; set; } = string.Empty; // DRAFT, PENDING_APPROVAL, APPROVED, REJECTED, PUBLISHED, ARCHIVED
+    public string ModerationStatus { get; set; } = string.Empty; // PENDING, APPROVED, REJECTED
+    public DateTime? SubmittedAt { get; set; }
+    public DateTime? ModeratedAt { get; set; }
+    public string? RejectionReason { get; set; }
+    public bool CanCancelSubmission { get; set; } // true if status is PENDING_APPROVAL
+    public bool CanResubmit { get; set; } // true if status is REJECTED or DRAFT
+}
+

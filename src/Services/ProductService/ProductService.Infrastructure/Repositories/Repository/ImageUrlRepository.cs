@@ -82,4 +82,49 @@ public class ImageUrlRepository : GenericRepository<ImageUrl>, IImageUrlReposito
             id => images.Where(i => i.ReferenceId == id).ToList()
         );
     }
+
+    public async Task<ImageUrl?> GetPrimaryImageWithFallbackAsync(Guid productId, Guid? productVersionId, Guid? categoryId)
+    {
+        // Step 1: Try to get PRODUCT image
+        var productImage = await _dbSet
+            .Where(i => i.ImageType == "PRODUCT" && i.ReferenceId == productId)
+            .OrderBy(i => i.SortOrder)
+            .ThenBy(i => i.CreatedAt)
+            .AsNoTracking()
+            .FirstOrDefaultAsync();
+
+        if (productImage != null)
+            return productImage;
+
+        // Step 2: Try to get PRODUCT_VERSION image (if version ID provided)
+        if (productVersionId.HasValue && productVersionId.Value != Guid.Empty)
+        {
+            var versionImage = await _dbSet
+                .Where(i => i.ImageType == "PRODUCT_VERSION" && i.ReferenceId == productVersionId.Value)
+                .OrderBy(i => i.SortOrder)
+                .ThenBy(i => i.CreatedAt)
+                .AsNoTracking()
+                .FirstOrDefaultAsync();
+
+            if (versionImage != null)
+                return versionImage;
+        }
+
+        // Step 3: Try to get CATEGORY image (if category ID provided)
+        if (categoryId.HasValue && categoryId.Value != Guid.Empty)
+        {
+            var categoryImage = await _dbSet
+                .Where(i => i.ImageType == "CATEGORY" && i.ReferenceId == categoryId.Value)
+                .OrderBy(i => i.SortOrder)
+                .ThenBy(i => i.CreatedAt)
+                .AsNoTracking()
+                .FirstOrDefaultAsync();
+
+            if (categoryImage != null)
+                return categoryImage;
+        }
+
+        // Step 4: Return null or placeholder (handled by caller)
+        return null;
+    }
 }

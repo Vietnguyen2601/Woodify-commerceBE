@@ -41,7 +41,11 @@ public class ProductMasterService : IProductMasterService
             return ServiceResult<ProductMasterDto>.NotFound("Product not found");
 
         var dto = product.ToDto();
-        dto.ThumbnailUrl = (await _imageUrlRepository.GetPrimaryImageAsync("PRODUCT", id))?.OriginalUrl;
+        var firstVersion = product.Versions?.OrderBy(v => v.CreatedAt).FirstOrDefault();
+        dto.ThumbnailUrl = (await _imageUrlRepository.GetPrimaryImageWithFallbackAsync(
+            product.ProductId,
+            firstVersion?.VersionId,
+            product.CategoryId))?.OriginalUrl;
         dto.ShopName = _shopNameCache.Get(product.ShopId);
         return ServiceResult<ProductMasterDto>.Success(dto);
     }
@@ -768,6 +772,70 @@ public class ProductMasterService : IProductMasterService
         catch (Exception ex)
         {
             return ServiceResult<ProductDetailListResultDto>.InternalServerError($"Error retrieving product details: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<ProductMasterDto>> CancelSubmissionAsync(Guid id)
+    {
+        try
+        {
+            var product = await _productMasterRepository.GetByIdAsync(id);
+            if (product == null)
+                return ServiceResult<ProductMasterDto>.NotFound("Product not found");
+
+            // Only allow cancellation if product is in PENDING_APPROVAL status
+            if (product.Status != Domain.Entities.ProductStatus.PENDING_APPROVAL)
+                return ServiceResult<ProductMasterDto>.BadRequest(
+                    $"Cannot cancel submission. Product status is {product.Status}. Only PENDING_APPROVAL submissions can be cancelled.");
+
+            // Revert to DRAFT status
+            product.Status = Domain.Entities.ProductStatus.DRAFT;
+            product.ModerationStatus = Domain.Entities.ModerationStatus.PENDING;
+            product.UpdatedAt = DateTime.UtcNow;
+
+            _productMasterRepository.Update(product);
+            await _unitOfWork.SaveChangesAsync();
+
+            var dto = product.ToDto();
+            dto.ThumbnailUrl = (await _imageUrlRepository.GetPrimaryImageAsync("PRODUCT", product.ProductId))?.OriginalUrl;
+            dto.ShopName = _shopNameCache.Get(product.ShopId);
+
+            // TODO: Publish product submission cancellation event
+
+            return ServiceResult<ProductMasterDto>.Success(dto, "Submission cancelled successfully");
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<ProductMasterDto>.InternalServerError($"Error cancelling submission: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<SubmissionStatusDto>> GetSubmissionStatusAsync(Guid id)
+    {
+        try
+        {
+            var product = await _productMasterRepository.GetByIdAsync(id);
+            if (product == null)
+                return ServiceResult<SubmissionStatusDto>.NotFound("Product not found");
+
+            var statusDto = new SubmissionStatusDto
+            {
+                ProductId = product.ProductId,
+                ProductName = product.Name,
+                CurrentStatus = product.Status.ToString(),
+                ModerationStatus = product.ModerationStatus.ToString(),
+                SubmittedAt = product.UpdatedAt, // UpdatedAt represents submission time
+                ModeratedAt = product.ModeratedAt,
+                CanCancelSubmission = product.Status == Domain.Entities.ProductStatus.PENDING_APPROVAL,
+                CanResubmit = product.Status == Domain.Entities.ProductStatus.REJECTED || 
+                              product.Status == Domain.Entities.ProductStatus.DRAFT
+            };
+
+            return ServiceResult<SubmissionStatusDto>.Success(statusDto);
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<SubmissionStatusDto>.InternalServerError($"Error retrieving submission status: {ex.Message}");
         }
     }
 }
