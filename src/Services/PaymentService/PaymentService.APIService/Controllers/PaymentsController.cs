@@ -27,10 +27,52 @@ public class PaymentsController : ControllerBase
     }
 
     /// <summary>
-    /// Tạo link thanh toán PayOS
+    /// Tạo Payment cho multi-order checkout
+    /// Endpoint chính cho 3 phương thức: COD, Wallet, PayOS
+    /// Schema:
+    /// 1. Frontend gọi OrderService: POST /api/orders/CreateFromCart → nhận orderIds + totalAmount
+    /// 2. Frontend gọi endpoint này: POST /api/payments/create → nhận paymentId + paymentUrl (nếu PayOS)
+    /// 3. Tùy theo method:
+    ///    - COD: Orders → CONFIRMED, Payment → PENDING
+    ///    - WALLET: Deduct wallet, Orders → CONFIRMED, Payment → SUCCEEDED
+    ///    - PAYOS: Payment → CREATED, return QR/link, orders chờ webhook
     /// </summary>
     /// <remarks>
-    /// Sample request:
+    /// Sample requests:
+    ///
+    /// 1. COD Payment:
+    ///     POST /api/payments/create
+    ///     {
+    ///         "orderIds": ["guid1", "guid2"],
+    ///         "paymentMethod": "COD",
+    ///         "accountId": "account-guid",
+    ///         "totalAmountCents": 1500000
+    ///     }
+    ///
+    /// 2. Wallet Payment (same structure, method="WALLET"):
+    ///     {
+    ///         "orderIds": [...],
+    ///         "paymentMethod": "WALLET",
+    ///         "accountId": "...",
+    ///         "totalAmountCents": 1500000
+    ///     }
+    ///
+    /// 3. PayOS Payment (with return URLs):
+    ///     {
+    ///         "orderIds": [...],
+    ///         "paymentMethod": "PAYOS",
+    ///         "accountId": "...",
+    ///         "totalAmountCents": 1500000,
+    ///         "returnUrl": "https://app.com/payment/success",
+    ///         "cancelUrl": "https://app.com/payment/cancel"
+    ///     }
+    /// </remarks>
+
+    /// <summary>
+    /// Tạo link thanh toán PayOS (Legacy endpoint)
+    /// Khuyên dùng POST /api/payments/create thay thế
+    /// </summary>
+    /// <remarks>
     /// 
     ///     POST /api/payments/payos/create
     ///     {
@@ -83,13 +125,13 @@ public class PaymentsController : ControllerBase
             webhook.Data?.OrderCode, webhook.Data?.Status);
 
         var result = await _webhookHandler.HandleWebhookAsync(webhook);
-        
+
         // PayOS expects 200 OK with code "00" for success, or code "01" for failure
         if (result.Code == "00")
         {
             return Ok(result);
         }
-        
+
         _logger.LogWarning("Webhook handler returned error: {Code} - {Desc}", result.Code, result.Desc);
         return StatusCode(StatusCodes.Status400BadRequest, result);
     }
@@ -137,4 +179,48 @@ public class PaymentsController : ControllerBase
             _ => StatusCode(result.Status, result)
         };
     }
+
+    /// <summary>
+    /// Tạo Payment cho multi-order checkout
+    /// Hỗ trợ 3 phương thức: COD, WALLET, PAYOS
+    /// Gọi sau khi CreateOrderFromCart thành công
+    /// </summary>
+    /// <remarks>
+    /// Sample request:
+    /// 
+    ///     POST /api/payments/create
+    ///     {
+    ///         "orderIds": ["guid1", "guid2", "guid3"],
+    ///         "paymentMethod": "COD",
+    ///         "accountId": "550e8400-e29b-41d4-a716-446655440000"
+    ///     }
+    /// 
+    /// Responses:
+    /// - COD: status = "PENDING", orders sẽ CONFIRMED
+    /// - WALLET: status = "SUCCEEDED", tiền đã deduct khỏi wallet
+    /// - PAYOS: status = "CREATED", return paymentUrl + qrCodeUrl để user thanh toán
+    /// </remarks>
+    /// <param name="request">Thông tin tạo payment (orderIds, paymentMethod, accountId)</param>
+    /// <returns>Payment info kèm đường thanh toán (für PayOS)</returns>
+    [HttpPost("create")]
+    [ProducesResponseType(typeof(ServiceResult<CreatePaymentResponse>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ServiceResult<CreatePaymentResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ServiceResult<CreatePaymentResponse>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ServiceResult<CreatePaymentResponse>>> CreatePayment(
+        [FromBody] CreatePaymentRequest request)
+    {
+        _logger.LogInformation("CreatePayment request received for {OrderCount} orders, method: {Method}",
+            request.OrderIds.Count, request.PaymentMethod);
+
+        var result = await _paymentAppService.CreatePaymentAsync(request);
+
+        return result.Status switch
+        {
+            201 => CreatedAtAction(nameof(GetPaymentById),
+                new { paymentId = result.Data?.PaymentId }, result),
+            400 => BadRequest(result),
+            _ => StatusCode(result.Status, result)
+        };
+    }
 }
+

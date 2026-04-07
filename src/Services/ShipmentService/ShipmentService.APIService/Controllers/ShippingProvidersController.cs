@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using ShipmentService.Application.DTOs;
 using ShipmentService.Application.Interfaces;
 using Shared.Results;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ShipmentService.APIService.Controllers;
 
@@ -65,6 +67,40 @@ public class ShippingProvidersController : ControllerBase
             404 => NotFound(result),
             409 => Conflict(result),
             400 => BadRequest(result),
+            _ => StatusCode(result.Status, result)
+        };
+    }
+
+    [HttpGet("providers/{providerId:guid}")]
+    [ProducesResponseType(typeof(ServiceResult<ShippingProviderDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ServiceResult<ShippingProviderDto>>> GetById([FromRoute] Guid providerId)
+    {
+        var result = await _providerService.GetByIdAsync(providerId);
+
+        return result.Status switch
+        {
+            200 => Ok(result),
+            404 => NotFound(result),
+            _ => StatusCode(result.Status, result)
+        };
+    }
+
+    [HttpDelete("providers/{providerId:guid}")]
+    [Authorize(Roles = "admin")]
+    [ProducesResponseType(typeof(ServiceResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [Authorize]
+    public async Task<ActionResult<ServiceResult>> Delete([FromRoute] Guid providerId)
+    {
+        var result = await _providerService.DeleteAsync(providerId);
+
+        return result.Status switch
+        {
+            200 => Ok(result),
+            404 => NotFound(result),
+            409 => Conflict(result),
             _ => StatusCode(result.Status, result)
         };
     }

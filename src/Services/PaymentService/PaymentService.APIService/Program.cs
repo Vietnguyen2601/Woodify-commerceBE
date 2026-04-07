@@ -10,6 +10,7 @@ using PaymentService.APIService.Services;
 using PaymentService.Infrastructure.Data;
 using PaymentService.Infrastructure.PayOs;
 using PaymentService.Infrastructure.Repositories;
+using PaymentService.Infrastructure.UnitOfWork;
 using Shared.Messaging;
 using DotNetEnv;
 
@@ -25,7 +26,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((ctx, _, cfg) => cfg
     .ReadFrom.Configuration(ctx.Configuration)
-    .Enrich.FromLogContext()    .Enrich.WithProperty("Service", "Payment")    .Filter.ByExcluding(logEvent =>
+    .Enrich.FromLogContext().Enrich.WithProperty("Service", "Payment").Filter.ByExcluding(logEvent =>
         logEvent.Exception is { } ex && (
             ex.ToString().Contains("57P01", StringComparison.Ordinal) ||
             ex.Message.Contains("transient failure", StringComparison.OrdinalIgnoreCase)))
@@ -114,6 +115,11 @@ builder.Services.AddHttpClient<IPayOsService, PayOsService>(client =>
 // ==========================================
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IWalletRepository, WalletRepository>();
+
+// ==========================================
+// 5.1 Unit of Work
+// ==========================================
+builder.Services.AddScoped<PaymentService.Application.Interfaces.IUnitOfWork, PaymentService.Infrastructure.UnitOfWork.UnitOfWork>();
 
 // ==========================================
 // 6. Application Services
@@ -223,8 +229,8 @@ app.UseSerilogRequestLogging(opts =>
     opts.MessageTemplate =
         "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
     opts.GetLevel = (httpCtx, _, ex) =>
-        ex != null || httpCtx.Response.StatusCode >= 500 ? Serilog.Events.LogEventLevel.Error   :
-        httpCtx.Response.StatusCode >= 400               ? Serilog.Events.LogEventLevel.Warning :
+        ex != null || httpCtx.Response.StatusCode >= 500 ? Serilog.Events.LogEventLevel.Error :
+        httpCtx.Response.StatusCode >= 400 ? Serilog.Events.LogEventLevel.Warning :
                                                            Serilog.Events.LogEventLevel.Information;
 });
 

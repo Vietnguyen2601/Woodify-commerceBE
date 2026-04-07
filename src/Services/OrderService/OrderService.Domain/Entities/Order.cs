@@ -18,8 +18,10 @@ public class Order
 
     public Guid? VoucherId { get; set; }
 
-    // Payment reference
-    public Guid? Payment { get; set; }
+    // === THÊM MỚI ===
+    // Hoa hồng
+    public decimal CommissionRate { get; set; } = 0.06m;  // Tỷ lệ hoa hồng của đơn này
+    public long CommissionCents { get; set; } = 0;        // Số tiền hoa hồng đã tính
 
     // Trạng thái - vận chuyển
     public OrderStatus Status { get; set; } = OrderStatus.PENDING;

@@ -23,6 +23,11 @@ public class UpdateAccountDto
     public string? Gender { get; set; }
 }
 
+public class UpdateAccountStatusDto
+{
+    /// <summary>true = kích hoạt, false = khóa (ban) tài khoản</summary>
+    public bool IsActive { get; set; }
+}
 
 public class AccountDto
 {

@@ -6,7 +6,6 @@ using OrderService.Infrastructure.Repositories.IRepositories;
 using Shared.Results;
 using Shared.Events;
 using Shared.Constants;
-using PaymentService.Application.Interfaces;
 
 namespace OrderService.Application.Services;
 
@@ -17,43 +16,34 @@ public class OrderService : IOrderService
     private readonly ICartItemRepository _cartItemRepository;
     private readonly IProductVersionCacheRepository _productCacheRepository;
     private readonly OrderEventPublisher _orderEventPublisher;
-    private readonly IPayOsService _payOsService;
-    private readonly string _paymentReturnUrl;
-    private readonly string _paymentCancelUrl;
 
     public OrderService(
         IOrderRepository orderRepository,
         ICartRepository cartRepository,
         ICartItemRepository cartItemRepository,
         IProductVersionCacheRepository productCacheRepository,
-        OrderEventPublisher orderEventPublisher,
-        IPayOsService payOsService)
+        OrderEventPublisher orderEventPublisher)
     {
         _orderRepository = orderRepository;
         _cartRepository = cartRepository;
         _cartItemRepository = cartItemRepository;
         _productCacheRepository = productCacheRepository;
         _orderEventPublisher = orderEventPublisher;
-        _payOsService = payOsService;
-
-        // TODO: Lấy từ appsettings
-        _paymentReturnUrl = "http://localhost:3000/payment/success";
-        _paymentCancelUrl = "http://localhost:3000/payment/cancel";
     }
 
-    public async Task<ServiceResult<OrderDto>> CreateOrderFromCartAsync(CreateOrderFromCartDto dto)
+    public async Task<ServiceResult<CreateOrdersFromCartResultDto>> CreateOrderFromCartAsync(CreateOrderFromCartDto dto)
     {
         try
         {
             // 1. Validate input
             if (string.IsNullOrWhiteSpace(dto.DeliveryAddress))
-                return ServiceResult<OrderDto>.BadRequest("Delivery address is required");
+                return ServiceResult<CreateOrdersFromCartResultDto>.BadRequest("Delivery address is required");
 
             // 2. Get cart with items
             var cart = await _cartRepository.GetActiveCartByAccountIdAsync(dto.AccountId);
             if (cart == null || !cart.CartItems.Any())
             {
-                return ServiceResult<OrderDto>.NotFound("Cart is empty or not found");
+                return ServiceResult<CreateOrdersFromCartResultDto>.NotFound("Cart is empty or not found");
             }
 
             // 3. FILTER ITEMS: Selected or All (BACKWARD COMPATIBLE)
@@ -63,12 +53,12 @@ public class OrderService : IOrderService
             );
 
             if (!itemsToProcess.Any())
-                return ServiceResult<OrderDto>.BadRequest("No items to process");
+                return ServiceResult<CreateOrdersFromCartResultDto>.BadRequest("No items to process");
 
             // 4. Validate selected IDs belong to this cart
             var validationError = ValidateSelectedItemsBelongToCart(itemsToProcess, dto.SelectedCartItemIds);
             if (validationError != null)
-                return ServiceResult<OrderDto>.BadRequest(validationError);
+                return ServiceResult<CreateOrdersFromCartResultDto>.BadRequest(validationError);
 
             // 5. Validate all items comprehensively
             var validationResult = await ValidateCartItemsForCheckoutAsync(itemsToProcess);
@@ -78,7 +68,7 @@ public class OrderService : IOrderService
                 var errorDetails = validationResult.InvalidItems.Select(item =>
                     $"Version {item.VersionId}: {item.Reason}").ToList();
 
-                return ServiceResult<OrderDto>.BadRequest(
+                return ServiceResult<CreateOrdersFromCartResultDto>.BadRequest(
                     errorDetails,
                     $"Cannot create order. {validationResult.InvalidItemsCount} of {validationResult.TotalItems} item(s) invalid."
                 );
@@ -96,7 +86,7 @@ public class OrderService : IOrderService
 
             if (!validItems.Any())
             {
-                return ServiceResult<OrderDto>.BadRequest("No valid items to create order");
+                return ServiceResult<CreateOrdersFromCartResultDto>.BadRequest("No valid items to create order");
             }
 
             // 7. SPLIT BY SHOP & CREATE ORDERS FOR EACH SHOP
@@ -112,7 +102,7 @@ public class OrderService : IOrderService
 
             if (!shopsToProcess.Any())
             {
-                return ServiceResult<OrderDto>.BadRequest(
+                return ServiceResult<CreateOrdersFromCartResultDto>.BadRequest(
                     !Guid.Empty.Equals(dto.ShopId)
                         ? $"No items from shop {dto.ShopId} in selected items"
                         : "No valid shops found in items"
@@ -141,7 +131,12 @@ public class OrderService : IOrderService
                 long shippingFeeCents = baseFee + weightSurcharge;
 
                 // Total amount = Subtotal + Shipping fee
-                double totalAmountCents = subtotalCents + shippingFeeCents;
+                double orderTotalAmountCents = subtotalCents + shippingFeeCents;
+
+                // === THÊM MỚI: Tính tiền hoa hồng ===
+                // Sử dụng default commission rate (6%) vì không fetch từ shop
+                decimal commissionRate = CommissionCalculator.DEFAULT_COMMISSION_RATE;
+                long commissionCents = CommissionCalculator.CalculateCommissionCents(subtotalCents, commissionRate);
 
                 // Create Order entity for this shop
                 var order = new Order
@@ -150,9 +145,10 @@ public class OrderService : IOrderService
                     AccountId = dto.AccountId,
                     ShopId = shopId,
                     SubtotalCents = subtotalCents,
-                    TotalAmountCents = totalAmountCents, // ✨ Includes calculated shipping fee
+                    TotalAmountCents = orderTotalAmountCents, // ✨ Includes calculated shipping fee
+                    CommissionRate = commissionRate,     // === THÊM: Commission rate (6%)
+                    CommissionCents = commissionCents,   // === THÊM: Tính hoa hồng
                     VoucherId = dto.VoucherId,
-                    Payment = dto.Payment,
                     Status = OrderStatus.PENDING,
                     DeliveryAddress = dto.DeliveryAddress,
                     CreatedAt = DateTime.UtcNow
@@ -211,28 +207,34 @@ public class OrderService : IOrderService
                 await _cartItemRepository.RemoveAsync(cartItem);
             }
 
-            // 11. Return first order (for backward compatibility)
-            // In real scenario, return CreateOrderResult with list of all orders
-            var orderDto = MapToOrderDto(createdOrders.First());
+            // 11. === BUILD RESULT: Danh sách orderIds + tổng tiền ===
+            var orderIds = createdOrders.Select(o => o.OrderId).ToList();
+            var totalAmountCents = createdOrders.Sum(o => (long)o.TotalAmountCents);
 
-            // 12. ✨ Create PayOS payment link for first order
-            try
+            var orderSummaries = createdOrders.Select(o => new OrderSummaryDto
             {
-                var firstOrder = createdOrders.First();
-                await CreateAndAddPaymentUrlAsync(orderDto, firstOrder, dto);
-            }
-            catch (Exception ex)
-            {
-                // Log but don't fail - order is created even if payment creation fails
-                System.Diagnostics.Debug.WriteLine($"⚠️ Payment creation failed: {ex.Message}");
-            }
+                OrderId = o.OrderId,
+                ShopId = o.ShopId,
+                SubtotalCents = o.SubtotalCents,
+                TotalAmountCents = o.TotalAmountCents,
+                CommissionCents = o.CommissionCents,
+                ItemCount = o.OrderItems.Count
+            }).ToList();
 
-            return ServiceResult<OrderDto>.Success(orderDto,
+            var result = new CreateOrdersFromCartResultDto
+            {
+                OrderIds = orderIds,
+                TotalAmountCents = totalAmountCents,
+                OrderCount = createdOrders.Count,
+                Orders = orderSummaries
+            };
+
+            return ServiceResult<CreateOrdersFromCartResultDto>.Success(result,
                 $"Order(s) created successfully. Total orders: {createdOrders.Count}");
         }
         catch (Exception ex)
         {
-            return ServiceResult<OrderDto>.InternalServerError($"Error creating order: {ex.Message}");
+            return ServiceResult<CreateOrdersFromCartResultDto>.InternalServerError($"Error creating order: {ex.Message}");
         }
     }
 
@@ -328,6 +330,32 @@ public class OrderService : IOrderService
         }
     }
 
+    public async Task<ServiceResult<OrderListResultDto>> GetAllOrdersAsync(GetAllOrdersQueryDto query)
+    {
+        try
+        {
+            var page = Math.Max(1, query.Page);
+            var pageSize = Math.Clamp(query.PageSize, 1, 100);
+
+            var (items, total) = await _orderRepository.GetAllPagedAsync(
+                page, pageSize, query.Status, query.ShopId, query.AccountId);
+
+            var result = new OrderListResultDto
+            {
+                Items = items.Select(o => MapToOrderDto(o)).ToList(),
+                Page = page,
+                PageSize = pageSize,
+                Total = total
+            };
+
+            return ServiceResult<OrderListResultDto>.Success(result);
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<OrderListResultDto>.InternalServerError($"Error getting orders: {ex.Message}");
+        }
+    }
+
     private OrderDto MapToOrderDto(Order order)
     {
         return new OrderDto
@@ -336,10 +364,10 @@ public class OrderService : IOrderService
             AccountId = order.AccountId,
             ShopId = order.ShopId,
             SubtotalCents = order.SubtotalCents,
-            ShippingFeeCents = order.TotalAmountCents - order.SubtotalCents, // Tính từ Total - Subtotal
             TotalAmountCents = order.TotalAmountCents,
+            CommissionRate = order.CommissionRate,      // === Commission rate (6%)
+            CommissionCents = order.CommissionCents,    // === Commission cents
             VoucherId = order.VoucherId,
-            Payment = order.Payment,
             Status = order.Status.ToString(),
             DeliveryAddress = order.DeliveryAddress,
             CreatedAt = order.CreatedAt,
@@ -557,7 +585,6 @@ public class OrderService : IOrderService
             SubtotalCents = order.SubtotalCents,
             TotalAmountCents = order.TotalAmountCents,
             VoucherId = order.VoucherId,
-            Payment = order.Payment,
             Status = order.Status.ToString(),
             DeliveryAddress = order.DeliveryAddress,
             CreatedAt = order.CreatedAt,
@@ -604,39 +631,4 @@ public class OrderService : IOrderService
     /// <summary>
     /// Create PayOS payment link và add vào OrderDto
     /// </summary>
-    private async Task CreateAndAddPaymentUrlAsync(
-        OrderDto orderDto,
-        Order order,
-        CreateOrderFromCartDto dto)
-    {
-        // Create PayOS request using helper
-        var payOsRequest = PayOsRequestHelper.CreatePayOsRequest(
-            order.OrderId,
-            order.ShopId,
-            order.TotalAmountCents,
-            buyerName: null, // Could get from account/profile
-            buyerEmail: null, // Will be generated random
-            buyerPhone: null, // Could get from account/profile
-            _paymentReturnUrl,
-            _paymentCancelUrl
-        );
-
-        // Call PayOS service to create payment link
-        var paymentResult = await _payOsService.CreatePaymentLinkAsync(payOsRequest);
-
-        if (paymentResult.IsSuccess)
-        {
-            orderDto.PaymentUrl = paymentResult.CheckoutUrl;
-            orderDto.QrCodeUrl = paymentResult.QrCodeUrl;
-            orderDto.PaymentStatus = paymentResult.Status ?? "PENDING";
-
-            System.Diagnostics.Debug.WriteLine(
-                $"✅ Payment created for order {order.OrderId}: {paymentResult.CheckoutUrl}");
-        }
-        else
-        {
-            System.Diagnostics.Debug.WriteLine(
-                $"❌ Payment creation failed: {paymentResult.ErrorMessage}");
-        }
-    }
 }

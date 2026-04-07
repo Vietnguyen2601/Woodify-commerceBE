@@ -87,4 +87,22 @@ public class ImagesController : ControllerBase
         if (result.Status == 404) return NotFound(result);
         return Ok(result);
     }
+
+    /// <summary>Lấy tất cả ảnh theo loại (imageType). Dùng cho BANNER, ADS. Sắp xếp theo sort_order ASC.</summary>
+    [HttpGet("type/{imageType}")]
+    public async Task<ActionResult<ServiceResult<List<ImageUrlDto>>>> GetAllByType(string imageType)
+    {
+        var result = await _imageUrlService.GetAllByTypeAsync(imageType);
+        if (result.Status == 400) return BadRequest(result);
+        return Ok(result);
+    }
+
+    /// <summary>Xóa ảnh theo ID.</summary>
+    [HttpDelete("{imageId:guid}")]
+    public async Task<ActionResult<ServiceResult>> DeleteImage(Guid imageId)
+    {
+        var result = await _imageUrlService.DeleteImageAsync(imageId);
+        if (result.Status == 404) return NotFound(result);
+        return Ok(result);
+    }
 }

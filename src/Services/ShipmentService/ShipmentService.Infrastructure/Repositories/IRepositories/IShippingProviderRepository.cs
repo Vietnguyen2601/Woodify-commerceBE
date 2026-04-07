@@ -11,4 +11,5 @@ public interface IShippingProviderRepository : IGenericRepository<ShippingProvid
     Task<List<ShippingProvider>> GetAllActiveAsync();
     Task<bool> ExistsByNameAsync(string name);
     Task<bool> ExistsByNameExcludingIdAsync(string name, Guid excludedProviderId);
+    Task<(List<ShippingProvider> Items, int Total)> GetPagedAsync(int page, int limit);
 }

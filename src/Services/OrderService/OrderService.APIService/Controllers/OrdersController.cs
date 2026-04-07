@@ -6,7 +6,7 @@ using Shared.Results;
 namespace OrderService.APIService.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/order/[controller]")]
 public class OrdersController : ControllerBase
 {
     private readonly IOrderService _orderService;
@@ -17,19 +17,24 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Tạo order từ giỏ hàng - hỗ trợ checkout selected items hoặc toàn bộ cart
+    /// Tạo orders từ giỏ hàng - hỗ trợ checkout selected items hoặc toàn bộ cart
+    /// Trả về danh sách orderIds để frontend gửi tới PaymentService
     /// </summary>
     /// <remarks>
-    /// Behavior:
-    /// - Nếu SelectedCartItemIds = null/empty → checkout toàn bộ cart (backward compatible)
-    /// - Nếu SelectedCartItemIds = [id1, id2, ...] → checkout chỉ những items này, items còn lại giữ trong cart
-    /// - Validate: kiểm tra stock, giá, status sản phẩm
-    /// - Split by shop: tạo order per shop từ selected items
+    /// Step 1 của payment flow:
+    /// - Nhận request: accountId, selectedCartItemIds, providerServiceCode, paymentMethod
+    /// - Tính commission (6%) + shipping fee cho mỗi order
+    /// - Trả về danh sách orderIds (1 order per shop)
+    /// - Frontend dùng orderIds này để gọi POST /api/payments/create
     /// </remarks>
-    /// <param name="dto">Thông tin tạo order với selectedCartItemIds tùy chọn</param>
-    /// <returns>Order được tạo thành công</returns>
+    /// <param name="dto">Thông tin tạo orders</param>
+    /// <returns>Danh sách orderIds + tổng tiền cần thanh toán</returns>
     [HttpPost("CreateFromCart")]
-    public async Task<ActionResult<ServiceResult<OrderDto>>> CreateOrderFromCart(CreateOrderFromCartDto dto)
+    [ProducesResponseType(typeof(ServiceResult<CreateOrdersFromCartResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ServiceResult<CreateOrdersFromCartResultDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ServiceResult<CreateOrdersFromCartResultDto>), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ServiceResult<CreateOrdersFromCartResultDto>>> CreateOrderFromCart(
+        [FromBody] CreateOrderFromCartDto dto)
     {
         var result = await _orderService.CreateOrderFromCartAsync(dto);
 
@@ -98,6 +103,36 @@ public class OrdersController : ControllerBase
         if (result.Status == 400)
             return BadRequest(result);
 
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Admin: Lấy tất cả orders có pagination và filter
+    /// </summary>
+    /// <param name="page">Trang (mặc định 1)</param>
+    /// <param name="pageSize">Số lượng mỗi trang (mặc định 20, tối đa 100)</param>
+    /// <param name="status">Lọc theo trạng thái: PENDING, CONFIRMED, PROCESSING, READY_TO_SHIP, SHIPPED, DELIVERED, COMPLETED, CANCELLED, REFUNDING, REFUNDED</param>
+    /// <param name="shopId">Lọc theo shop</param>
+    /// <param name="accountId">Lọc theo customer</param>
+    [HttpGet("GetAllOrders")]
+    [ProducesResponseType(typeof(ServiceResult<OrderListResultDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ServiceResult<OrderListResultDto>>> GetAllOrders(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? status = null,
+        [FromQuery] Guid? shopId = null,
+        [FromQuery] Guid? accountId = null)
+    {
+        var query = new GetAllOrdersQueryDto
+        {
+            Page = page,
+            PageSize = pageSize,
+            Status = status,
+            ShopId = shopId,
+            AccountId = accountId
+        };
+
+        var result = await _orderService.GetAllOrdersAsync(query);
         return Ok(result);
     }
 }

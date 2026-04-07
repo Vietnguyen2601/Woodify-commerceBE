@@ -127,4 +127,24 @@ public class ImageUrlRepository : GenericRepository<ImageUrl>, IImageUrlReposito
         // Step 4: Return null or placeholder (handled by caller)
         return null;
     }
+
+    public async Task<List<ImageUrl>> GetAllByTypeAsync(string imageType)
+    {
+        return await _dbSet
+            .Where(i => i.ImageType == imageType.ToUpper())
+            .OrderBy(i => i.SortOrder)
+            .ThenBy(i => i.CreatedAt)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
+    public async Task<bool> DeleteByIdAsync(Guid imageId)
+    {
+        var image = await _dbSet.FindAsync(imageId);
+        if (image == null) return false;
+
+        _dbSet.Remove(image);
+        await _context.SaveChangesAsync();
+        return true;
+    }
 }

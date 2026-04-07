@@ -116,3 +116,105 @@ public class PaymentInfoResponse
 }
 
 #endregion
+
+#region Multi-Order Payment (New)
+
+/// <summary>
+/// Request tạo Payment cho multi-order checkout
+/// Hỗ trợ 3 phương thức: COD, Wallet, PayOS
+/// </summary>
+public class CreatePaymentRequest
+{
+    /// <summary>
+    /// Danh sách Order IDs từ CreateOrderFromCart response
+    /// </summary>
+    public List<Guid> OrderIds { get; set; } = new();
+
+    /// <summary>
+    /// Phương thức thanh toán: "COD", "WALLET", "PAYOS"
+    /// </summary>
+    public string PaymentMethod { get; set; } = string.Empty;
+
+    /// <summary>
+    /// ID tài khoản người mua
+    /// </summary>
+    public Guid AccountId { get; set; }
+
+    /// <summary>
+    /// Tổng số tiền cần thanh toán (cents)
+    /// Được tính từ sum(Order.TotalAmountCents) ở CreateOrdersFromCart
+    /// </summary>
+    public long TotalAmountCents { get; set; }
+
+    /// <summary>
+    /// Return URL sau khi thanh toán (dùng cho PayOS)
+    /// </summary>
+    public string? ReturnUrl { get; set; }
+
+    /// <summary>
+    /// Cancel URL khi user hủy (dùng cho PayOS)
+    /// </summary>
+    public string? CancelUrl { get; set; }
+}
+
+/// <summary>
+/// Response sau khi tạo Payment
+/// Tùy loại payment method mà có thông tin khác nhau
+/// </summary>
+public class CreatePaymentResponse
+{
+    /// <summary>
+    /// ID payment được tạo
+    /// </summary>
+    public Guid PaymentId { get; set; }
+
+    /// <summary>
+    /// List OrderIds liên quan tới payment này
+    /// </summary>
+    public List<Guid> OrderIds { get; set; } = new();
+
+    /// <summary>
+    /// Tổng tiền thanh toán (cents)
+    /// </summary>
+    public long TotalAmount { get; set; }
+
+    /// <summary>
+    /// Phương thức thanh toán
+    /// </summary>
+    public string PaymentMethod { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Trạng thái thanh toán: "PENDING", "SUCCEEDED", "CREATED", "FAILED"
+    /// </summary>
+    public string Status { get; set; } = string.Empty;
+
+    // === Dùng cho Wallet ===
+    /// <summary>
+    /// Số dư còn lại sau khi deduct (chỉ dùng cho WALLET)
+    /// </summary>
+    public long? RemainingBalance { get; set; }
+
+    // === Dùng cho PayOS ===
+    /// <summary>
+    /// Mã đơn hàng PayOS (chỉ dùng cho PAYOS)
+    /// </summary>
+    public long? OrderCode { get; set; }
+
+    /// <summary>
+    /// URL thanh toán PayOS (chỉ dùng cho PAYOS)
+    /// </summary>
+    public string? PaymentUrl { get; set; }
+
+    /// <summary>
+    /// URL QR code PayOS (chỉ dùng cho PAYOS)
+    /// </summary>
+    public string? QrCodeUrl { get; set; }
+
+    /// <summary>
+    /// Message mô tả
+    /// </summary>
+    public string? Message { get; set; }
+}
+
+#endregion
+

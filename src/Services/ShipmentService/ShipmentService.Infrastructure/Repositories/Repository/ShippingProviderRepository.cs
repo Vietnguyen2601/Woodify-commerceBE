@@ -39,6 +39,17 @@ public class ShippingProviderRepository : GenericRepository<ShippingProvider>, I
             p.ProviderId != excludedProviderId);
     }
 
+    public async Task<(List<ShippingProvider> Items, int Total)> GetPagedAsync(int page, int limit)
+    {
+        var queryable = _dbSet.OrderBy(p => p.Name);
+        var total = await queryable.CountAsync();
+        var items = await queryable
+            .Skip((page - 1) * limit)
+            .Take(limit)
+            .ToListAsync();
+        return (items, total);
+    }
+
     public override async Task<bool> ExistsAsync(Guid id)
     {
         return await _dbSet.AnyAsync(p => p.ProviderId == id);
