@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using ShipmentService.Application.Constants;
 using ShipmentService.Application.DTOs;
@@ -189,7 +188,7 @@ public class ShippingProviderAppService : IShippingProviderService
         {
             throw;
         }
-        catch (DbUpdateException ex)
+        catch (InvalidOperationException ex)
         {
             return ServiceResult.InternalServerError($"{ShipmentMessages.ProviderDeleteError}: {ex.Message}");
         }
