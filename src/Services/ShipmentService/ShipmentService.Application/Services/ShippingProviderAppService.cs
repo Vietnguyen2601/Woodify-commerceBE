@@ -185,7 +185,11 @@ public class ShippingProviderAppService : IShippingProviderService
         {
             throw;
         }
-        catch (Exception ex)
+        catch (TaskCanceledException)
+        {
+            throw;
+        }
+        catch (DbUpdateException ex)
         {
             return ServiceResult.InternalServerError($"{ShipmentMessages.ProviderDeleteError}: {ex.Message}");
         }

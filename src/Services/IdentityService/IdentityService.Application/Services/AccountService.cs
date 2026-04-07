@@ -114,6 +114,14 @@ public class AccountService : IAccountService
             var message = dto.IsActive ? "Account activated successfully" : "Account deactivated successfully";
             return ServiceResult<AccountDto>.Success(account.ToDto(), message);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (TaskCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             return ServiceResult<AccountDto>.InternalServerError($"Error updating account status: {ex.Message}");

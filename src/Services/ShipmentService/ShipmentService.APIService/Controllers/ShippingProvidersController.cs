@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using ShipmentService.Application.DTOs;
 using ShipmentService.Application.Interfaces;
 using Shared.Results;
@@ -85,6 +86,7 @@ public class ShippingProvidersController : ControllerBase
     }
 
     [HttpDelete("providers/{providerId:guid}")]
+    [Authorize(Roles = "admin")]
     [ProducesResponseType(typeof(ServiceResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
