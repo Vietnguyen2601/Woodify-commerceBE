@@ -6,7 +6,7 @@ using Shared.Results;
 namespace ShipmentService.APIService.Controllers;
 
 [ApiController]
-[Route("api/shipping")]
+[Route("api/shipment")]
 public class ShippingProvidersController : ControllerBase
 {
     private readonly IShippingProviderService _providerService;

@@ -8,10 +8,26 @@ namespace ShopService.Application.Interfaces;
 /// </summary>
 public interface IShopService
 {
-    Task<ServiceResult<IEnumerable<ShopDto>>> GetAllShopsAsync();
+    /// <summary>
+    /// Lấy tất cả shops ACTIVE (công khai - ẩn bank info)
+    /// </summary>
+    Task<ServiceResult<IEnumerable<ShopPublicDto>>> GetAllShopsAsync();
+
+    /// <summary>
+    /// Lấy tất cả shops (admin - hiển thị bank info)
+    /// </summary>
     Task<ServiceResult<IEnumerable<ShopDto>>> GetAllShopsAdminAsync();
-    Task<ServiceResult<ShopDto>> GetShopByIdAsync(Guid shopId);
-    Task<ServiceResult<ShopDto>> GetShopByOwnerIdAsync(Guid ownerId);
+
+    /// <summary>
+    /// Lấy shop by ID (công khai - ẩn bank info)
+    /// </summary>
+    Task<ServiceResult<ShopPublicDto>> GetShopByIdAsync(Guid shopId);
+
+    /// <summary>
+    /// Lấy shop by Owner ID (hiển thị bank info)
+    /// </summary>
+    Task<ServiceResult<ShopDetailDto>> GetShopByOwnerIdAsync(Guid ownerId);
+
     Task<ServiceResult<RegisterShopResponseDto>> RegisterShopAsync(RegisterShopDto dto);
     Task<ServiceResult<UpdateShopInfoResponseDto>> UpdateShopInfoAsync(Guid shopId, UpdateShopInfoDto dto);
     Task<ServiceResult<UpdateShopStatusResponseDto>> UpdateShopStatusAsync(Guid shopId, UpdateShopStatusDto dto);

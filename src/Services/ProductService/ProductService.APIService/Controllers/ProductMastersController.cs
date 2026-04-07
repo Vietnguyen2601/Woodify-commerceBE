@@ -6,7 +6,7 @@ using Shared.Results;
 namespace ProductService.APIService.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/product/[controller]")]
 public class ProductMastersController : ControllerBase
 {
     private readonly IProductMasterService _productMasterService;
@@ -45,7 +45,7 @@ public class ProductMastersController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("GetProductsByShopId/{shopId:guid}")]
+    [HttpGet("GetProductByShopId/{shopId:guid}")]
     public async Task<ActionResult<ServiceResult<IEnumerable<ProductMasterDto>>>> GetByShopId(Guid shopId)
     {
         var result = await _productMasterService.GetByShopIdAsync(shopId);
@@ -241,6 +241,42 @@ public class ProductMastersController : ControllerBase
         [FromQuery] Guid? categoryId = null)
     {
         var result = await _productMasterService.GetAllProductDetailsAsync(role, page, pageSize, shopId, categoryId);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Get best-selling products (platform-wide across all shops)
+    /// Ranked by total units sold in descending order
+    /// <summary>
+    /// Cancel product submission (revert from PENDING_APPROVAL to DRAFT)
+    /// Only works when product status is PENDING_APPROVAL
+    /// </summary>
+    [HttpPatch("CancelSubmission/{id:guid}")]
+    public async Task<ActionResult<ServiceResult<ProductMasterDto>>> CancelSubmission(Guid id)
+    {
+        var result = await _productMasterService.CancelSubmissionAsync(id);
+        
+        if (result.Status == 404)
+            return NotFound(result);
+        
+        if (result.Status == 400)
+            return BadRequest(result);
+        
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Get submission status information for a product
+    /// Returns current status, moderation info, and available actions
+    /// </summary>
+    [HttpGet("SubmissionStatus/{id:guid}")]
+    public async Task<ActionResult<ServiceResult<SubmissionStatusDto>>> GetSubmissionStatus(Guid id)
+    {
+        var result = await _productMasterService.GetSubmissionStatusAsync(id);
+        
+        if (result.Status == 404)
+            return NotFound(result);
+        
         return Ok(result);
     }
 }

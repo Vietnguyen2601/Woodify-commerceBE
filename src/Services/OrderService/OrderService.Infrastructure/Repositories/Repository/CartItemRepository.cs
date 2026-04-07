@@ -24,4 +24,12 @@ public class CartItemRepository : GenericRepository<CartItem>, ICartItemReposito
             .Where(ci => ci.CartId == cartId)
             .ToListAsync();
     }
+
+    public async Task<List<CartItem>> GetByIdsAsync(IEnumerable<Guid> cartItemIds)
+    {
+        var ids = cartItemIds.ToList();
+        return await _dbSet
+            .Where(ci => ids.Contains(ci.CartItemId))
+            .ToListAsync();
+    }
 }

@@ -53,16 +53,52 @@ public static class AccountDbSeeder
             await dbContext.SaveChangesAsync();
         }
 
-        // Seed Customer Accounts nếu chưa có
+        // Seed Seller Accounts nếu chưa có
         if (!dbContext.Accounts.Any())
         {
+            var sellerRole = dbContext.Roles.FirstOrDefault(r => r.RoleName == "Seller");
             var customerRole = dbContext.Roles.FirstOrDefault(r => r.RoleName == "Customer");
 
             var accounts = new List<Account>
             {
+                // Seller 01
                 new()
                 {
-                    AccountId = Guid.NewGuid(),
+                    AccountId = new Guid("a7b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d"),
+                    Username = "seller01",
+                    Password = "seller_pass_01",
+                    Email = "seller01@woodify.com",
+                    Name = "Nguyễn Văn Seller",
+                    PhoneNumber = "0901111111",
+                    Address = "100 Pasteur, Quận 1, TP.HCM",
+                    Dob = new DateTime(1985, 3, 15, 0, 0, 0, DateTimeKind.Utc),
+                    Gender = "Male",
+                    RoleId = sellerRole?.RoleId,
+                    CreatedAt = DateTime.UtcNow.AddDays(-60),
+                    UpdatedAt = DateTime.UtcNow.AddDays(-60),
+                    IsActive = true
+                },
+                // Seller 02
+                new()
+                {
+                    AccountId = new Guid("b8c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e"),
+                    Username = "seller02",
+                    Password = "seller_pass_02",
+                    Email = "seller02@woodify.com",
+                    Name = "Trần Thị Seller",
+                    PhoneNumber = "0901222222",
+                    Address = "200 Đinh Tiên Hoàng, Quận Bình Thạnh, TP.HCM",
+                    Dob = new DateTime(1987, 7, 22, 0, 0, 0, DateTimeKind.Utc),
+                    Gender = "Female",
+                    RoleId = sellerRole?.RoleId,
+                    CreatedAt = DateTime.UtcNow.AddDays(-50),
+                    UpdatedAt = DateTime.UtcNow.AddDays(-50),
+                    IsActive = true
+                },
+                // Customer 01
+                new()
+                {
+                    AccountId = new Guid("c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f"),
                     Username = "customer01",
                     Password = "password7",
                     Email = "customer01@gmail.com",
@@ -78,7 +114,7 @@ public static class AccountDbSeeder
                 },
                 new()
                 {
-                    AccountId = Guid.NewGuid(),
+                    AccountId = new Guid("d2e3f4a5-b6c7-4d8e-9f0a-1b2c3d4e5f6a"),
                     Username = "customer02",
                     Password = "password8",
                     Email = "customer02@gmail.com",
@@ -94,7 +130,7 @@ public static class AccountDbSeeder
                 },
                 new()
                 {
-                    AccountId = Guid.NewGuid(),
+                    AccountId = new Guid("e3f4a5b6-c7d8-4e9f-0a1b-2c3d4e5f6a7b"),
                     Username = "customer03",
                     Password = "password9",
                     Email = "customer03@gmail.com",

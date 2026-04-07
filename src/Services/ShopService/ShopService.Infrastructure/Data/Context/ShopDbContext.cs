@@ -84,6 +84,9 @@ public class ShopDbContext : DbContext
             entity.Property(e => e.CoverImageUrl).HasColumnName("cover_image_url");
             entity.Property(e => e.DefaultPickupAddress).HasColumnName("default_pickup_address");
             entity.Property(e => e.DefaultProvider).HasColumnName("default_provider");
+            entity.Property(e => e.BankName).HasColumnName("bank_name").HasMaxLength(100);
+            entity.Property(e => e.BankAccountNumber).HasColumnName("bank_account_number").HasMaxLength(50);
+            entity.Property(e => e.BankAccountName).HasColumnName("bank_account_name").HasMaxLength(100);
             entity.Property(e => e.Rating)
                 .HasColumnName("rating")
                 .HasColumnType("decimal(3,2)")
@@ -93,8 +96,7 @@ public class ShopDbContext : DbContext
             entity.Property(e => e.TotalOrders).HasColumnName("total_orders").HasDefaultValue(0);
             entity.Property(e => e.Status)
                 .HasColumnName("status")
-                .HasConversion<string>()
-                .HasDefaultValue(Domain.Enums.ShopStatus.INACTIVE);
+                .HasConversion<string>();
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 

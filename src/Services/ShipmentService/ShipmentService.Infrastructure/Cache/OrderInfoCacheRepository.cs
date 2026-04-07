@@ -9,7 +9,7 @@ public class OrderInfoCache
     public Guid OrderId { get; set; }
     public Guid ShopId { get; set; }
     public Guid AccountId { get; set; }
-    public string? DeliveryAddressId { get; set; }
+    public string? DeliveryAddress { get; set; }
     public double TotalAmountCents { get; set; }
     public DateTime CreatedAt { get; set; }
 }

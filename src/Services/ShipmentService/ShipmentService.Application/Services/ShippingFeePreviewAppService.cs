@@ -3,8 +3,9 @@ using Microsoft.Extensions.Logging;
 using ShipmentService.Application.Constants;
 using ShipmentService.Application.DTOs;
 using ShipmentService.Application.Interfaces;
-using ShipmentService.Infrastructure.ExternalProviders;
+using ShipmentService.Infrastructure.Services;
 using ShipmentService.Infrastructure.Repositories.IRepositories;
+using ShipmentService.Infrastructure.Cache;
 using Shared.Results;
 
 namespace ShipmentService.Application.Services;
@@ -15,16 +16,22 @@ public class ShippingFeePreviewAppService : IShippingFeePreviewService
     private const double SuperBulkySurchargeRate = 0.50;
 
     private readonly IProviderServiceRepository _providerServiceRepository;
-    private readonly IGhnApiClient _ghnApiClient;
+    private readonly IShippingFeeCalculator _feeCalculator;
+    private readonly IOrderInfoCacheRepository _orderInfoCache;
+    private readonly IShopInfoCacheRepository _shopInfoCache;
     private readonly ILogger<ShippingFeePreviewAppService> _logger;
 
     public ShippingFeePreviewAppService(
         IProviderServiceRepository providerServiceRepository,
-        IGhnApiClient ghnApiClient,
+        IShippingFeeCalculator feeCalculator,
+        IOrderInfoCacheRepository orderInfoCache,
+        IShopInfoCacheRepository shopInfoCache,
         ILogger<ShippingFeePreviewAppService> logger)
     {
         _providerServiceRepository = providerServiceRepository;
-        _ghnApiClient = ghnApiClient;
+        _feeCalculator = feeCalculator;
+        _orderInfoCache = orderInfoCache;
+        _shopInfoCache = shopInfoCache;
         _logger = logger;
     }
 
@@ -36,14 +43,34 @@ public class ShippingFeePreviewAppService : IShippingFeePreviewService
         if (validationError != null)
             return ServiceResult<ShippingFeePreviewResponse>.BadRequest(validationError);
 
+        // Get shop info from cache (optional - use fallback if not available)
+        var cachedShopInfo = await _shopInfoCache.GetShopInfoAsync(request.ShopId);
+
+        // Get order info from cache (optional - use fallback if not available)
+        var cachedOrderInfo = await _orderInfoCache.GetOrderInfoAsync(request.OrderId);
+
+        // Auto-calculate fields from order (or use defaults)
+        double totalWeightGrams = CalculateWeight(null); // Mock: 1000g default
+        string bulkyType = CalculateBulkyType(totalWeightGrams);
+        long subtotalCents = (long)(cachedOrderInfo?.TotalAmountCents ?? 10000000); // Default 100k VND if no order
+
+        // Use provider from request, fallback to shop's default provider
+        string providerServiceCode = !string.IsNullOrEmpty(request.ProviderServiceCode)
+            ? request.ProviderServiceCode
+            : cachedShopInfo?.DefaultProviderServiceCode ?? "STD";
+
         var providerService = await _providerServiceRepository
-            .GetByCodeAsync(request.ProviderServiceCode);
+            .GetByCodeAsync(providerServiceCode);
 
         if (providerService == null)
         {
+            var safeProviderServiceCode = providerServiceCode
+                ?.Replace("\r", string.Empty)
+                .Replace("\n", string.Empty);
+
             _logger.LogWarning(
                 "ProviderService không tìm thấy hoặc không active: code='{Code}'",
-                request.ProviderServiceCode);
+                safeProviderServiceCode);
             return ServiceResult<ShippingFeePreviewResponse>.BadRequest(
                 ShipmentMessages.FeePreviewServiceNotAvailable);
         }
@@ -51,52 +78,30 @@ public class ShippingFeePreviewAppService : IShippingFeePreviewService
         _logger.LogInformation(
             "Tính phí ship: service={Code} ({Name}), weight={Weight}g, bulky={Bulky}",
             providerService.Code, providerService.Name,
-            request.TotalWeightGrams, request.BulkyType);
+            totalWeightGrams, bulkyType);
 
-        var pickup = _ghnApiClient.ResolvePickupAddress(request.PickupAddressId);
-        var delivery = _ghnApiClient.ResolveDeliveryAddress(request.DeliveryAddressId);
+        // Mock calculation - no address parsing, no district/ward logic
+        int serviceId = _feeCalculator.MapServiceCode(providerServiceCode);
+        int weightGrams = (int)Math.Ceiling(totalWeightGrams);
 
-        if (pickup == null || delivery == null)
-        {
-            return ServiceResult<ShippingFeePreviewResponse>.BadRequest(
-                ShipmentMessages.FeePreviewInvalidAddress);
-        }
-
-        int ghnServiceId = ResolveGhnServiceId(request.ProviderServiceCode);
-
-        var ghnRequest = new GhnFeeRequest
-        {
-            ServiceId = ghnServiceId,
-            FromDistrictId = pickup.DistrictId,
-            ToDistrictId = delivery.DistrictId,
-            ToWardCode = delivery.WardCode,
-            Weight = (int)Math.Ceiling(request.TotalWeightGrams),
-            InsuranceValue = request.SubtotalCents
-        };
-
-
-        GhnFeeResponse ghnFee;
+        ShippingFeeResult feeResult;
         try
         {
-            ghnFee = await _ghnApiClient.GetFeeAsync(ghnRequest);
-        }
-        catch (HttpRequestException ex)
-        {
-            _logger.LogError(ex,
-                "GHN API lỗi khi tính phí: service={Code}, from={From}, to={To}",
-                request.ProviderServiceCode, pickup.DistrictId, delivery.DistrictId);
-            return ServiceResult<ShippingFeePreviewResponse>.InternalServerError(
-                ShipmentMessages.FeePreviewProviderError);
+            feeResult = await _feeCalculator.CalculateAsync(serviceId, weightGrams);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Lỗi không xác định khi gọi GHN API");
+            var safeProviderServiceCode = request.ProviderServiceCode
+                ?.Replace("\r", string.Empty)
+                .Replace("\n", string.Empty);
+
+            _logger.LogError(ex, "Lỗi khi tính phí ship: service={Code}", safeProviderServiceCode);
             return ServiceResult<ShippingFeePreviewResponse>.InternalServerError(
                 ShipmentMessages.FeePreviewProviderError);
         }
 
-        long baseFee = ghnFee.Total;
-        long surcharge = request.BulkyType switch
+        long baseFee = feeResult.Total;
+        long surcharge = bulkyType switch
         {
             "BULKY" => (long)Math.Round(baseFee * BulkySurchargeRate),
             "SUPER_BULKY" => (long)Math.Round(baseFee * SuperBulkySurchargeRate),
@@ -109,11 +114,11 @@ public class ShippingFeePreviewAppService : IShippingFeePreviewService
         _logger.LogInformation(
             "Fee breakdown: base={Base}, surcharge={Surcharge} ({Bulky}), " +
             "multiplier={Multiplier} → final={Final} cents",
-            baseFee, surcharge, request.BulkyType, multiplier, rawFinal);
+            baseFee, surcharge, bulkyType, multiplier, rawFinal);
 
         // TODO: Wire vào VoucherService để check voucher_id freeship
         // TODO: Wire vào ShopService để lấy freeship_threshold theo shop_id
-        var (isFreeShipping, freeShipReason) = CheckFreeShipping(request, rawFinal);
+        var (isFreeShipping, freeShipReason) = CheckFreeShipping(subtotalCents, request.VoucherId, rawFinal);
         long finalFee = isFreeShipping ? 0L : rawFinal;
 
         string message = isFreeShipping
@@ -140,47 +145,45 @@ public class ShippingFeePreviewAppService : IShippingFeePreviewService
 
     private static string? ValidateInput(ShippingFeePreviewRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.ProviderServiceCode))
-            return "provider_service_code là bắt buộc.";
+        if (request.ShopId == Guid.Empty)
+            return "shop_id là bắt buộc.";
 
-        if (request.TotalWeightGrams <= 0)
-            return "total_weight_grams phải lớn hơn 0.";
-
-        var allowedBulky = new[] { "NORMAL", "BULKY", "SUPER_BULKY" };
-        if (!allowedBulky.Contains(request.BulkyType?.ToUpperInvariant()))
-            return "bulky_type phải là NORMAL, BULKY hoặc SUPER_BULKY.";
-
-        if (string.IsNullOrWhiteSpace(request.PickupAddressId))
-            return "pickup_address_id là bắt buộc.";
-
-        if (string.IsNullOrWhiteSpace(request.DeliveryAddressId))
-            return "delivery_address_id là bắt buộc.";
+        if (request.OrderId == Guid.Empty)
+            return "order_id là bắt buộc.";
 
         return null;
     }
 
     private static (bool isFree, string reason) CheckFreeShipping(
-        ShippingFeePreviewRequest request, long calculatedFee)
+        long subtotalCents, Guid? voucherId, long calculatedFee)
     {
         // TODO: Lấy threshold từ Shop.FreeshippingThreshold via ShopService
         const long freeshippingThresholdCents = 50_000_000L;
-        if (request.SubtotalCents.HasValue &&
-            request.SubtotalCents.Value >= freeshippingThresholdCents)
+        if (subtotalCents >= freeshippingThresholdCents)
         {
             return (true, "Đơn hàng đủ điều kiện freeship (đơn ≥ 500.000đ)");
         }
 
-        // TODO: Kiểm tra request.VoucherId freeship qua VoucherService
+        // TODO: Kiểm tra voucherId freeship qua VoucherService
 
         return (false, string.Empty);
     }
 
-    private static int ResolveGhnServiceId(string code) => code.ToUpperInvariant() switch
+    private static double CalculateWeight(List<OrderItemInfo>? items)
     {
-        "ECO" => 5,
-        "STD" => 5,
-        "EXP" => 2,
-        "SUP" => 1,
-        _ => 5
-    };
+        if (items == null || items.Count == 0)
+            return 1000.0; // Default 1kg if no items
+
+        return items.Sum(i => (i.Quantity * 500.0)); // Assume 500g per item as placeholder
+    }
+
+    private static string CalculateBulkyType(double weightGrams)
+    {
+        if (weightGrams >= 5000.0) // >= 5kg
+            return "SUPER_BULKY";
+        if (weightGrams >= 2000.0) // >= 2kg
+            return "BULKY";
+        return "NORMAL";
+    }
 }
+

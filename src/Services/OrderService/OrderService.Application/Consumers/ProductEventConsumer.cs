@@ -66,8 +66,16 @@ public class ProductEventConsumer
             handler: async (message) => await HandleProductDeleted(message)
         );
 
+        // Subscribe to ImageUrl Updated events
+        _rabbitMQConsumer.Subscribe<ImageUrlUpdatedEvent>(
+            queueName: "orderservice.image.url.updated",
+            exchange: "product.events",
+            routingKey: "image.url.updated",
+            handler: async (message) => await HandleImageUrlUpdated(message)
+        );
+
         Console.WriteLine("ProductEventConsumer started listening for Product events");
-        Console.WriteLine("Subscribed to: product.events exchange with routing keys: product.version.updated, product.status.changed, product.version.deleted, product.version.restored, product.deleted");
+        Console.WriteLine("Subscribed to: product.events exchange with routing keys: product.version.updated, product.status.changed, product.version.deleted, product.version.restored, product.deleted, image.url.updated");
     }
 
     private async Task HandleProductVersionUpdated(ProductVersionUpdatedEvent evt)
@@ -95,35 +103,38 @@ public class ProductEventConsumer
                     VersionId = evt.VersionId,
                     ProductId = evt.ProductId,
                     ShopId = evt.ShopId,
-                    
+
                     // Product Master Info
                     ProductName = evt.ProductName,
                     ProductDescription = evt.ProductDescription,
                     ProductStatus = evt.ProductStatus,
-                    
+
                     // Version Info
                     SellerSku = evt.SellerSku,
                     VersionNumber = evt.VersionNumber,
                     VersionName = evt.VersionName,
-                    
+
                     // Pricing
                     Price = evt.Price,
                     Currency = evt.Currency,
-                    
+
                     // Stock
                     StockQuantity = evt.StockQuantity,
                     AllowBackorder = false, // Default to false as ProductVersion doesn't have this field
-                    
+
                     // Shipping Dimensions
                     WoodType = evt.WoodType,
                     WeightGrams = evt.WeightGrams,
                     LengthCm = evt.LengthCm,
                     WidthCm = evt.WidthCm,
                     HeightCm = evt.HeightCm,
-                    
+
                     // Status
                     IsActive = evt.IsActive,
-                    
+
+                    // Thumbnail
+                    ThumbnailUrl = evt.ThumbnailUrl,
+
                     LastUpdated = evt.UpdatedAt
                 };
 
@@ -171,7 +182,7 @@ public class ProductEventConsumer
                 existing.IsDeleted = true;
                 existing.DeletedAt = evt.DeletedAt;
                 existing.LastUpdated = DateTime.UtcNow;
-                
+
                 await cacheRepository.UpdateAsync(existing);
                 Console.WriteLine($"[OrderService] Product version marked as deleted in cache: {evt.VersionId}");
             }
@@ -202,7 +213,7 @@ public class ProductEventConsumer
                 existing.IsDeleted = false;
                 existing.DeletedAt = null;
                 existing.LastUpdated = DateTime.UtcNow;
-                
+
                 await cacheRepository.UpdateAsync(existing);
                 Console.WriteLine($"[OrderService] Product version restored in cache: {evt.VersionId}");
             }
@@ -228,7 +239,7 @@ public class ProductEventConsumer
 
             // Get all product versions of this product from cache
             var productVersions = await cacheRepository.GetByProductIdAsync(evt.ProductId);
-            
+
             if (productVersions != null && productVersions.Any())
             {
                 foreach (var version in productVersions)
@@ -238,10 +249,10 @@ public class ProductEventConsumer
                     version.DeletedAt = evt.DeletedAt;
                     version.ProductStatus = "DELETED";
                     version.LastUpdated = DateTime.UtcNow;
-                    
+
                     await cacheRepository.UpdateAsync(version);
                 }
-                
+
                 Console.WriteLine($"[OrderService] Product deleted - marked {productVersions.Count()} versions as deleted: ProductId={evt.ProductId}");
             }
             else
@@ -252,6 +263,35 @@ public class ProductEventConsumer
         catch (Exception ex)
         {
             Console.WriteLine($"[OrderService] Error handling ProductDeleted: {ex.Message}");
+        }
+    }
+
+    private async Task HandleImageUrlUpdated(ImageUrlUpdatedEvent evt)
+    {
+        try
+        {
+            Console.WriteLine($"[OrderService] Received ImageUrlUpdated event: VersionId={evt.VersionId}, ThumbnailUrl={evt.ThumbnailUrl}");
+
+            using var scope = _scopeFactory.CreateScope();
+            var cacheRepository = scope.ServiceProvider.GetRequiredService<IProductVersionCacheRepository>();
+
+            var cache = await cacheRepository.GetByVersionIdAsync(evt.VersionId);
+            if (cache != null)
+            {
+                cache.ThumbnailUrl = evt.ThumbnailUrl;
+                cache.LastUpdated = evt.UpdatedAt;
+
+                await cacheRepository.UpdateAsync(cache);
+                Console.WriteLine($"[OrderService] Product version thumbnail updated in cache: VersionId={evt.VersionId}, ThumbnailUrl={evt.ThumbnailUrl}");
+            }
+            else
+            {
+                Console.WriteLine($"[OrderService] Product version not found in cache for image update: {evt.VersionId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[OrderService] Error handling ImageUrlUpdated: {ex.Message}");
         }
     }
 }

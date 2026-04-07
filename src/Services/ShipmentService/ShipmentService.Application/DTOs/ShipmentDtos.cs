@@ -4,19 +4,19 @@ namespace ShipmentService.Application.DTOs;
 
 public class CreateShipmentDto
 {
+    public Guid ShopId { get; set; }
     public Guid OrderId { get; set; }
     public string? ProviderServiceCode { get; set; }     // e.g. "STD" — resolved to ProviderService internally
-    public string? PickupAddressId { get; set; }          // optional: auto-filled from shop's DefaultPickupAddress
-    public string? DeliveryAddressId { get; set; }        // optional: auto-filled from order's DeliveryAddressId
-    public bool IsFreeShipping { get; set; } = false;
+    public string? PickupAddress { get; set; }          // optional: auto-filled from shop's DefaultPickupAddress
+    public string? DeliveryAddress { get; set; }        // optional: auto-filled from order's DeliveryAddressId
 }
 
 public class UpdateShipmentDto
 {
     public string? TrackingNumber { get; set; }
     public Guid? ProviderServiceId { get; set; }
-    public string? PickupAddressId { get; set; }
-    public string? DeliveryAddressId { get; set; }
+    public string? PickupAddress { get; set; }
+    public string? DeliveryAddress { get; set; }
     public double? TotalWeightGrams { get; set; }
     public string? BulkyType { get; set; }
     public long? FinalShippingFeeCents { get; set; }
@@ -43,8 +43,8 @@ public class ShipmentDto
     public string? TrackingNumber { get; set; }
     public string? ProviderServiceCode { get; set; }
     public string? ShippingProviderName { get; set; }
-    public string? PickupAddressId { get; set; }
-    public string? DeliveryAddressId { get; set; }
+    public string? PickupAddress { get; set; }
+    public string? DeliveryAddress { get; set; }
     public double TotalWeightGrams { get; set; }
     public string? BulkyType { get; set; }
     public long FinalShippingFeeCents { get; set; }

@@ -1,9 +1,12 @@
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
+using OrderService.Application.Helpers;
 using OrderService.Domain.Entities;
 using OrderService.Infrastructure.Repositories.IRepositories;
 using Shared.Results;
 using Shared.Events;
+using Shared.Constants;
+using PaymentService.Application.Interfaces;
 
 namespace OrderService.Application.Services;
 
@@ -14,39 +17,66 @@ public class OrderService : IOrderService
     private readonly ICartItemRepository _cartItemRepository;
     private readonly IProductVersionCacheRepository _productCacheRepository;
     private readonly OrderEventPublisher _orderEventPublisher;
+    private readonly IPayOsService _payOsService;
+    private readonly string _paymentReturnUrl;
+    private readonly string _paymentCancelUrl;
 
     public OrderService(
         IOrderRepository orderRepository,
         ICartRepository cartRepository,
         ICartItemRepository cartItemRepository,
         IProductVersionCacheRepository productCacheRepository,
-        OrderEventPublisher orderEventPublisher)
+        OrderEventPublisher orderEventPublisher,
+        IPayOsService payOsService)
     {
         _orderRepository = orderRepository;
         _cartRepository = cartRepository;
         _cartItemRepository = cartItemRepository;
         _productCacheRepository = productCacheRepository;
         _orderEventPublisher = orderEventPublisher;
+        _payOsService = payOsService;
+
+        // TODO: Lấy từ appsettings
+        _paymentReturnUrl = "http://localhost:3000/payment/success";
+        _paymentCancelUrl = "http://localhost:3000/payment/cancel";
     }
 
     public async Task<ServiceResult<OrderDto>> CreateOrderFromCartAsync(CreateOrderFromCartDto dto)
     {
         try
         {
-            // 1. Get cart with items
+            // 1. Validate input
+            if (string.IsNullOrWhiteSpace(dto.DeliveryAddress))
+                return ServiceResult<OrderDto>.BadRequest("Delivery address is required");
+
+            // 2. Get cart with items
             var cart = await _cartRepository.GetActiveCartByAccountIdAsync(dto.AccountId);
             if (cart == null || !cart.CartItems.Any())
             {
                 return ServiceResult<OrderDto>.NotFound("Cart is empty or not found");
             }
 
-            // 2. Validate all cart items comprehensively
-            var validationResult = await ValidateCartItemsForCheckoutAsync(cart.CartItems.ToList());
+            // 3. FILTER ITEMS: Selected or All (BACKWARD COMPATIBLE)
+            List<CartItem> itemsToProcess = GetItemsToProcess(
+                cart.CartItems.ToList(),
+                dto.SelectedCartItemIds
+            );
+
+            if (!itemsToProcess.Any())
+                return ServiceResult<OrderDto>.BadRequest("No items to process");
+
+            // 4. Validate selected IDs belong to this cart
+            var validationError = ValidateSelectedItemsBelongToCart(itemsToProcess, dto.SelectedCartItemIds);
+            if (validationError != null)
+                return ServiceResult<OrderDto>.BadRequest(validationError);
+
+            // 5. Validate all items comprehensively
+            var validationResult = await ValidateCartItemsForCheckoutAsync(itemsToProcess);
 
             if (!validationResult.IsValid)
             {
                 var errorDetails = validationResult.InvalidItems.Select(item =>
-                    $"Version {item.VersionId}: {item.Reason} - {item.Details}").ToList();
+                    $"Version {item.VersionId}: {item.Reason}").ToList();
 
                 return ServiceResult<OrderDto>.BadRequest(
                     errorDetails,
@@ -54,83 +84,151 @@ public class OrderService : IOrderService
                 );
             }
 
-            // 3. Get valid cart items
-            var validCartItemIds = cart.CartItems
+            // 6. Get valid cart items
+            var validCartItemIds = itemsToProcess
                 .Select(ci => ci.CartItemId)
                 .Except(validationResult.InvalidItems.Select(ii => ii.CartItemId))
                 .ToHashSet();
 
-            var validItems = cart.CartItems.Where(ci => validCartItemIds.Contains(ci.CartItemId)).ToList();
+            var validItems = itemsToProcess
+                .Where(ci => validCartItemIds.Contains(ci.CartItemId))
+                .ToList();
 
             if (!validItems.Any())
             {
                 return ServiceResult<OrderDto>.BadRequest("No valid items to create order");
             }
 
-            // 4. Calculate totals
-            double subtotalCents = validItems.Sum(item => item.Price * item.Quantity);
-            double totalAmountCents = subtotalCents; // Can add shipping, tax, discount calculations here
+            // 7. SPLIT BY SHOP & CREATE ORDERS FOR EACH SHOP
+            // Tạo order riêng cho mỗi shop (hỗ trợ multi-shop checkout như Shopee, Lazada)
+            var itemsByShop = validItems
+                .GroupBy(ci => ci.ShopId)
+                .ToDictionary(g => g.Key, g => g.ToList());
 
-            // 5. Create Order entity
-            var order = new Order
-            {
-                OrderId = Guid.NewGuid(),
-                AccountId = dto.AccountId,
-                ShopId = dto.ShopId,
-                SubtotalCents = subtotalCents,
-                TotalAmountCents = totalAmountCents,
-                VoucherId = dto.VoucherId,
-                Payment = dto.Payment,
-                Status = OrderStatus.PENDING,
-                DeliveryAddressId = dto.DeliveryAddressId,
-                CreatedAt = DateTime.UtcNow
-            };
+            // 8. FIX: Nếu dto.ShopId được chỉ định, chỉ process shop đó; ngược lại process tất cả
+            var shopsToProcess = !Guid.Empty.Equals(dto.ShopId) && itemsByShop.ContainsKey(dto.ShopId)
+                ? new Dictionary<Guid, List<CartItem>> { { dto.ShopId, itemsByShop[dto.ShopId] } }
+                : itemsByShop;
 
-            // 6. Create Order Items (snapshot from cart items)
-            foreach (var cartItem in validItems)
+            if (!shopsToProcess.Any())
             {
-                var orderItem = new OrderItem
+                return ServiceResult<OrderDto>.BadRequest(
+                    !Guid.Empty.Equals(dto.ShopId)
+                        ? $"No items from shop {dto.ShopId} in selected items"
+                        : "No valid shops found in items"
+                );
+            }
+
+            // 9. CREATE ORDER FOR EACH SHOP
+            var createdOrders = new List<Order>();
+
+            foreach (var shopGroup in shopsToProcess)
+            {
+                var shopId = shopGroup.Key;
+                var shopItems = shopGroup.Value;
+
+                // Calculate subtotal for this shop
+                double subtotalCents = shopItems.Sum(item => item.Price * item.Quantity);
+
+                // ✨ Calculate total weight FOR THIS SHOP (not total for all shops)
+                int totalWeightGrams = await CalculateTotalWeightAsync(shopItems);
+
+                // ✨ Calculate shipping fee immediately using ShippingServiceConstants
+                int serviceId = ShippingServiceConstants.GetServiceId(dto.ProviderServiceCode);
+                string bucketType = ShippingServiceConstants.GetBucketType(totalWeightGrams);
+                long baseFee = ShippingServiceConstants.GetBaseFee(serviceId, bucketType);
+                long weightSurcharge = (totalWeightGrams / ShippingServiceConstants.WEIGHT_SURCHARGE_UNIT) * ShippingServiceConstants.WEIGHT_SURCHARGE_PER_UNIT;
+                long shippingFeeCents = baseFee + weightSurcharge;
+
+                // Total amount = Subtotal + Shipping fee
+                double totalAmountCents = subtotalCents + shippingFeeCents;
+
+                // Create Order entity for this shop
+                var order = new Order
                 {
-                    OrderItemId = Guid.NewGuid(),
-                    OrderId = order.OrderId,
-                    VersionId = cartItem.VersionId,
-                    UnitPriceCents = (long)(cartItem.Price * 100), // Convert to cents for precision
-                    Quantity = cartItem.Quantity,
-                    DiscountCents = 0,
-                    TaxCents = 0,
-                    LineTotalCents = cartItem.Price * cartItem.Quantity,
-                    Status = FulfillmentStatus.UNFULFILLED,
+                    OrderId = Guid.NewGuid(),
+                    AccountId = dto.AccountId,
+                    ShopId = shopId,
+                    SubtotalCents = subtotalCents,
+                    TotalAmountCents = totalAmountCents, // ✨ Includes calculated shipping fee
+                    VoucherId = dto.VoucherId,
+                    Payment = dto.Payment,
+                    Status = OrderStatus.PENDING,
+                    DeliveryAddress = dto.DeliveryAddress,
                     CreatedAt = DateTime.UtcNow
                 };
 
-                order.OrderItems.Add(orderItem);
+                // Create Order Items (snapshot from cart items)
+                foreach (var cartItem in shopItems)
+                {
+                    var orderItem = new OrderItem
+                    {
+                        OrderItemId = Guid.NewGuid(),
+                        OrderId = order.OrderId,
+                        VersionId = cartItem.VersionId,
+                        UnitPriceCents = (long)(cartItem.Price * 100),
+                        Quantity = cartItem.Quantity,
+                        DiscountCents = 0,
+                        TaxCents = 0,
+                        LineTotalCents = cartItem.Price * cartItem.Quantity,
+                        Status = FulfillmentStatus.UNFULFILLED,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    order.OrderItems.Add(orderItem);
+                }
+
+                // Save order to database
+                await _orderRepository.CreateAsync(order);
+                createdOrders.Add(order);
+
+                // Publish OrderCreated event to RabbitMQ for ShipmentService
+                // ✨ TotalAmountCents already includes calculated shipping fee
+                // ShipmentService can verify/log the calculation if needed
+                _orderEventPublisher.PublishOrderCreated(new OrderCreatedEvent
+                {
+                    OrderId = order.OrderId,
+                    ShopId = order.ShopId,
+                    AccountId = order.AccountId,
+                    DeliveryAddress = order.DeliveryAddress,
+                    SubtotalCents = order.SubtotalCents,
+                    TotalAmountCents = order.TotalAmountCents,
+                    ProviderServiceCode = dto.ProviderServiceCode,
+                    TotalWeightGrams = totalWeightGrams,
+                    VoucherId = dto.VoucherId,
+                    CreatedAt = order.CreatedAt
+                });
             }
 
-            // 7. Save order to database
-            await _orderRepository.CreateAsync(order);
+            // 10. DELETE ONLY SELECTED/PROCESSED ITEMS FROM CART
+            // FIX: Materialize list to avoid "Collection modified during enumeration" error
+            var cartItemsToDelete = cart.CartItems
+                .Where(ci => itemsToProcess.Select(ip => ip.CartItemId).Contains(ci.CartItemId))
+                .ToList();  // ← IMPORTANT: ToList() materializes before removing
 
-            // 8. Publish OrderCreated event to RabbitMQ for ShipmentService
-            _orderEventPublisher.PublishOrderCreated(new OrderCreatedEvent
-            {
-                OrderId = order.OrderId,
-                ShopId = order.ShopId,
-                AccountId = order.AccountId,
-                DeliveryAddressId = order.DeliveryAddressId,
-                TotalAmountCents = order.TotalAmountCents,
-                CreatedAt = order.CreatedAt
-            });
-
-            // 9. Clear cart after successful order creation
-            var cartItemsToRemove = cart.CartItems.ToList();
-            foreach (var cartItem in cartItemsToRemove)
+            foreach (var cartItem in cartItemsToDelete)
             {
                 await _cartItemRepository.RemoveAsync(cartItem);
             }
 
-            // 10. Map to DTO and return
-            var orderDto = MapToOrderDto(order);
+            // 11. Return first order (for backward compatibility)
+            // In real scenario, return CreateOrderResult with list of all orders
+            var orderDto = MapToOrderDto(createdOrders.First());
 
-            return ServiceResult<OrderDto>.Success(orderDto, "Order created successfully");
+            // 12. ✨ Create PayOS payment link for first order
+            try
+            {
+                var firstOrder = createdOrders.First();
+                await CreateAndAddPaymentUrlAsync(orderDto, firstOrder, dto);
+            }
+            catch (Exception ex)
+            {
+                // Log but don't fail - order is created even if payment creation fails
+                System.Diagnostics.Debug.WriteLine($"⚠️ Payment creation failed: {ex.Message}");
+            }
+
+            return ServiceResult<OrderDto>.Success(orderDto,
+                $"Order(s) created successfully. Total orders: {createdOrders.Count}");
         }
         catch (Exception ex)
         {
@@ -174,6 +272,62 @@ public class OrderService : IOrderService
         }
     }
 
+    public async Task<ServiceResult<List<OrderWithProductDetailsDto>>> GetOrdersByShopIdAsync(Guid shopId)
+    {
+        try
+        {
+            var orders = await _orderRepository.GetOrdersByShopIdAsync(shopId);
+
+            var orderDtos = new List<OrderWithProductDetailsDto>();
+
+            foreach (var order in orders)
+            {
+                var orderDto = await MapToOrderWithProductDetailsDto(order);
+                orderDtos.Add(orderDto);
+            }
+
+            return ServiceResult<List<OrderWithProductDetailsDto>>.Success(orderDtos);
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<List<OrderWithProductDetailsDto>>.InternalServerError($"Error getting shop orders: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<OrderDto>> UpdateOrderStatusAsync(UpdateOrderStatusDto dto)
+    {
+        try
+        {
+            // 1. Validate status
+            if (!Enum.TryParse<OrderStatus>(dto.Status, true, out var newStatus))
+            {
+                return ServiceResult<OrderDto>.BadRequest($"Invalid status: {dto.Status}");
+            }
+
+            // 2. Get order
+            var order = await _orderRepository.GetOrderWithItemsAsync(dto.OrderId);
+            if (order == null)
+            {
+                return ServiceResult<OrderDto>.NotFound("Order not found");
+            }
+
+            // 3. Update status
+            order.Status = newStatus;
+            order.UpdatedAt = DateTime.UtcNow;
+
+            // 4. Save changes
+            await _orderRepository.UpdateAsync(order);
+
+            // 5. Return updated order
+            var orderDto = MapToOrderDto(order);
+            return ServiceResult<OrderDto>.Success(orderDto, "Order status updated successfully");
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<OrderDto>.InternalServerError($"Error updating order status: {ex.Message}");
+        }
+    }
+
     private OrderDto MapToOrderDto(Order order)
     {
         return new OrderDto
@@ -182,11 +336,12 @@ public class OrderService : IOrderService
             AccountId = order.AccountId,
             ShopId = order.ShopId,
             SubtotalCents = order.SubtotalCents,
+            ShippingFeeCents = order.TotalAmountCents - order.SubtotalCents, // Tính từ Total - Subtotal
             TotalAmountCents = order.TotalAmountCents,
             VoucherId = order.VoucherId,
             Payment = order.Payment,
             Status = order.Status.ToString(),
-            DeliveryAddressId = order.DeliveryAddressId,
+            DeliveryAddress = order.DeliveryAddress,
             CreatedAt = order.CreatedAt,
             UpdatedAt = order.UpdatedAt,
             OrderItems = order.OrderItems.Select(oi => new OrderItemDto
@@ -323,5 +478,165 @@ public class OrderService : IOrderService
         result.IsValid = result.InvalidItemsCount == 0;
 
         return result;
+    }
+
+    /// <summary>
+    /// Xác định items cần process: selected hoặc toàn bộ (backward compatible)
+    /// Nếu không có selected ids → process toàn bộ cart
+    /// Nếu có selected ids → chỉ process những items được chọn
+    /// </summary>
+    private List<CartItem> GetItemsToProcess(
+        List<CartItem> allCartItems,
+        Guid[]? selectedCartItemIds)
+    {
+        // Nếu không có selected ids → process toàn bộ (backward compatible)
+        if (selectedCartItemIds == null || selectedCartItemIds.Length == 0)
+            return allCartItems;
+
+        // Filter chỉ lấy items có id trong list
+        var selectedIds = new HashSet<Guid>(selectedCartItemIds);
+        return allCartItems
+            .Where(ci => selectedIds.Contains(ci.CartItemId))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Calculate total weight of cart items in grams
+    /// Truy cập product cache để lấy WeightGrams từ mỗi item
+    /// Formula: Sum(ProductCache.WeightGrams * CartItem.Quantity)
+    /// </summary>
+    private async Task<int> CalculateTotalWeightAsync(List<CartItem> cartItems)
+    {
+        int totalWeightGrams = 0;
+
+        foreach (var cartItem in cartItems)
+        {
+            var productCache = await _productCacheRepository.GetByVersionIdAsync(cartItem.VersionId);
+            if (productCache != null)
+            {
+                // Weight per item × Quantity trong cart
+                totalWeightGrams += productCache.WeightGrams * cartItem.Quantity;
+            }
+        }
+
+        return totalWeightGrams;
+    }
+
+    /// <summary>
+    /// Validate: tất cả selected ids phải nằm trong cart hiện tại
+    /// Trả về error message nếu có id không hợp lệ, null nếu ok
+    /// </summary>
+    private string? ValidateSelectedItemsBelongToCart(
+        List<CartItem> cartItems,
+        Guid[]? selectedCartItemIds)
+    {
+        if (selectedCartItemIds == null || selectedCartItemIds.Length == 0)
+            return null;
+
+        var cartItemIds = cartItems.Select(ci => ci.CartItemId).ToHashSet();
+        var selectedIds = new HashSet<Guid>(selectedCartItemIds);
+
+        // Check if all selected ids exist in cart
+        var invalidIds = selectedIds.Except(cartItemIds).ToList();
+        if (invalidIds.Any())
+        {
+            return $"Invalid cart item IDs: {string.Join(", ", invalidIds)}. " +
+                   "Item(s) do not belong to user's cart.";
+        }
+
+        return null;
+    }
+
+    private async Task<OrderWithProductDetailsDto> MapToOrderWithProductDetailsDto(Order order)
+    {
+        var orderDto = new OrderWithProductDetailsDto
+        {
+            OrderId = order.OrderId,
+            AccountId = order.AccountId,
+            ShopId = order.ShopId,
+            SubtotalCents = order.SubtotalCents,
+            TotalAmountCents = order.TotalAmountCents,
+            VoucherId = order.VoucherId,
+            Payment = order.Payment,
+            Status = order.Status.ToString(),
+            DeliveryAddress = order.DeliveryAddress,
+            CreatedAt = order.CreatedAt,
+            UpdatedAt = order.UpdatedAt,
+            OrderItems = new List<OrderItemWithProductDetailsDto>()
+        };
+
+        // Fetch product details for each order item
+        foreach (var orderItem in order.OrderItems)
+        {
+            var productCache = await _productCacheRepository.GetByVersionIdAsync(orderItem.VersionId);
+
+            var orderItemDto = new OrderItemWithProductDetailsDto
+            {
+                OrderItemId = orderItem.OrderItemId,
+                OrderId = orderItem.OrderId,
+                VersionId = orderItem.VersionId,
+                UnitPriceCents = orderItem.UnitPriceCents,
+                Quantity = orderItem.Quantity,
+                DiscountCents = orderItem.DiscountCents,
+                TaxCents = orderItem.TaxCents,
+                LineTotalCents = orderItem.LineTotalCents,
+                ShipmentId = orderItem.ShipmentId,
+                Status = orderItem.Status.ToString(),
+                CreatedAt = orderItem.CreatedAt,
+                // Product details from cache
+                ProductName = productCache?.ProductName ?? "Unknown Product",
+                ProductDescription = productCache?.ProductDescription,
+                SellerSku = productCache?.SellerSku ?? "",
+                VersionName = productCache?.VersionName,
+                WoodType = productCache?.WoodType,
+                WeightGrams = productCache?.WeightGrams ?? 0,
+                LengthCm = productCache?.LengthCm ?? 0,
+                WidthCm = productCache?.WidthCm ?? 0,
+                HeightCm = productCache?.HeightCm ?? 0
+            };
+
+            orderDto.OrderItems.Add(orderItemDto);
+        }
+
+        return orderDto;
+    }
+
+    /// <summary>
+    /// Create PayOS payment link và add vào OrderDto
+    /// </summary>
+    private async Task CreateAndAddPaymentUrlAsync(
+        OrderDto orderDto,
+        Order order,
+        CreateOrderFromCartDto dto)
+    {
+        // Create PayOS request using helper
+        var payOsRequest = PayOsRequestHelper.CreatePayOsRequest(
+            order.OrderId,
+            order.ShopId,
+            order.TotalAmountCents,
+            buyerName: null, // Could get from account/profile
+            buyerEmail: null, // Will be generated random
+            buyerPhone: null, // Could get from account/profile
+            _paymentReturnUrl,
+            _paymentCancelUrl
+        );
+
+        // Call PayOS service to create payment link
+        var paymentResult = await _payOsService.CreatePaymentLinkAsync(payOsRequest);
+
+        if (paymentResult.IsSuccess)
+        {
+            orderDto.PaymentUrl = paymentResult.CheckoutUrl;
+            orderDto.QrCodeUrl = paymentResult.QrCodeUrl;
+            orderDto.PaymentStatus = paymentResult.Status ?? "PENDING";
+
+            System.Diagnostics.Debug.WriteLine(
+                $"✅ Payment created for order {order.OrderId}: {paymentResult.CheckoutUrl}");
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"❌ Payment creation failed: {paymentResult.ErrorMessage}");
+        }
     }
 }

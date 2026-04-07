@@ -97,9 +97,9 @@ namespace OrderService.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<string>("DeliveryAddressId")
+                    b.Property<string>("DeliveryAddress")
                         .HasColumnType("text")
-                        .HasColumnName("delivery_address_id");
+                        .HasColumnName("delivery_address");
 
                     b.Property<Guid?>("Payment")
                         .HasColumnType("uuid")
@@ -294,6 +294,11 @@ namespace OrderService.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0)
                         .HasColumnName("stock_quantity");
+
+                    b.Property<string>("ThumbnailUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("thumbnail_url");
 
                     b.Property<string>("VersionName")
                         .HasMaxLength(255)

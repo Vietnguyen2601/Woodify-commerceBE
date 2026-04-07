@@ -77,6 +77,54 @@ namespace ProductService.Infrastructure.Migrations
                     b.ToTable("categories", (string)null);
                 });
 
+            modelBuilder.Entity("ProductService.Domain.Entities.ImageUrl", b =>
+                {
+                    b.Property<Guid>("ImageId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("image_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("ImageType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("image_type");
+
+                    b.Property<string>("OriginalUrl")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("original_url");
+
+                    b.Property<string>("PublicId")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("public_id");
+
+                    b.Property<Guid>("ReferenceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reference_id");
+
+                    b.Property<int>("SortOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("sort_order");
+
+                    b.HasKey("ImageId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("ReferenceId");
+
+                    b.HasIndex("ImageType", "ReferenceId");
+
+                    b.ToTable("image_urls", (string)null);
+                });
+
             modelBuilder.Entity("ProductService.Domain.Entities.ProductMaster", b =>
                 {
                     b.Property<Guid>("ProductId")

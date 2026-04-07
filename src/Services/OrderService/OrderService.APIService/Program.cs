@@ -21,7 +21,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((ctx, _, cfg) => cfg
     .ReadFrom.Configuration(ctx.Configuration)
-    .Enrich.FromLogContext()    .Enrich.WithProperty("Service", "Order")    .Filter.ByExcluding(logEvent =>
+    .Enrich.FromLogContext().Enrich.WithProperty("Service", "Order").Filter.ByExcluding(logEvent =>
         logEvent.Exception is { } ex && (
             ex.ToString().Contains("57P01", StringComparison.Ordinal) ||
             ex.Message.Contains("transient failure", StringComparison.OrdinalIgnoreCase)))
@@ -50,7 +50,7 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddDbContext<OrderDbContext>();
 
 // Register Order Services
-builder.Services.AddOrderServices();
+builder.Services.AddOrderServices(builder.Configuration);
 
 var rabbitMQSettings = new RabbitMQSettings
 {
@@ -68,14 +68,15 @@ for (int i = 0; i < 5; i++)
     {
         var consumer = new RabbitMQConsumer(rabbitMQSettings);
         builder.Services.AddSingleton(consumer);
-        
+
         var publisher = new RabbitMQPublisher(rabbitMQSettings);
         builder.Services.AddSingleton(publisher);
-        
-        // Register OrderEventPublisher and ProductEventConsumer
+
+        // Register OrderEventPublisher and Event Consumers
         builder.Services.AddSingleton<OrderEventPublisher>();
         builder.Services.AddSingleton<ProductEventConsumer>();
-        
+        builder.Services.AddSingleton<ShippingFeeEventConsumer>();
+
         Console.WriteLine("RabbitMQ Publisher and Consumer connected successfully");
         rabbitMQAvailable = true;
         break;
@@ -106,7 +107,7 @@ using (var scope = app.Services.CreateScope())
     {
         dbContext.Database.Migrate();
         Console.WriteLine("Database migration applied successfully");
-        
+
         // Seed initial data
         await OrderDbSeeder.SeedAsync(dbContext);
         Console.WriteLine("Database seeding completed successfully");
@@ -133,8 +134,8 @@ app.UseSerilogRequestLogging(opts =>
     opts.MessageTemplate =
         "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
     opts.GetLevel = (httpCtx, _, ex) =>
-        ex != null || httpCtx.Response.StatusCode >= 500 ? Serilog.Events.LogEventLevel.Error   :
-        httpCtx.Response.StatusCode >= 400               ? Serilog.Events.LogEventLevel.Warning :
+        ex != null || httpCtx.Response.StatusCode >= 500 ? Serilog.Events.LogEventLevel.Error :
+        httpCtx.Response.StatusCode >= 400 ? Serilog.Events.LogEventLevel.Warning :
                                                            Serilog.Events.LogEventLevel.Information;
 });
 

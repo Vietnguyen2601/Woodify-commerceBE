@@ -76,7 +76,7 @@ builder.Services.AddShipmentServices();
 builder.Services.AddValidators();
 
 // ── GHN Shipping API Client ───────────────────────────────────────────────────
-builder.Services.AddGhnApiClient(builder.Configuration);
+builder.Services.AddShippingFeeCalculator();
 
 // ── External Service Clients (OrderService, ProductService) ──────────────────
 builder.Services.AddExternalServiceClients(builder.Configuration);
@@ -211,9 +211,5 @@ app.MapControllers();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "shipment-service" }));
 app.MapGet("/api/shipment/health", () => Results.Ok(new { status = "healthy", service = "shipment-service" }));
-
-app.Run();
-app.MapControllers();
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "shipment-service" }));
 
 app.Run();

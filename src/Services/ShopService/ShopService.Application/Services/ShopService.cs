@@ -25,7 +25,6 @@ public class ShopService : IShopService
     {
         try
         {
-            // Validate name uniqueness
             if (await _unitOfWork.Shops.ExistsWithNameAsync(dto.Name))
                 return ServiceResult<RegisterShopResponseDto>.BadRequest("A shop with this name already exists");
 
@@ -38,12 +37,30 @@ public class ShopService : IShopService
                 CoverImageUrl = dto.CoverImageUrl,
                 DefaultPickupAddress = dto.DefaultPickupAddress,
                 DefaultProvider = dto.DefaultProvider,
-                Status = ShopStatus.INACTIVE,
+                Status = ShopStatus.ACTIVE,
                 CreatedAt = DateTime.UtcNow
             };
 
             await _unitOfWork.Shops.AddAsync(shop);
             await _unitOfWork.SaveChangesAsync();
+
+            // 🔔 Publish ShopCreated event
+            if (_rabbitPublisher != null)
+            {
+                var shopCreatedEvent = new ShopCreatedEvent
+                {
+                    ShopId = shop.ShopId,
+                    ShopName = shop.Name,
+                    OwnerId = shop.OwnerAccountId,
+                    DefaultPickupAddress = shop.DefaultPickupAddress,
+                    DefaultProvider = shop.DefaultProvider,
+                    DefaultProviderServiceCode = null,
+                    CreatedAt = shop.CreatedAt
+                };
+
+                _rabbitPublisher.Publish("shop.events", "shop.created", shopCreatedEvent);
+                Console.WriteLine($"[ShopService] Published ShopCreated event: ShopId={shop.ShopId}, ShopName={shop.Name}");
+            }
 
             var response = new RegisterShopResponseDto
             {
@@ -91,6 +108,26 @@ public class ShopService : IShopService
             shop.MapToShopInfo(dto);
             _unitOfWork.Shops.Update(shop);
             await _unitOfWork.SaveChangesAsync();
+
+            // 🔔 Publish ShopUpdated event
+            if (_rabbitPublisher != null)
+            {
+                var shopUpdatedEvent = new ShopUpdatedEvent
+                {
+                    ShopId = shop.ShopId,
+                    ShopName = shop.Name,
+                    ShopPhone = null,
+                    ShopEmail = null,
+                    ShopAddress = null,
+                    DefaultPickupAddress = shop.DefaultPickupAddress,
+                    DefaultProvider = shop.DefaultProvider,
+                    DefaultProviderServiceCode = null,
+                    UpdatedAt = shop.UpdatedAt ?? DateTime.UtcNow
+                };
+
+                _rabbitPublisher.Publish("shop.events", "shop.updated", shopUpdatedEvent);
+                Console.WriteLine($"[ShopService] Published ShopUpdated event: ShopId={shop.ShopId}, ShopName={shop.Name}");
+            }
 
             var response = new UpdateShopInfoResponseDto
             {
@@ -166,12 +203,12 @@ public class ShopService : IShopService
         }
     }
 
-    public async Task<ServiceResult<IEnumerable<ShopDto>>> GetAllShopsAsync()
+    public async Task<ServiceResult<IEnumerable<ShopPublicDto>>> GetAllShopsAsync()
     {
         try
         {
             var shops = await _unitOfWork.Shops.GetActiveShopsAsync();
-            return ServiceResult<IEnumerable<ShopDto>>.Success(shops.ToDto());
+            return ServiceResult<IEnumerable<ShopPublicDto>>.Success(shops.ToPublicDto());
         }
         catch (OperationCanceledException)
         {
@@ -179,7 +216,7 @@ public class ShopService : IShopService
         }
         catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
         {
-            return ServiceResult<IEnumerable<ShopDto>>.InternalServerError($"Error retrieving shops: {ex.Message}");
+            return ServiceResult<IEnumerable<ShopPublicDto>>.InternalServerError($"Error retrieving shops: {ex.Message}");
         }
     }
 
@@ -200,15 +237,15 @@ public class ShopService : IShopService
         }
     }
 
-    public async Task<ServiceResult<ShopDto>> GetShopByIdAsync(Guid shopId)
+    public async Task<ServiceResult<ShopPublicDto>> GetShopByIdAsync(Guid shopId)
     {
         try
         {
             var shop = await _unitOfWork.Shops.GetByIdAsync(shopId);
             if (shop == null)
-                return ServiceResult<ShopDto>.NotFound("Shop not found");
+                return ServiceResult<ShopPublicDto>.NotFound("Shop not found");
 
-            return ServiceResult<ShopDto>.Success(shop.ToDto());
+            return ServiceResult<ShopPublicDto>.Success(shop.ToPublicDto());
         }
         catch (OperationCanceledException)
         {
@@ -216,19 +253,19 @@ public class ShopService : IShopService
         }
         catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
         {
-            return ServiceResult<ShopDto>.InternalServerError($"Error retrieving shop: {ex.Message}");
+            return ServiceResult<ShopPublicDto>.InternalServerError($"Error retrieving shop: {ex.Message}");
         }
     }
 
-    public async Task<ServiceResult<ShopDto>> GetShopByOwnerIdAsync(Guid ownerId)
+    public async Task<ServiceResult<ShopDetailDto>> GetShopByOwnerIdAsync(Guid ownerId)
     {
         try
         {
             var shop = await _unitOfWork.Shops.GetByOwnerIdAsync(ownerId);
             if (shop == null)
-                return ServiceResult<ShopDto>.NotFound("Shop not found for this owner");
+                return ServiceResult<ShopDetailDto>.NotFound("Shop not found for this owner");
 
-            return ServiceResult<ShopDto>.Success(shop.ToDto());
+            return ServiceResult<ShopDetailDto>.Success(shop.ToDetailDto());
         }
         catch (OperationCanceledException)
         {
@@ -236,7 +273,7 @@ public class ShopService : IShopService
         }
         catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
         {
-            return ServiceResult<ShopDto>.InternalServerError($"Error retrieving shop: {ex.Message}");
+            return ServiceResult<ShopDetailDto>.InternalServerError($"Error retrieving shop: {ex.Message}");
         }
     }
 
@@ -244,7 +281,12 @@ public class ShopService : IShopService
     {
         try
         {
+            var existingShop = await _unitOfWork.Shops.GetByOwnerIdAsync(dto.OwnerAccountId);
+            if (existingShop != null)
+                return ServiceResult<ShopDto>.BadRequest("This account already has a shop.");
+
             var shop = dto.ToModel();
+            shop.Status = ShopStatus.ACTIVE;
             await _unitOfWork.Shops.AddAsync(shop);
             await _unitOfWork.SaveChangesAsync();
 
@@ -256,10 +298,14 @@ public class ShopService : IShopService
                     ShopId = shop.ShopId,
                     ShopName = shop.Name,
                     OwnerId = shop.OwnerAccountId,
+                    DefaultPickupAddress = shop.DefaultPickupAddress,
+                    DefaultProvider = shop.DefaultProvider,
+                    DefaultProviderServiceCode = null,
                     CreatedAt = shop.CreatedAt
                 };
 
-                _rabbitPublisher.PublishToQueue("shop.created", shopCreatedEvent);
+                _rabbitPublisher.Publish("shop.events", "shop.created", shopCreatedEvent);
+                Console.WriteLine($"[ShopService] Published ShopCreated event: ShopId={shop.ShopId}, ShopName={shop.Name}");
             }
 
             return ServiceResult<ShopDto>.Created(shop.ToDto(), "Shop created successfully");
@@ -285,6 +331,25 @@ public class ShopService : IShopService
             shop.MapToUpdate(dto);
             _unitOfWork.Shops.Update(shop);
             await _unitOfWork.SaveChangesAsync();
+
+            // 🔔 Publish ShopUpdated event
+            if (_rabbitPublisher != null)
+            {
+                var shopUpdatedEvent = new ShopUpdatedEvent
+                {
+                    ShopId = shop.ShopId,
+                    ShopName = shop.Name,
+                    ShopPhone = null,
+                    ShopEmail = null,
+                    ShopAddress = null,
+                    DefaultPickupAddress = shop.DefaultPickupAddress,
+                    DefaultProviderServiceCode = shop.DefaultProvider?.ToString(),
+                    UpdatedAt = shop.UpdatedAt ?? DateTime.UtcNow
+                };
+
+                _rabbitPublisher.Publish("shop.events", "shop.updated", shopUpdatedEvent);
+                Console.WriteLine($"[ShopService] Published ShopUpdated event: ShopId={shop.ShopId}, ShopName={shop.Name}");
+            }
 
             return ServiceResult<ShopDto>.Success(shop.ToDto(), "Shop updated successfully");
         }

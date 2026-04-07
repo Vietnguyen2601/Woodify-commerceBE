@@ -50,6 +50,16 @@ public class ProviderServiceRepository : GenericRepository<ProviderService>, IPr
             .FirstOrDefaultAsync(ps => ps.Code == code && ps.IsActive);
     }
 
+    public async Task<ProviderService?> GetByProviderIdAndCodeAsync(Guid providerId, string code)
+    {
+        return await _dbSet
+            .Include(ps => ps.ShippingProvider)
+            .FirstOrDefaultAsync(ps =>
+                ps.ProviderId == providerId &&
+                ps.Code == code &&
+                ps.IsActive);
+    }
+
     public async Task<bool> HasActiveByProviderIdAsync(Guid providerId)
     {
         return await _dbSet.AnyAsync(ps =>

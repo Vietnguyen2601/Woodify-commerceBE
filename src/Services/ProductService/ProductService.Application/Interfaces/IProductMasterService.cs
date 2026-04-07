@@ -30,4 +30,8 @@ public interface IProductMasterService
     // Product detail with versions
     Task<ServiceResult<ProductMasterDetailDto>> GetProductDetailAsync(Guid productId, string userRole);
     Task<ServiceResult<ProductDetailListResultDto>> GetAllProductDetailsAsync(string userRole, int page = 1, int pageSize = 20, Guid? shopId = null, Guid? categoryId = null);
+    
+    // Submission management APIs (Issue #6)
+    Task<ServiceResult<ProductMasterDto>> CancelSubmissionAsync(Guid id);
+    Task<ServiceResult<SubmissionStatusDto>> GetSubmissionStatusAsync(Guid id);
 }

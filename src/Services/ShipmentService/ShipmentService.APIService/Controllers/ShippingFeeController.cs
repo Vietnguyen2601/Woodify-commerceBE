@@ -9,7 +9,7 @@ namespace ShipmentService.APIService.Controllers;
 /// Controller xử lý các API liên quan đến tính phí vận chuyển.
 /// </summary>
 [ApiController]
-[Route("api/shipping")]
+[Route("api/shipment")]
 public class ShippingFeeController : ControllerBase
 {
     private readonly IShippingFeePreviewService _feePreviewService;

@@ -29,6 +29,21 @@ namespace ShopService.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("shop_id");
 
+                    b.Property<string>("BankAccountName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("bank_account_name");
+
+                    b.Property<string>("BankAccountNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("bank_account_number");
+
+                    b.Property<string>("BankName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("bank_name");
+
                     b.Property<string>("CoverImageUrl")
                         .HasColumnType("text")
                         .HasColumnName("cover_image_url");
@@ -76,9 +91,7 @@ namespace ShopService.Infrastructure.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("text")
-                        .HasDefaultValue("INACTIVE")
                         .HasColumnName("status");
 
                     b.Property<int>("TotalOrders")

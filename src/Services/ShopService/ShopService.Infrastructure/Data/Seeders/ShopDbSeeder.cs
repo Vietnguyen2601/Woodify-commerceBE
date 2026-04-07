@@ -20,25 +20,35 @@ public static class ShopDbSeeder
         {
             var shops = new List<Shop>
             {
+                // Shop của Seller 01
                 new()
                 {
-                    ShopId = Guid.NewGuid(),
-                    OwnerAccountId = Guid.NewGuid(),
-                    Name = "Nguyễn Văn Shop",
-                    Description = "Cửa hàng gỗ chất lượng cao với mục đích cung cấp nội thất gỗ tự nhiên",
-                    Rating = 4.5m,
+                    ShopId = new Guid("f4a5b6c7-d8e9-4f0a-1b2c-3d4e5f6a7b8c"),
+                    OwnerAccountId = new Guid("a7b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d"),
+                    Name = "Nội Thất Gỗ Cao Cấp A",
+                    Description = "Cửa hàng gỗ chất lượng cao với mục đích cung cấp nội thất gỗ tự nhiên cao cấp từ các loại gỗ nhập khẩu",
+                    Rating = 4.7m,
                     Status = ShopService.Domain.Enums.ShopStatus.ACTIVE,
-                    CreatedAt = DateTime.UtcNow
+                    DefaultProvider = null, // Will be set after seeding providers
+                    BankName = "Vietcombank",
+                    BankAccountNumber = "1001234567",
+                    BankAccountName = "NGUYEN VAN A",
+                    CreatedAt = DateTime.UtcNow.AddDays(-60)
                 },
+                // Shop của Seller 02
                 new()
                 {
-                    ShopId = Guid.NewGuid(),
-                    OwnerAccountId = Guid.NewGuid(),
-                    Name = "Trần Thị Antique",
-                    Description = "Chuyên cung cấp những sản phẩm gỗ vintage và trang trí hiện đại",
+                    ShopId = new Guid("a5b6c7d8-e9f0-4a1b-2c3d-4e5f6a7b8c9d"),
+                    OwnerAccountId = new Guid("b8c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e"),
+                    Name = "Nội Thất Gỗ Hiện Đại B",
+                    Description = "Chuyên cung cấp những sản phẩm gỗ vintage, hiện đại và trang trí nội thất theo phong cách Bắc Âu",
                     Rating = 4.8m,
                     Status = ShopService.Domain.Enums.ShopStatus.ACTIVE,
-                    CreatedAt = DateTime.UtcNow
+                    DefaultProvider = null, // Will be set after seeding providers
+                    BankName = "BIDV",
+                    BankAccountNumber = "2005678901",
+                    BankAccountName = "TRAN THI B",
+                    CreatedAt = DateTime.UtcNow.AddDays(-50)
                 },
                 new()
                 {
@@ -48,6 +58,9 @@ public static class ShopDbSeeder
                     Description = "Bán các sản phẩm gỗ tự nhiên nhập khẩu từ châu Âu",
                     Rating = 4.7m,
                     Status = ShopService.Domain.Enums.ShopStatus.ACTIVE,
+                    BankName = "Techcombank",
+                    BankAccountNumber = "3009123456",
+                    BankAccountName = "PHAM VAN C",
                     CreatedAt = DateTime.UtcNow
                 },
                 new()
@@ -58,6 +71,9 @@ public static class ShopDbSeeder
                     Description = "Thiết kế và cung cấp nội thất gỗ cao cấp theo yêu cầu",
                     Rating = 4.9m,
                     Status = ShopService.Domain.Enums.ShopStatus.ACTIVE,
+                    BankName = "ACB",
+                    BankAccountNumber = "4017654321",
+                    BankAccountName = "LE THI D",
                     CreatedAt = DateTime.UtcNow
                 },
                 new()
@@ -68,6 +84,9 @@ public static class ShopDbSeeder
                     Description = "Chuyên bán sản phẩm gỗ từ Lâm Đồng, chất lượng tốt giá hợp lý",
                     Rating = 4.3m,
                     Status = ShopService.Domain.Enums.ShopStatus.ACTIVE,
+                    BankName = "Agribank",
+                    BankAccountNumber = "5050789012",
+                    BankAccountName = "HOANG VAN E",
                     CreatedAt = DateTime.UtcNow
                 }
             };

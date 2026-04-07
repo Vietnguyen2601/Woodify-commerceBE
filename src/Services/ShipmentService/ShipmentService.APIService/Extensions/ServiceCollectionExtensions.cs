@@ -8,6 +8,7 @@ using ShipmentService.Infrastructure.ExternalProviders;
 using ShipmentService.Infrastructure.Persistence;
 using ShipmentService.Infrastructure.Repositories.IRepositories;
 using ShipmentService.Infrastructure.Repositories.Repository;
+using ShipmentService.Infrastructure.Services;
 
 namespace ShipmentService.APIService.Extensions;
 
@@ -17,6 +18,9 @@ public static class ServiceCollectionExtensions
     {
         // Order Info Cache (from RabbitMQ events)
         services.AddSingleton<IOrderInfoCacheRepository, OrderInfoCacheRepository>();
+
+        // Shop Info Cache (from RabbitMQ events)
+        services.AddSingleton<IShopInfoCacheRepository, ShopInfoCacheRepository>();
 
         // Unit of Work
         services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -38,18 +42,12 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddGhnApiClient(
-        this IServiceCollection services, IConfiguration config)
+    public static IServiceCollection AddShippingFeeCalculator(
+        this IServiceCollection services)
     {
-        var baseUrl = config["GhnSettings:ApiBaseUrl"]
-                      ?? "https://online-gateway.ghn.vn";
-
-        services.AddHttpClient<IGhnApiClient, GhnApiClient>(client =>
-        {
-            client.BaseAddress = new Uri(baseUrl);
-            client.Timeout = TimeSpan.FromSeconds(10);
-            client.DefaultRequestHeaders.Add("Accept", "application/json");
-        });
+        // Register mock shipping fee calculator as Singleton (stateless, safe for singleton consumers like OrderEventConsumer)
+        // MockShippingFeeCalculator is thread-safe and doesn't maintain mutable state
+        services.AddSingleton<IShippingFeeCalculator, MockShippingFeeCalculator>();
 
         return services;
     }

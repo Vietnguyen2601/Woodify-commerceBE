@@ -6,7 +6,7 @@ using Shared.Results;
 namespace ProductService.APIService.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/product/[controller]")]
 public class CategoriesController : ControllerBase
 {
     private readonly ICategoryService _categoryService;

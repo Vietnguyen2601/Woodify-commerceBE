@@ -18,9 +18,14 @@ public interface IProviderServiceRepository : IGenericRepository<ProviderService
     Task<ProviderService?> GetByCodeAsync(string code);
 
     /// <summary>
-    /// Tìm dịch vụ active theo shopId và providerServiceCode.
+    /// Tìm dịch vụ active theo shopId và providerServiceCode (legacy - không filter theo provider).
     /// </summary>
     Task<ProviderService?> GetByShopIdAndCodeAsync(Guid shopId, string code);
+
+    /// <summary>
+    /// Tìm dịch vụ active theo providerId và serviceCode.
+    /// </summary>
+    Task<ProviderService?> GetByProviderIdAndCodeAsync(Guid providerId, string code);
 
     Task<bool> HasActiveByProviderIdAsync(Guid providerId);
     Task<bool> ExistsByCodeForProviderAsync(Guid providerId, string code);
