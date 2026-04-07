@@ -115,49 +115,4 @@ public class PaymentInfoResponse
     public DateTime? UpdatedAt { get; set; }
 }
 
-/// <summary>
-/// Response sau khi xử lý webhook
-/// </summary>
-public class WebhookProcessResult
-{
-    public bool Success { get; set; }
-    public long OrderCode { get; set; }
-    public PaymentStatus NewStatus { get; set; }
-    public string Message { get; set; } = string.Empty;
-}
-
-#endregion
-
-#region Webhook DTOs
-
-/// <summary>
-/// Payload webhook từ API controller
-/// </summary>
-public class PayOsWebhookRequest
-{
-    public string Code { get; set; } = string.Empty;
-    public string? Desc { get; set; }
-    public PayOsWebhookDataDto? Data { get; set; }
-    public string? Signature { get; set; }
-}
-
-public class PayOsWebhookDataDto
-{
-    public long OrderCode { get; set; }
-    public int Amount { get; set; }
-    public string? Description { get; set; }
-    public string? AccountNumber { get; set; }
-    public string? Reference { get; set; }
-    public string? TransactionDateTime { get; set; }
-    public string? Currency { get; set; }
-    public string? PaymentLinkId { get; set; }
-    public string? Code { get; set; }
-    public string? Desc { get; set; }
-    public string? CounterAccountBankName { get; set; }
-    public string? CounterAccountNumber { get; set; }
-    public string? CounterAccountName { get; set; }
-    public string? VirtualAccountNumber { get; set; }
-    public string? VirtualAccountName { get; set; }
-}
-
 #endregion

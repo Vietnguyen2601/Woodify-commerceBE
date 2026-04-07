@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PaymentService.Application.Interfaces;
 using PaymentService.Domain.Entities;
+using PaymentService.Domain.Enums;
 using PaymentService.Infrastructure.Data;
 
 namespace PaymentService.Infrastructure.Repositories;
@@ -62,5 +63,13 @@ public class PaymentRepository : IPaymentRepository
         await _context.SaveChangesAsync();
 
         return payment;
+    }
+
+    public async Task<IEnumerable<Payment>> GetAllProcessingAsync()
+    {
+        return await _context.Payments
+            .Where(p => p.Status == PaymentStatus.Processing)
+            .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync();
     }
 }

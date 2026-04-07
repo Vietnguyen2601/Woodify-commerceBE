@@ -29,6 +29,11 @@ public interface IPaymentRepository
     Task<IEnumerable<Payment>> GetByAccountIdAsync(Guid accountId);
 
     /// <summary>
+    /// Lấy tất cả PROCESSING payments để polling status
+    /// </summary>
+    Task<IEnumerable<Payment>> GetAllProcessingAsync();
+
+    /// <summary>
     /// Tạo mới Payment
     /// </summary>
     Task<Payment> CreateAsync(Payment payment);

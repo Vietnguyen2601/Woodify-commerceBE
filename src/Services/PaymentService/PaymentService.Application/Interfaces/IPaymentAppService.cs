@@ -15,11 +15,6 @@ public interface IPaymentAppService
     Task<ServiceResult<CreatePaymentLinkResponse>> CreatePaymentLinkAsync(CreatePaymentLinkRequest request);
 
     /// <summary>
-    /// Xử lý webhook từ PayOS
-    /// </summary>
-    Task<ServiceResult<WebhookProcessResult>> ProcessWebhookAsync(PayOsWebhookRequest webhook, string? rawBody);
-
-    /// <summary>
     /// Query thông tin thanh toán theo orderCode
     /// </summary>
     Task<ServiceResult<PaymentInfoResponse>> GetPaymentByOrderCodeAsync(long orderCode);

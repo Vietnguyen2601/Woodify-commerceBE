@@ -13,13 +13,16 @@ namespace PaymentService.Application.Services;
 public class WalletService : IWalletService
 {
     private readonly IWalletRepository _walletRepository;
+    private readonly WalletTopUpService _walletTopUpService;
     private readonly ILogger<WalletService> _logger;
 
     public WalletService(
         IWalletRepository walletRepository,
+        WalletTopUpService walletTopUpService,
         ILogger<WalletService> logger)
     {
         _walletRepository = walletRepository;
+        _walletTopUpService = walletTopUpService;
         _logger = logger;
     }
 
@@ -335,4 +338,7 @@ public class WalletService : IWalletService
     }
 
     #endregion
+
+    public Task<ServiceResult<WalletTopUpResponse>> TopUpAsync(WalletTopUpRequest request)
+        => _walletTopUpService.TopUpAsync(request);
 }

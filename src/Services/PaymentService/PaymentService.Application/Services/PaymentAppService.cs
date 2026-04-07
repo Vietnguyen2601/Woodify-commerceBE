@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using PaymentService.Application.DTOs;
 using PaymentService.Application.Interfaces;
@@ -126,92 +125,6 @@ public class PaymentAppService : IPaymentAppService
     }
 
     /// <summary>
-    /// Xử lý webhook từ PayOS
-    /// </summary>
-    public async Task<ServiceResult<WebhookProcessResult>> ProcessWebhookAsync(
-        PayOsWebhookRequest webhook, string? rawBody)
-    {
-        try
-        {
-            _logger.LogInformation("Processing PayOS webhook. Code: {Code}, OrderCode: {OrderCode}",
-                webhook.Code, webhook.Data?.OrderCode);
-
-            // Log toàn bộ payload
-            _logger.LogDebug("Webhook raw body: {Body}", rawBody);
-
-            if (webhook.Data == null)
-            {
-                _logger.LogWarning("Webhook data is null");
-                return ServiceResult<WebhookProcessResult>.BadRequest("Webhook data is null");
-            }
-
-            // Verify signature (optional - có thể bật/tắt tùy môi trường)
-            if (!string.IsNullOrEmpty(webhook.Signature))
-            {
-                var dataString = CreateWebhookDataString(webhook.Data);
-                var isValid = _payOsService.VerifyWebhookSignature(dataString, webhook.Signature);
-
-                if (!isValid)
-                {
-                    _logger.LogWarning("Invalid webhook signature for orderCode: {OrderCode}",
-                        webhook.Data.OrderCode);
-
-                    return ServiceResult<WebhookProcessResult>.Unauthorized("Invalid signature");
-                }
-            }
-
-            // Tìm payment trong DB
-            var payment = await _paymentRepository.GetByProviderPaymentIdAsync(
-                webhook.Data.OrderCode.ToString());
-
-            if (payment == null)
-            {
-                _logger.LogWarning("Payment not found for orderCode: {OrderCode}",
-                    webhook.Data.OrderCode);
-
-                return ServiceResult<WebhookProcessResult>.NotFound(
-                    $"Payment not found for orderCode: {webhook.Data.OrderCode}");
-            }
-
-            // Validate amount
-            if (payment.AmountCents != webhook.Data.Amount)
-            {
-                _logger.LogWarning("Amount mismatch. Expected: {Expected}, Received: {Received}",
-                    payment.AmountCents, webhook.Data.Amount);
-
-                return ServiceResult<WebhookProcessResult>.BadRequest(
-                    $"Amount mismatch. Expected: {payment.AmountCents}, Received: {webhook.Data.Amount}");
-            }
-
-            // Xác định status mới
-            var newStatus = DeterminePaymentStatus(webhook.Code, webhook.Data.Code);
-            var previousStatus = payment.Status;
-
-            // Cập nhật payment
-            payment.Status = newStatus;
-            payment.ProviderResponse = rawBody;
-            await _paymentRepository.UpdateAsync(payment);
-
-            _logger.LogInformation(
-                "Payment status updated. OrderCode: {OrderCode}, PreviousStatus: {Previous}, NewStatus: {New}",
-                webhook.Data.OrderCode, previousStatus, newStatus);
-
-            return ServiceResult<WebhookProcessResult>.Success(new WebhookProcessResult
-            {
-                Success = true,
-                OrderCode = webhook.Data.OrderCode,
-                NewStatus = newStatus,
-                Message = $"Payment status updated from {previousStatus} to {newStatus}"
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Exception while processing webhook");
-            return ServiceResult<WebhookProcessResult>.InternalServerError($"Lỗi xử lý webhook: {ex.Message}");
-        }
-    }
-
-    /// <summary>
     /// Query thông tin thanh toán theo orderCode
     /// </summary>
     public async Task<ServiceResult<PaymentInfoResponse>> GetPaymentByOrderCodeAsync(long orderCode)
@@ -316,19 +229,6 @@ public class PaymentAppService : IPaymentAppService
     #region Private Methods
 
     /// <summary>
-    /// Xác định PaymentStatus từ webhook code
-    /// </summary>
-    private static PaymentStatus DeterminePaymentStatus(string webhookCode, string? dataCode)
-    {
-        // Code "00" = success
-        if (webhookCode == "00" && dataCode == "00")
-            return PaymentStatus.Succeeded;
-
-        // Các code khác = failed/cancelled
-        return PaymentStatus.Failed;
-    }
-
-    /// <summary>
     /// Map PayOS status string to PaymentStatus enum
     /// </summary>
     private static PaymentStatus MapPayOsStatusToPaymentStatus(string? payOsStatus)
@@ -341,33 +241,6 @@ public class PaymentAppService : IPaymentAppService
             "EXPIRED" => PaymentStatus.Failed,
             _ => PaymentStatus.Created
         };
-    }
-
-    /// <summary>
-    /// Tạo data string từ webhook data để verify signature
-    /// </summary>
-    private static string CreateWebhookDataString(PayOsWebhookDataDto data)
-    {
-        var sortedData = new SortedDictionary<string, string>(StringComparer.Ordinal)
-        {
-            { "orderCode", data.OrderCode.ToString() },
-            { "amount", data.Amount.ToString() },
-            { "description", data.Description ?? "" },
-            { "accountNumber", data.AccountNumber ?? "" },
-            { "reference", data.Reference ?? "" },
-            { "transactionDateTime", data.TransactionDateTime ?? "" },
-            { "currency", data.Currency ?? "" },
-            { "paymentLinkId", data.PaymentLinkId ?? "" },
-            { "code", data.Code ?? "" },
-            { "desc", data.Desc ?? "" },
-            { "counterAccountBankName", data.CounterAccountBankName ?? "" },
-            { "counterAccountNumber", data.CounterAccountNumber ?? "" },
-            { "counterAccountName", data.CounterAccountName ?? "" },
-            { "virtualAccountNumber", data.VirtualAccountNumber ?? "" },
-            { "virtualAccountName", data.VirtualAccountName ?? "" }
-        };
-
-        return string.Join("&", sortedData.Select(kvp => $"{kvp.Key}={kvp.Value}"));
     }
 
     #endregion
