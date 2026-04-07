@@ -4,7 +4,7 @@ using IdentityService.Application.Mappers;
 using IdentityService.Domain.Entities;
 using IdentityService.Infrastructure.Repositories.IRepositories;
 using Shared.Results;
-
+using System.Threading.Tasks;
 namespace IdentityService.Application.Services;
 
 public class AccountService : IAccountService
@@ -76,6 +76,10 @@ public class AccountService : IAccountService
             var updatedAccount = await _accountRepository.GetByIdAsync(id);
             return ServiceResult<AccountDto>.Success(updatedAccount!.ToDto(), "Account updated successfully");
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             return ServiceResult<AccountDto>.InternalServerError($"Error updating account: {ex.Message}");
@@ -92,6 +96,10 @@ public class AccountService : IAccountService
 
             await _accountRepository.RemoveAsync(account);
             return ServiceResult.Success("Account deleted successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -115,10 +123,6 @@ public class AccountService : IAccountService
             return ServiceResult<AccountDto>.Success(account.ToDto(), message);
         }
         catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (TaskCanceledException)
         {
             throw;
         }

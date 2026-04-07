@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using ShipmentService.Application.DTOs;
 using ShipmentService.Application.Interfaces;
 using Shared.Results;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ShipmentService.APIService.Controllers;
 
@@ -90,6 +91,7 @@ public class ShippingProvidersController : ControllerBase
     [ProducesResponseType(typeof(ServiceResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [Authorize]
     public async Task<ActionResult<ServiceResult>> Delete([FromRoute] Guid providerId)
     {
         var result = await _providerService.DeleteAsync(providerId);

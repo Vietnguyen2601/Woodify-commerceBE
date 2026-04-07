@@ -65,15 +65,7 @@ public class ShippingProviderAppService : IShippingProviderService
         var page = Math.Max(1, query.Page);
         var limit = Math.Clamp(query.Limit, 1, 100);
 
-        var queryable = _providerRepository.GetAllQueryable()
-            .OrderBy(p => p.Name);
-
-        var total = await queryable.CountAsync();
-
-        var items = await queryable
-            .Skip((page - 1) * limit)
-            .Take(limit)
-            .ToListAsync();
+        var (items, total) = await _providerRepository.GetPagedAsync(page, limit);
 
         var result = new ShippingProviderPagedDto
         {
@@ -181,10 +173,6 @@ public class ShippingProviderAppService : IShippingProviderService
             return ServiceResult.Success(ShipmentMessages.ProviderDeleted);
         }
         catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (TaskCanceledException)
         {
             throw;
         }
