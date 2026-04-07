@@ -240,3 +240,38 @@ public class SubmissionStatusDto
     public bool CanResubmit { get; set; } // true if status is REJECTED or DRAFT
 }
 
+// ─── Issue #4: Bestseller DTOs ───────────────────────────────────────────────
+
+public class BestSellingProductDto
+{
+    public Guid ProductId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? CategoryName { get; set; }
+    public double? Price { get; set; }
+    public Guid ShopId { get; set; }
+    public string? ShopName { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public int SoldCount { get; set; }
+    public int Rank { get; set; }
+}
+
+public class BestSellingProductsResultDto
+{
+    public List<BestSellingProductDto> Products { get; set; } = new();
+    public int TotalCount { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
+}
+
+public class ShopBestSellingProductsResultDto
+{
+    public Guid ShopId { get; set; }
+    public string? ShopName { get; set; }
+    public List<BestSellingProductDto> Products { get; set; } = new();
+    public int TotalCount { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
+}
+

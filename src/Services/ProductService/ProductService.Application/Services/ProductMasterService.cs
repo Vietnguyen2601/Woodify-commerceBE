@@ -17,6 +17,7 @@ public class ProductMasterService : IProductMasterService
     private readonly ProductEventPublisher _eventPublisher;
     private readonly IImageUrlRepository _imageUrlRepository;
     private readonly ShopNameCacheService _shopNameCache;
+    private readonly BestSellerCacheService _bestSellerCache;
 
     public ProductMasterService(
         IProductMasterRepository productMasterRepository,
@@ -24,7 +25,8 @@ public class ProductMasterService : IProductMasterService
         IUnitOfWork unitOfWork,
         ProductEventPublisher eventPublisher,
         IImageUrlRepository imageUrlRepository,
-        ShopNameCacheService shopNameCache)
+        ShopNameCacheService shopNameCache,
+        BestSellerCacheService bestSellerCache)
     {
         _productMasterRepository = productMasterRepository;
         _productVersionRepository = productVersionRepository;
@@ -32,6 +34,7 @@ public class ProductMasterService : IProductMasterService
         _eventPublisher = eventPublisher;
         _imageUrlRepository = imageUrlRepository;
         _shopNameCache = shopNameCache;
+        _bestSellerCache = bestSellerCache;
     }
 
     public async Task<ServiceResult<ProductMasterDto>> GetByIdAsync(Guid id)
@@ -800,7 +803,13 @@ public class ProductMasterService : IProductMasterService
             dto.ThumbnailUrl = (await _imageUrlRepository.GetPrimaryImageAsync("PRODUCT", product.ProductId))?.OriginalUrl;
             dto.ShopName = _shopNameCache.Get(product.ShopId);
 
-            // TODO: Publish product submission cancellation event
+            _eventPublisher.PublishProductSubmissionCancelled(new Shared.Events.ProductSubmissionCancelledEvent
+            {
+                ProductId = product.ProductId,
+                ShopId = product.ShopId,
+                ProductName = product.Name,
+                CancelledAt = product.UpdatedAt ?? DateTime.UtcNow
+            });
 
             return ServiceResult<ProductMasterDto>.Success(dto, "Submission cancelled successfully");
         }
@@ -836,6 +845,163 @@ public class ProductMasterService : IProductMasterService
         catch (Exception ex)
         {
             return ServiceResult<SubmissionStatusDto>.InternalServerError($"Error retrieving submission status: {ex.Message}");
+        }
+    }
+
+
+    public async Task<ServiceResult<BestSellingProductsResultDto>> GetBestSellingProductsAsync(int page, int pageSize)
+    {
+        try
+        {
+            var allSorted = _bestSellerCache.GetTopSelling(int.MaxValue);
+            var totalCount = allSorted.Count;
+            var paged = allSorted.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            var productIds = paged.Select(x => x.ProductId).ToList();
+            var products = await _productMasterRepository.GetByIdsAsync(productIds);
+            var productMap = products.ToDictionary(p => p.ProductId);
+
+            var dtos = new List<BestSellingProductDto>();
+            int rank = (page - 1) * pageSize + 1;
+            foreach (var (productId, soldCount) in paged)
+            {
+                if (!productMap.TryGetValue(productId, out var product)) continue;
+                var firstVersion = product.Versions?.OrderBy(v => v.CreatedAt).FirstOrDefault();
+                dtos.Add(new BestSellingProductDto
+                {
+                    ProductId = product.ProductId,
+                    Name = product.Name,
+                    CategoryName = product.Category?.Name,
+                    Price = firstVersion?.Price,
+                    ShopId = product.ShopId,
+                    ShopName = _shopNameCache.Get(product.ShopId),
+                    ThumbnailUrl = (await _imageUrlRepository.GetPrimaryImageWithFallbackAsync(
+                        product.ProductId, firstVersion?.VersionId, product.CategoryId))?.OriginalUrl,
+                    SoldCount = soldCount,
+                    Rank = rank++
+                });
+            }
+
+            return ServiceResult<BestSellingProductsResultDto>.Success(new BestSellingProductsResultDto
+            {
+                Products = dtos,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            });
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<BestSellingProductsResultDto>.InternalServerError($"Error retrieving bestselling products: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<BestSellingProductsResultDto>> GetTrendingProductsAsync(int page, int pageSize, Guid? categoryId = null)
+    {
+        try
+        {
+            var allSorted = _bestSellerCache.GetTopSelling(int.MaxValue);
+
+            if (categoryId.HasValue)
+            {
+                // Fetch all to filter by category
+                var allIds = allSorted.Select(x => x.ProductId).ToList();
+                var allProducts = await _productMasterRepository.GetByIdsAsync(allIds);
+                var filteredIds = allProducts
+                    .Where(p => p.CategoryId == categoryId.Value)
+                    .Select(p => p.ProductId)
+                    .ToHashSet();
+                allSorted = allSorted.Where(x => filteredIds.Contains(x.ProductId)).ToList();
+            }
+
+            var totalCount = allSorted.Count;
+            var paged = allSorted.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            var productIds = paged.Select(x => x.ProductId).ToList();
+            var products = await _productMasterRepository.GetByIdsAsync(productIds);
+            var productMap = products.ToDictionary(p => p.ProductId);
+
+            var dtos = new List<BestSellingProductDto>();
+            int rank = (page - 1) * pageSize + 1;
+            foreach (var (productId, soldCount) in paged)
+            {
+                if (!productMap.TryGetValue(productId, out var product)) continue;
+                var firstVersion = product.Versions?.OrderBy(v => v.CreatedAt).FirstOrDefault();
+                dtos.Add(new BestSellingProductDto
+                {
+                    ProductId = product.ProductId,
+                    Name = product.Name,
+                    CategoryName = product.Category?.Name,
+                    Price = firstVersion?.Price,
+                    ShopId = product.ShopId,
+                    ShopName = _shopNameCache.Get(product.ShopId),
+                    ThumbnailUrl = (await _imageUrlRepository.GetPrimaryImageWithFallbackAsync(
+                        product.ProductId, firstVersion?.VersionId, product.CategoryId))?.OriginalUrl,
+                    SoldCount = soldCount,
+                    Rank = rank++
+                });
+            }
+
+            return ServiceResult<BestSellingProductsResultDto>.Success(new BestSellingProductsResultDto
+            {
+                Products = dtos,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            });
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<BestSellingProductsResultDto>.InternalServerError($"Error retrieving trending products: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<ShopBestSellingProductsResultDto>> GetBestSellingProductsByShopAsync(Guid shopId, int page, int pageSize)
+    {
+        try
+        {
+            var allSorted = _bestSellerCache.GetTopSellingByShop(shopId, int.MaxValue);
+            var totalCount = allSorted.Count;
+            var paged = allSorted.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            var productIds = paged.Select(x => x.ProductId).ToList();
+            var products = await _productMasterRepository.GetByIdsAsync(productIds);
+            var productMap = products.ToDictionary(p => p.ProductId);
+
+            var dtos = new List<BestSellingProductDto>();
+            int rank = (page - 1) * pageSize + 1;
+            foreach (var (productId, soldCount) in paged)
+            {
+                if (!productMap.TryGetValue(productId, out var product)) continue;
+                var firstVersion = product.Versions?.OrderBy(v => v.CreatedAt).FirstOrDefault();
+                dtos.Add(new BestSellingProductDto
+                {
+                    ProductId = product.ProductId,
+                    Name = product.Name,
+                    CategoryName = product.Category?.Name,
+                    Price = firstVersion?.Price,
+                    ShopId = product.ShopId,
+                    ShopName = _shopNameCache.Get(product.ShopId),
+                    ThumbnailUrl = (await _imageUrlRepository.GetPrimaryImageWithFallbackAsync(
+                        product.ProductId, firstVersion?.VersionId, product.CategoryId))?.OriginalUrl,
+                    SoldCount = soldCount,
+                    Rank = rank++
+                });
+            }
+
+            return ServiceResult<ShopBestSellingProductsResultDto>.Success(new ShopBestSellingProductsResultDto
+            {
+                ShopId = shopId,
+                ShopName = _shopNameCache.Get(shopId),
+                Products = dtos,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            });
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<ShopBestSellingProductsResultDto>.InternalServerError($"Error retrieving shop bestselling products: {ex.Message}");
         }
     }
 }

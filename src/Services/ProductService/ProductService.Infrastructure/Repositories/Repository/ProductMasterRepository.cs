@@ -47,6 +47,16 @@ public class ProductMasterRepository : GenericRepository<ProductMaster>, IProduc
             .ToListAsync();
     }
 
+    public async Task<List<ProductMaster>> GetByIdsAsync(IEnumerable<Guid> ids)
+    {
+        var idSet = ids.ToHashSet();
+        return await _dbSet
+            .Include(p => p.Category)
+            .Include(p => p.Versions)
+            .Where(p => idSet.Contains(p.ProductId))
+            .ToListAsync();
+    }
+
     public async Task<(List<ProductMaster> Products, int TotalCount)> SearchAsync(ProductSearchParameters searchParams)
     {
         var query = _context.ProductMasters

@@ -93,8 +93,7 @@ for (int i = 0; i < 5; i++)
 
         // Register event consumers (require RabbitMQ)
         builder.Services.AddSingleton<ShopEventConsumer>();
-
-        rabbitMQAvailable = true;
+                builder.Services.AddSingleton<OrderCreatedConsumer>();
         break;
     }
     catch (Exception ex)

@@ -1,6 +1,7 @@
 using ProductService.Application.DTOs;
 using ProductService.Application.Interfaces;
 using ProductService.Domain.Entities;
+using ProductService.Infrastructure.Persistence;
 using ProductService.Infrastructure.Repositories.IRepositories;
 using Shared.Results;
 using Shared.Events;
@@ -11,6 +12,7 @@ public class ImageUrlService : IImageUrlService
 {
     private readonly IImageUrlRepository _imageUrlRepository;
     private readonly ProductEventPublisher _eventPublisher;
+    private readonly IUnitOfWork _unitOfWork;
 
     private static readonly HashSet<string> ValidImageTypes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -18,10 +20,11 @@ public class ImageUrlService : IImageUrlService
         "SHOP_LOGO", "SHOP_COVER", "CATEGORY", "BANNER", "ADS"
     };
 
-    public ImageUrlService(IImageUrlRepository imageUrlRepository, ProductEventPublisher eventPublisher)
+    public ImageUrlService(IImageUrlRepository imageUrlRepository, ProductEventPublisher eventPublisher, IUnitOfWork unitOfWork)
     {
         _imageUrlRepository = imageUrlRepository;
         _eventPublisher = eventPublisher;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<ServiceResult<ImageUrlDto>> SaveImageAsync(SaveImageUrlDto dto)
@@ -62,6 +65,12 @@ public class ImageUrlService : IImageUrlService
                 UpdatedAt = DateTime.UtcNow,
                 EventType = "ImageUrlUpdated"
             });
+        }
+
+        // Option C: trigger re-moderation if parent product is PUBLISHED
+        if (entity.ImageType == "PRODUCT_VERSION")
+        {
+            await TriggerReModerationIfPublishedAsync(entity.ReferenceId);
         }
 
         return ServiceResult<ImageUrlDto>.Created(ToDto(entity), "Image saved successfully");
@@ -116,6 +125,16 @@ public class ImageUrlService : IImageUrlService
             }
         }
 
+        // Option C: trigger re-moderation for each distinct PRODUCT_VERSION versionId
+        var distinctVersionIds = saved
+            .Where(img => img.ImageType == "PRODUCT_VERSION")
+            .Select(img => img.ReferenceId)
+            .Distinct();
+        foreach (var versionId in distinctVersionIds)
+        {
+            await TriggerReModerationIfPublishedAsync(versionId);
+        }
+
         return ServiceResult<List<ImageUrlDto>>.Created(saved.Select(ToDto).ToList(),
             $"{saved.Count} image(s) saved successfully");
     }
@@ -145,4 +164,31 @@ public class ImageUrlService : IImageUrlService
         PublicId = img.PublicId,
         CreatedAt = img.CreatedAt
     };
+
+    /// <summary>
+    /// Option C re-moderation: nếu thêm ảnh cho version của PUBLISHED product → PENDING_APPROVAL
+    /// </summary>
+    private async Task TriggerReModerationIfPublishedAsync(Guid versionId)
+    {
+        try
+        {
+            var version = await _unitOfWork.ProductVersions.GetByIdAsync(versionId);
+            if (version == null) return;
+
+            var product = await _unitOfWork.ProductMasters.GetByIdAsync(version.ProductId);
+            if (product == null || product.Status != ProductStatus.PUBLISHED) return;
+
+            product.Status = ProductStatus.PENDING_APPROVAL;
+            product.ModerationStatus = ModerationStatus.PENDING;
+            product.ModeratedAt = null;
+            product.PublishedAt = null;
+            product.UpdatedAt = DateTime.UtcNow;
+            _unitOfWork.MarkAsModified(product);
+            await _unitOfWork.SaveChangesAsync();
+        }
+        catch
+        {
+            // Non-fatal — image already saved, re-moderation flag is best-effort
+        }
+    }
 }

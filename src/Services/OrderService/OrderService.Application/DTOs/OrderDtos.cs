@@ -44,21 +44,6 @@ public class OrderDto
 
     public string? DeliveryAddress { get; set; }
 
-    /// <summary>
-    /// Payment URL từ PayOS để thanh toán trực tuyến
-    /// </summary>
-    public string? PaymentUrl { get; set; }
-
-    /// <summary>
-    /// QR Code URL từ PayOS
-    /// </summary>
-    public string? QrCodeUrl { get; set; }
-
-    /// <summary>
-    /// Trạng thái payment (PENDING, PAID, EXPIRED, CANCELLED)
-    /// </summary>
-    public string? PaymentStatus { get; set; }
-
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 

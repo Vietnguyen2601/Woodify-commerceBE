@@ -259,24 +259,36 @@ public class ProductVersionService : IProductVersionService
             if (product == null)
                 return ServiceResult<ProductVersionDto>.NotFound("Product not found");
 
-            // Only allow updates if product status is DRAFT or APPROVED
-            if (product.Status != ProductStatus.DRAFT && product.Status != ProductStatus.APPROVED)
+            // Block edits while pending approval
+            if (product.Status == ProductStatus.PENDING_APPROVAL)
             {
                 return ServiceResult<ProductVersionDto>.BadRequest(
-                    $"Cannot update product version. Product must be in DRAFT or APPROVED status. Current status: {product.Status}");
+                    "Cannot edit product version while it is pending approval. Please wait for review or cancel the submission.");
             }
 
-            // Check if product is APPROVED and needs to revert to DRAFT
+            // Option C: Only sensitive field changes on PUBLISHED products require re-moderation
+            bool priceChanged = dto.Price.HasValue && dto.Price.Value != version.Price;
             bool shouldRevertToDraft = product.Status == ProductStatus.APPROVED;
+            bool requiresReModerationOnPublished = product.Status == ProductStatus.PUBLISHED && priceChanged;
 
             // Update version - just modify properties, don't call UpdateAsync
             dto.MapToUpdate(version);
             _unitOfWork.MarkAsModified(version);
 
-            // If product was APPROVED, change it back to DRAFT
+            // If product was APPROVED, revert to DRAFT on any change (existing behavior)
             if (shouldRevertToDraft)
             {
                 product.Status = ProductStatus.DRAFT;
+                product.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.MarkAsModified(product);
+            }
+            // If product is PUBLISHED and price changed → require re-moderation
+            else if (requiresReModerationOnPublished)
+            {
+                product.Status = ProductStatus.PENDING_APPROVAL;
+                product.ModerationStatus = ModerationStatus.PENDING;
+                product.ModeratedAt = null;
+                product.PublishedAt = null;
                 product.UpdatedAt = DateTime.UtcNow;
                 _unitOfWork.MarkAsModified(product);
             }
@@ -315,7 +327,10 @@ public class ProductVersionService : IProductVersionService
                 EventType = "Updated"
             });
 
-            return ServiceResult<ProductVersionDto>.Success(updatedVersion, "Product version updated successfully");
+            return ServiceResult<ProductVersionDto>.Success(updatedVersion,
+                requiresReModerationOnPublished
+                    ? "Product version updated. Price change on a published product requires re-moderation — status set to PENDING_APPROVAL."
+                    : "Product version updated successfully");
         }
         catch (Exception ex)
         {

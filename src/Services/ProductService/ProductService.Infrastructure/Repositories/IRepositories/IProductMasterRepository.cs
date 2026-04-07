@@ -20,4 +20,6 @@ public interface IProductMasterRepository : IGenericRepository<ProductMaster>
         DateTime? submittedTo = null,
         int page = 1,
         int pageSize = 20);
+
+    Task<List<ProductMaster>> GetByIdsAsync(IEnumerable<Guid> ids);
 }
