@@ -135,6 +135,25 @@ public class ImageUrlService : IImageUrlService
         return ServiceResult<ImageUrlDto>.Success(ToDto(image));
     }
 
+    public async Task<ServiceResult<List<ImageUrlDto>>> GetAllByTypeAsync(string imageType)
+    {
+        if (!ValidImageTypes.Contains(imageType))
+            return ServiceResult<List<ImageUrlDto>>.BadRequest(
+                $"Invalid imageType '{imageType}'. Allowed: {string.Join(", ", ValidImageTypes)}");
+
+        var images = await _imageUrlRepository.GetAllByTypeAsync(imageType.ToUpper());
+        return ServiceResult<List<ImageUrlDto>>.Success(images.Select(ToDto).ToList());
+    }
+
+    public async Task<ServiceResult> DeleteImageAsync(Guid imageId)
+    {
+        var deleted = await _imageUrlRepository.DeleteByIdAsync(imageId);
+        if (!deleted)
+            return ServiceResult.NotFound("Image not found");
+
+        return ServiceResult.Success("Image deleted successfully");
+    }
+
     private static ImageUrlDto ToDto(ImageUrl img) => new()
     {
         ImageId = img.ImageId,

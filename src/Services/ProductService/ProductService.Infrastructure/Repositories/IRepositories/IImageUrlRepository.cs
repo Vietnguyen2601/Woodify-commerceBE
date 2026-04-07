@@ -11,7 +11,7 @@ public interface IImageUrlRepository : IGenericRepository<ImageUrl>
     Task<List<ImageUrl>> BulkCreateAsync(List<ImageUrl> images);
     Task<Dictionary<Guid, string?>> GetPrimaryImageBatchAsync(string imageType, IEnumerable<Guid> referenceIds);
     Task<Dictionary<Guid, List<ImageUrl>>> GetImagesBatchAsync(string imageType, IEnumerable<Guid> referenceIds);
-    
+
     /// <summary>
     /// Get primary image with fallback chain:
     /// 1. PRODUCT image (primary)
@@ -20,4 +20,10 @@ public interface IImageUrlRepository : IGenericRepository<ImageUrl>
     /// 4. null (caller should handle with placeholder)
     /// </summary>
     Task<ImageUrl?> GetPrimaryImageWithFallbackAsync(Guid productId, Guid? productVersionId = null, Guid? categoryId = null);
+
+    /// <summary>Lấy tất cả ảnh theo loại (ví dụ: BANNER, ADS), sắp xếp theo sort_order ASC</summary>
+    Task<List<ImageUrl>> GetAllByTypeAsync(string imageType);
+
+    /// <summary>Xóa ảnh theo ID</summary>
+    Task<bool> DeleteByIdAsync(Guid imageId);
 }

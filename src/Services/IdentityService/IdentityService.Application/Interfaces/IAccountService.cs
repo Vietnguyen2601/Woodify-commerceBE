@@ -13,5 +13,6 @@ public interface IAccountService
     Task<ServiceResult<IEnumerable<AccountDto>>> GetAllAsync();
     Task<ServiceResult<AccountDto>> CreateAsync(CreateAccountDto dto);
     Task<ServiceResult<AccountDto>> UpdateAsync(Guid id, UpdateAccountDto dto);
+    Task<ServiceResult<AccountDto>> UpdateAccountStatusAsync(Guid id, UpdateAccountStatusDto dto);
     Task<ServiceResult> DeleteAsync(Guid id);
 }

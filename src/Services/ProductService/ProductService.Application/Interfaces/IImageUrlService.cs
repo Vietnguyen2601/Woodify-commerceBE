@@ -16,4 +16,10 @@ public interface IImageUrlService
 
     /// <summary>Lấy ảnh chính (sortOrder nhỏ nhất)</summary>
     Task<ServiceResult<ImageUrlDto>> GetPrimaryImageAsync(string imageType, Guid referenceId);
+
+    /// <summary>Lấy tất cả ảnh theo loại (dùng cho BANNER, ADS...)</summary>
+    Task<ServiceResult<List<ImageUrlDto>>> GetAllByTypeAsync(string imageType);
+
+    /// <summary>Xóa ảnh theo ID</summary>
+    Task<ServiceResult> DeleteImageAsync(Guid imageId);
 }

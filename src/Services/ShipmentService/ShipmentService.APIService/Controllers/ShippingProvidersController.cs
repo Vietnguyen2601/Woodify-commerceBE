@@ -68,6 +68,38 @@ public class ShippingProvidersController : ControllerBase
             _ => StatusCode(result.Status, result)
         };
     }
+
+    [HttpGet("providers/{providerId:guid}")]
+    [ProducesResponseType(typeof(ServiceResult<ShippingProviderDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ServiceResult<ShippingProviderDto>>> GetById([FromRoute] Guid providerId)
+    {
+        var result = await _providerService.GetByIdAsync(providerId);
+
+        return result.Status switch
+        {
+            200 => Ok(result),
+            404 => NotFound(result),
+            _ => StatusCode(result.Status, result)
+        };
+    }
+
+    [HttpDelete("providers/{providerId:guid}")]
+    [ProducesResponseType(typeof(ServiceResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ServiceResult>> Delete([FromRoute] Guid providerId)
+    {
+        var result = await _providerService.DeleteAsync(providerId);
+
+        return result.Status switch
+        {
+            200 => Ok(result),
+            404 => NotFound(result),
+            409 => Conflict(result),
+            _ => StatusCode(result.Status, result)
+        };
+    }
 }
 
 

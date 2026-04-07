@@ -23,7 +23,7 @@ public class AccountService : IAccountService
         var account = await _accountRepository.GetByIdAsync(id);
         if (account == null)
             return ServiceResult<AccountDto>.NotFound("Account not found");
-        
+
         return ServiceResult<AccountDto>.Success(account.ToDto());
     }
 
@@ -32,7 +32,7 @@ public class AccountService : IAccountService
         var account = await _accountRepository.GetByUsernameAsync(username);
         if (account == null)
             return ServiceResult<AccountDto>.NotFound("Account not found");
-        
+
         return ServiceResult<AccountDto>.Success(account.ToDto());
     }
 
@@ -40,7 +40,7 @@ public class AccountService : IAccountService
     {
         var accounts = await _accountRepository.GetAllAsync();
         var accountDtos = accounts.Select(a => a.ToDto());
-        
+
         return ServiceResult<IEnumerable<AccountDto>>.Success(accountDtos);
     }
 
@@ -50,7 +50,7 @@ public class AccountService : IAccountService
         {
             var account = dto.ToModel(dto.Password);
             await _accountRepository.CreateAsync(account);
-            
+
             if (account.RoleId.HasValue)
                 account.Role = await _roleRepository.GetByIdAsync(account.RoleId.Value);
 
@@ -72,7 +72,7 @@ public class AccountService : IAccountService
 
             dto.MapToUpdate(account);
             await _accountRepository.UpdateAsync(account);
-            
+
             var updatedAccount = await _accountRepository.GetByIdAsync(id);
             return ServiceResult<AccountDto>.Success(updatedAccount!.ToDto(), "Account updated successfully");
         }
@@ -89,13 +89,34 @@ public class AccountService : IAccountService
             var account = await _accountRepository.GetByIdAsync(id);
             if (account == null)
                 return ServiceResult.NotFound("Account not found");
-            
+
             await _accountRepository.RemoveAsync(account);
             return ServiceResult.Success("Account deleted successfully");
         }
         catch (Exception ex)
         {
             return ServiceResult.InternalServerError($"Error deleting account: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<AccountDto>> UpdateAccountStatusAsync(Guid id, UpdateAccountStatusDto dto)
+    {
+        try
+        {
+            var account = await _accountRepository.GetByIdAsync(id);
+            if (account == null)
+                return ServiceResult<AccountDto>.NotFound("Account not found");
+
+            account.IsActive = dto.IsActive;
+            account.UpdatedAt = DateTime.UtcNow;
+            await _accountRepository.UpdateAsync(account);
+
+            var message = dto.IsActive ? "Account activated successfully" : "Account deactivated successfully";
+            return ServiceResult<AccountDto>.Success(account.ToDto(), message);
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<AccountDto>.InternalServerError($"Error updating account status: {ex.Message}");
         }
     }
 }

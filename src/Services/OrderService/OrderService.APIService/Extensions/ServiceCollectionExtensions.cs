@@ -5,8 +5,6 @@ using OrderService.Application.Services;
 using OrderService.Application.Consumers;
 using OrderService.Infrastructure.Data.Context;
 using Microsoft.Extensions.DependencyInjection;
-using PaymentService.Application.Interfaces;
-using PaymentService.Infrastructure.PayOs;
 
 namespace OrderService.APIService.Extensions
 {
@@ -27,32 +25,6 @@ namespace OrderService.APIService.Extensions
             // Services
             services.AddScoped<ICartService, CartService>();
             services.AddScoped<IOrderService, Application.Services.OrderService>();
-
-            // ✨ Configure PayOS for payment integration
-            services.Configure<PayOsOptions>(options =>
-            {
-                options.ClientId = configuration["PAYOS_CLIENT_ID"]
-                    ?? configuration["PayOs:ClientId"]
-                    ?? string.Empty;
-
-                options.ApiKey = configuration["PAYOS_API_KEY"]
-                    ?? configuration["PayOs:ApiKey"]
-                    ?? string.Empty;
-
-                options.ChecksumKey = configuration["PAYOS_CHECKSUM_KEY"]
-                    ?? configuration["PayOs:ChecksumKey"]
-                    ?? string.Empty;
-
-                options.BaseUrl = configuration["PAYOS_BASE_URL"]
-                    ?? configuration["PayOs:BaseUrl"]
-                    ?? "https://api-merchant.payos.vn";
-            });
-
-            // Register HttpClient for PayOsService
-            services.AddHttpClient<IPayOsService, PayOsService>(client =>
-            {
-                client.Timeout = TimeSpan.FromSeconds(30);
-            });
 
             // Register event consumers
             services.AddScoped<ProductEventConsumer>();

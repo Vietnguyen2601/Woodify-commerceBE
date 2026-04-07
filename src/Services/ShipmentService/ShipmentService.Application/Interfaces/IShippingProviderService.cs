@@ -12,5 +12,9 @@ public interface IShippingProviderService
 
     Task<ServiceResult<ShippingProviderPagedDto>> GetPagedAsync(GetProvidersQueryDto query);
 
+    Task<ServiceResult<ShippingProviderDto>> GetByIdAsync(Guid providerId);
+
     Task<ServiceResult<ShippingProviderDto>> UpdateAsync(Guid providerId, UpdateShippingProviderDto dto);
+
+    Task<ServiceResult> DeleteAsync(Guid providerId);
 }

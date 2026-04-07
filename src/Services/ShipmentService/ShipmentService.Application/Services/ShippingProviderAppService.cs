@@ -142,4 +142,52 @@ public class ShippingProviderAppService : IShippingProviderService
             return ServiceResult<ShippingProviderDto>.InternalServerError($"{ShipmentMessages.ProviderUpdateError}: {ex.Message}");
         }
     }
+
+    public async Task<ServiceResult<ShippingProviderDto>> GetByIdAsync(Guid providerId)
+    {
+        var cached = _cache.Get<ShippingProviderDto>(ProviderCacheKey(providerId));
+        if (cached is not null)
+            return ServiceResult<ShippingProviderDto>.Success(cached);
+
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+        if (provider is null)
+            return ServiceResult<ShippingProviderDto>.NotFound(ShipmentMessages.ProviderNotFound);
+
+        var dto = provider.ToDto();
+        _cache.Set(ProviderCacheKey(providerId), dto, TimeSpan.FromMinutes(5));
+        return ServiceResult<ShippingProviderDto>.Success(dto);
+    }
+
+    public async Task<ServiceResult> DeleteAsync(Guid providerId)
+    {
+        try
+        {
+            var provider = await _providerRepository.GetByIdAsync(providerId);
+            if (provider is null)
+                return ServiceResult.NotFound(ShipmentMessages.ProviderNotFound);
+
+            var hasActiveServices = await _providerServiceRepository.HasActiveByProviderIdAsync(providerId);
+            if (hasActiveServices)
+                return ServiceResult.Conflict(ShipmentMessages.ProviderHasActiveServices);
+
+            var hasActiveShipments = await _shipmentRepository.HasNonTerminalByProviderIdAsync(providerId);
+            if (hasActiveShipments)
+                return ServiceResult.Conflict(ShipmentMessages.ProviderHasActiveShipments);
+
+            await _providerRepository.RemoveAsync(provider);
+
+            _cache.Remove(CacheKeyAllProviders);
+            _cache.Remove(ProviderCacheKey(providerId));
+
+            return ServiceResult.Success(ShipmentMessages.ProviderDeleted);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult.InternalServerError($"{ShipmentMessages.ProviderDeleteError}: {ex.Message}");
+        }
+    }
 }

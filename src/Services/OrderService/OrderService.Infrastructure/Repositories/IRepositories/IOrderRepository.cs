@@ -11,4 +11,14 @@ public interface IOrderRepository : IGenericRepository<Order>
     Task<Order?> GetOrderWithItemsAsync(Guid orderId);
     Task<List<Order>> GetOrdersByAccountIdAsync(Guid accountId);
     Task<List<Order>> GetOrdersByShopIdAsync(Guid shopId);
+
+    /// <summary>
+    /// Lấy nhiều orders từ list IDs (dùng cho multi-order payment)
+    /// </summary>
+    Task<List<Order>> GetByIdsAsync(IEnumerable<Guid> orderIds);
+
+    /// <summary>
+    /// Admin: Lấy tất cả orders có pagination và filter
+    /// </summary>
+    Task<(List<Order> Items, int Total)> GetAllPagedAsync(int page, int pageSize, string? status, Guid? shopId, Guid? accountId);
 }

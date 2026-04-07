@@ -1,6 +1,35 @@
 namespace OrderService.Application.DTOs;
 
 /// <summary>
+/// Query DTO cho admin GetAllOrders (pagination + filter)
+/// </summary>
+public class GetAllOrdersQueryDto
+{
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 20;
+
+    /// <summary>Lọc theo trạng thái: PENDING, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, COMPLETED, CANCELLED...</summary>
+    public string? Status { get; set; }
+
+    /// <summary>Lọc theo shop</summary>
+    public Guid? ShopId { get; set; }
+
+    /// <summary>Lọc theo account (customer)</summary>
+    public Guid? AccountId { get; set; }
+}
+
+/// <summary>
+/// Kết quả trả về từ GetAllOrders (paginated)
+/// </summary>
+public class OrderListResultDto
+{
+    public List<OrderDto> Items { get; set; } = new();
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int Total { get; set; }
+}
+
+/// <summary>
 /// DTO để tạo order từ cart - hỗ trợ checkout selected items
 /// </summary>
 public class CreateOrderFromCartDto
@@ -9,7 +38,6 @@ public class CreateOrderFromCartDto
     public Guid ShopId { get; set; }
     public string? DeliveryAddress { get; set; }
     public Guid? VoucherId { get; set; }
-    public Guid? Payment { get; set; }
 
     /// <summary>
     /// Mã phương thức vận chuyển mà customer chọn (ví dụ: "EXPRESS", "STANDARD")
@@ -20,6 +48,51 @@ public class CreateOrderFromCartDto
     /// IDs của cart items cần thanh toán. Nếu null/empty → thanh toán toàn bộ cart (backward compatible)
     /// </summary>
     public Guid[]? SelectedCartItemIds { get; set; }
+
+    /// <summary>
+    /// Phương thức thanh toán (COD, WALLET, PAYOS) - chỉ dùng để log, CreateOrdersFromCart không xử lý payment
+    /// Payment sẽ được xử lý riêng ở PaymentService sau bước này
+    /// </summary>
+    public string? PaymentMethod { get; set; }
+}
+
+/// <summary>
+/// DTO trả về kết quả tạo orders từ cart - danh sách orderIds
+/// </summary>
+public class CreateOrdersFromCartResultDto
+{
+    /// <summary>
+    /// Danh sách IDs của orders vừa tạo (mỗi shop 1 order)
+    /// </summary>
+    public List<Guid> OrderIds { get; set; } = new List<Guid>();
+
+    /// <summary>
+    /// Tổng số tiền cần thanh toán (sum của tất cả orders' TotalAmountCents)
+    /// </summary>
+    public long TotalAmountCents { get; set; }
+
+    /// <summary>
+    /// Số lượng orders được tạo
+    /// </summary>
+    public int OrderCount { get; set; }
+
+    /// <summary>
+    /// Chi tiết từng order (optional - dùng để client preview)
+    /// </summary>
+    public List<OrderSummaryDto> Orders { get; set; } = new List<OrderSummaryDto>();
+}
+
+/// <summary>
+/// DTO tóm tắt thông tin order (dùng trong CreateOrdersFromCartResultDto)
+/// </summary>
+public class OrderSummaryDto
+{
+    public Guid OrderId { get; set; }
+    public Guid ShopId { get; set; }
+    public double SubtotalCents { get; set; }
+    public double TotalAmountCents { get; set; }
+    public long CommissionCents { get; set; }
+    public int ItemCount { get; set; }
 }
 
 /// <summary>
@@ -33,12 +106,23 @@ public class OrderDto
     public Guid ShopId { get; set; }
 
     public double SubtotalCents { get; set; }
-    public double ShippingFeeCents { get; set; }
     public double TotalAmountCents { get; set; }
 
-    public Guid? VoucherId { get; set; }
+    /// <summary>
+    /// === TIỀN HÓA HỒNG ===
+    /// Tỷ lệ hoa hồng sàn lấy từ đơn hàng này (mặc định 6%)
+    /// </summary>
+    public decimal CommissionRate { get; set; } = 0.06m;
 
-    public Guid? Payment { get; set; }
+    /// <summary>
+    /// Số tiền hoa hồng đã tính (cents)
+    /// Formula: FLOOR(subtotal_cents × commission_rate)
+    /// Example: 1,000,000 × 0.06 = 60,000 cents
+    /// Dùng sau để trừ từ Seller Wallet khi Order → COMPLETED
+    /// </summary>
+    public long CommissionCents { get; set; } = 0;
+
+    public Guid? VoucherId { get; set; }
 
     public string Status { get; set; } = string.Empty;
 

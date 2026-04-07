@@ -194,7 +194,7 @@ public class OrderDbContext : DbContext
             entity.Property(e => e.SubtotalCents).HasColumnName("subtotal_cents").HasColumnType("double precision").IsRequired();
             entity.Property(e => e.TotalAmountCents).HasColumnName("total_amount_cents").HasColumnType("double precision").IsRequired();
             entity.Property(e => e.VoucherId).HasColumnName("voucher_id");
-            entity.Property(e => e.Payment).HasColumnName("payment");
+
             entity.Property(e => e.Status).HasColumnName("status")
                 .HasConversion<string>()
                 .HasMaxLength(50)

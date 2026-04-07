@@ -23,4 +23,11 @@ public interface IPaymentAppService
     /// Query thông tin thanh toán theo PaymentId
     /// </summary>
     Task<ServiceResult<PaymentInfoResponse>> GetPaymentByIdAsync(Guid paymentId);
+
+    /// <summary>
+    /// Tạo Payment cho multi-order checkout
+    /// Hỗ trợ 3 phương thức: COD, WALLET, PAYOS
+    /// Gọi từ frontend sau khi CreateOrderFromCart thành công
+    /// </summary>
+    Task<ServiceResult<CreatePaymentResponse>> CreatePaymentAsync(CreatePaymentRequest request);
 }

@@ -27,10 +27,10 @@ public class AccountsController : ControllerBase
     public async Task<ActionResult<ServiceResult<AccountDto>>> GetById(Guid id)
     {
         var result = await _accountService.GetByIdAsync(id);
-        
+
         if (result.Status == 404)
             return NotFound(result);
-        
+
         return Ok(result);
     }
 
@@ -38,10 +38,10 @@ public class AccountsController : ControllerBase
     public async Task<ActionResult<ServiceResult<AccountDto>>> GetByUsername(string username)
     {
         var result = await _accountService.GetByUsernameAsync(username);
-        
+
         if (result.Status == 404)
             return NotFound(result);
-        
+
         return Ok(result);
     }
 
@@ -49,10 +49,10 @@ public class AccountsController : ControllerBase
     public async Task<ActionResult<ServiceResult<AccountDto>>> Create([FromBody] CreateAccountDto dto)
     {
         var result = await _accountService.CreateAsync(dto);
-        
+
         if (result.Status == 201)
             return CreatedAtAction(nameof(GetById), new { id = result.Data?.AccountId }, result);
-        
+
         return BadRequest(result);
     }
 
@@ -60,13 +60,13 @@ public class AccountsController : ControllerBase
     public async Task<ActionResult<ServiceResult<AccountDto>>> Update(Guid id, [FromBody] UpdateAccountDto dto)
     {
         var result = await _accountService.UpdateAsync(id, dto);
-        
+
         if (result.Status == 404)
             return NotFound(result);
-        
+
         if (result.Status != 200)
             return BadRequest(result);
-        
+
         return Ok(result);
     }
 
@@ -74,13 +74,30 @@ public class AccountsController : ControllerBase
     public async Task<ActionResult<ServiceResult>> Delete(Guid id)
     {
         var result = await _accountService.DeleteAsync(id);
-        
+
         if (result.Status == 404)
             return NotFound(result);
-        
+
         if (result.Status != 200)
             return BadRequest(result);
-        
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Admin: Kích hoạt hoặc khóa tài khoản (ban/unban)
+    /// </summary>
+    [HttpPatch("UpdateAccountStatus/{id:guid}")]
+    public async Task<ActionResult<ServiceResult<AccountDto>>> UpdateAccountStatus(Guid id, [FromBody] UpdateAccountStatusDto dto)
+    {
+        var result = await _accountService.UpdateAccountStatusAsync(id, dto);
+
+        if (result.Status == 404)
+            return NotFound(result);
+
+        if (result.Status != 200)
+            return BadRequest(result);
+
         return Ok(result);
     }
 }
