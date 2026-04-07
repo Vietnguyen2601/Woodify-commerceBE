@@ -1,12 +1,10 @@
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
-using OrderService.Application.Helpers;
 using OrderService.Domain.Entities;
 using OrderService.Infrastructure.Repositories.IRepositories;
 using Shared.Results;
 using Shared.Events;
 using Shared.Constants;
-using PaymentService.Application.Interfaces;
 
 namespace OrderService.Application.Services;
 
@@ -17,28 +15,19 @@ public class OrderService : IOrderService
     private readonly ICartItemRepository _cartItemRepository;
     private readonly IProductVersionCacheRepository _productCacheRepository;
     private readonly OrderEventPublisher _orderEventPublisher;
-    private readonly IPayOsService _payOsService;
-    private readonly string _paymentReturnUrl;
-    private readonly string _paymentCancelUrl;
 
     public OrderService(
         IOrderRepository orderRepository,
         ICartRepository cartRepository,
         ICartItemRepository cartItemRepository,
         IProductVersionCacheRepository productCacheRepository,
-        OrderEventPublisher orderEventPublisher,
-        IPayOsService payOsService)
+        OrderEventPublisher orderEventPublisher)
     {
         _orderRepository = orderRepository;
         _cartRepository = cartRepository;
         _cartItemRepository = cartItemRepository;
         _productCacheRepository = productCacheRepository;
         _orderEventPublisher = orderEventPublisher;
-        _payOsService = payOsService;
-
-        // TODO: Lấy từ appsettings
-        _paymentReturnUrl = "http://localhost:3000/payment/success";
-        _paymentCancelUrl = "http://localhost:3000/payment/cancel";
     }
 
     public async Task<ServiceResult<OrderDto>> CreateOrderFromCartAsync(CreateOrderFromCartDto dto)
@@ -182,7 +171,7 @@ public class OrderService : IOrderService
                 await _orderRepository.CreateAsync(order);
                 createdOrders.Add(order);
 
-                // Publish OrderCreated event to RabbitMQ for ShipmentService
+                // Publish OrderCreated event to RabbitMQ for ShipmentService + ProductService
                 // ✨ TotalAmountCents already includes calculated shipping fee
                 // ShipmentService can verify/log the calculation if needed
                 _orderEventPublisher.PublishOrderCreated(new OrderCreatedEvent
@@ -196,7 +185,12 @@ public class OrderService : IOrderService
                     ProviderServiceCode = dto.ProviderServiceCode,
                     TotalWeightGrams = totalWeightGrams,
                     VoucherId = dto.VoucherId,
-                    CreatedAt = order.CreatedAt
+                    CreatedAt = order.CreatedAt,
+                    Items = order.OrderItems.Select(oi => new OrderItemEvent
+                    {
+                        VersionId = oi.VersionId,
+                        Quantity = oi.Quantity
+                    }).ToList()
                 });
             }
 
@@ -214,18 +208,6 @@ public class OrderService : IOrderService
             // 11. Return first order (for backward compatibility)
             // In real scenario, return CreateOrderResult with list of all orders
             var orderDto = MapToOrderDto(createdOrders.First());
-
-            // 12. ✨ Create PayOS payment link for first order
-            try
-            {
-                var firstOrder = createdOrders.First();
-                await CreateAndAddPaymentUrlAsync(orderDto, firstOrder, dto);
-            }
-            catch (Exception ex)
-            {
-                // Log but don't fail - order is created even if payment creation fails
-                System.Diagnostics.Debug.WriteLine($"⚠️ Payment creation failed: {ex.Message}");
-            }
 
             return ServiceResult<OrderDto>.Success(orderDto,
                 $"Order(s) created successfully. Total orders: {createdOrders.Count}");
@@ -599,44 +581,5 @@ public class OrderService : IOrderService
         }
 
         return orderDto;
-    }
-
-    /// <summary>
-    /// Create PayOS payment link và add vào OrderDto
-    /// </summary>
-    private async Task CreateAndAddPaymentUrlAsync(
-        OrderDto orderDto,
-        Order order,
-        CreateOrderFromCartDto dto)
-    {
-        // Create PayOS request using helper
-        var payOsRequest = PayOsRequestHelper.CreatePayOsRequest(
-            order.OrderId,
-            order.ShopId,
-            order.TotalAmountCents,
-            buyerName: null, // Could get from account/profile
-            buyerEmail: null, // Will be generated random
-            buyerPhone: null, // Could get from account/profile
-            _paymentReturnUrl,
-            _paymentCancelUrl
-        );
-
-        // Call PayOS service to create payment link
-        var paymentResult = await _payOsService.CreatePaymentLinkAsync(payOsRequest);
-
-        if (paymentResult.IsSuccess)
-        {
-            orderDto.PaymentUrl = paymentResult.CheckoutUrl;
-            orderDto.QrCodeUrl = paymentResult.QrCodeUrl;
-            orderDto.PaymentStatus = paymentResult.Status ?? "PENDING";
-
-            System.Diagnostics.Debug.WriteLine(
-                $"✅ Payment created for order {order.OrderId}: {paymentResult.CheckoutUrl}");
-        }
-        else
-        {
-            System.Diagnostics.Debug.WriteLine(
-                $"❌ Payment creation failed: {paymentResult.ErrorMessage}");
-        }
     }
 }

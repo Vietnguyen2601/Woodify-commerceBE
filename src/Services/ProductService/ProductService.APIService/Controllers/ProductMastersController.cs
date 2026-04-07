@@ -279,4 +279,44 @@ public class ProductMastersController : ControllerBase
         
         return Ok(result);
     }
+
+    // ─── Issue #4: Bestseller APIs ────────────────────────────────────────────
+
+    /// <summary>
+    /// Top sản phẩm bán chạy nhất toàn sàn (all-time, in-memory)
+    /// </summary>
+    [HttpGet("GetBestSellingProducts")]
+    public async Task<ActionResult<ServiceResult<BestSellingProductsResultDto>>> GetBestSellingProducts(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        var result = await _productMasterService.GetBestSellingProductsAsync(page, pageSize);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Top sản phẩm trending toàn sàn (all-time), có thể lọc theo category
+    /// </summary>
+    [HttpGet("GetTrendingProducts")]
+    public async Task<ActionResult<ServiceResult<BestSellingProductsResultDto>>> GetTrendingProducts(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] Guid? categoryId = null)
+    {
+        var result = await _productMasterService.GetTrendingProductsAsync(page, pageSize, categoryId);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Top sản phẩm bán chạy nhất của một shop cụ thể (all-time, in-memory)
+    /// </summary>
+    [HttpGet("GetBestSellingProductsByShop/{shopId:guid}")]
+    public async Task<ActionResult<ServiceResult<ShopBestSellingProductsResultDto>>> GetBestSellingProductsByShop(
+        Guid shopId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        var result = await _productMasterService.GetBestSellingProductsByShopAsync(shopId, page, pageSize);
+        return Ok(result);
+    }
 }

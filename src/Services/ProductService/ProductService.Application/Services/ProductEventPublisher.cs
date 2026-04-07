@@ -128,4 +128,23 @@ public class ProductEventPublisher
             Console.WriteLine($"[ProductService] Failed to publish ImageUrlUpdated event: {ex.Message}");
         }
     }
+
+    public void PublishProductSubmissionCancelled(ProductSubmissionCancelledEvent evt)
+    {
+        if (_publisher == null)
+        {
+            Console.WriteLine($"[ProductService] WARNING: RabbitMQ publisher is not available. Skipping ProductSubmissionCancelled event.");
+            return;
+        }
+
+        try
+        {
+            _publisher.Publish("product.events", "product.submission.cancelled", evt);
+            Console.WriteLine($"[ProductService] Published ProductSubmissionCancelled event: ProductId={evt.ProductId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ProductService] Failed to publish ProductSubmissionCancelled event: {ex.Message}");
+        }
+    }
 }

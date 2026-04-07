@@ -34,4 +34,9 @@ public interface IProductMasterService
     // Submission management APIs (Issue #6)
     Task<ServiceResult<ProductMasterDto>> CancelSubmissionAsync(Guid id);
     Task<ServiceResult<SubmissionStatusDto>> GetSubmissionStatusAsync(Guid id);
+
+    // Bestseller APIs (Issue #4)
+    Task<ServiceResult<BestSellingProductsResultDto>> GetBestSellingProductsAsync(int page, int pageSize);
+    Task<ServiceResult<BestSellingProductsResultDto>> GetTrendingProductsAsync(int page, int pageSize, Guid? categoryId = null);
+    Task<ServiceResult<ShopBestSellingProductsResultDto>> GetBestSellingProductsByShopAsync(Guid shopId, int page, int pageSize);
 }

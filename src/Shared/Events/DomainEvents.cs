@@ -47,7 +47,7 @@ public class ShopUpdatedEvent
 
 /// <summary>
 /// Event khi Order được tạo mới
-/// OrderService publish → ShipmentService consume
+/// OrderService publish → ShipmentService consume, ProductService consume
 /// Exchange: "order.events" / Routing key: "order.created"
 /// </summary>
 public class OrderCreatedEvent
@@ -65,6 +65,18 @@ public class OrderCreatedEvent
     public int TotalWeightGrams { get; set; }
 
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>Danh sách sản phẩm trong đơn hàng (để ProductService cập nhật bestseller)</summary>
+    public List<OrderItemEvent> Items { get; set; } = new();
+}
+
+/// <summary>
+/// Thông tin item trong order, dùng trong OrderCreatedEvent
+/// </summary>
+public class OrderItemEvent
+{
+    public Guid VersionId { get; set; }
+    public int Quantity { get; set; }
 }
 
 /// <summary>

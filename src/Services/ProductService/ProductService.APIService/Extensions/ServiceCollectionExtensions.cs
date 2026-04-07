@@ -44,6 +44,9 @@ namespace ProductService.APIService.Extensions
             // Shop name cache (populated by ShopEventConsumer via RabbitMQ)
             services.AddSingleton<ShopNameCacheService>();
 
+            // Bestseller cache (populated by OrderCreatedConsumer via RabbitMQ)
+            services.AddSingleton<BestSellerCacheService>();
+
             return services;
         }
 
@@ -51,6 +54,9 @@ namespace ProductService.APIService.Extensions
         {
             var shopEventConsumer = serviceProvider.GetService<ShopEventConsumer>();
             shopEventConsumer?.StartListening();
+
+            var orderCreatedConsumer = serviceProvider.GetService<OrderCreatedConsumer>();
+            orderCreatedConsumer?.StartListening();
         }
 
         public static IServiceCollection AddValidators(this IServiceCollection services)
