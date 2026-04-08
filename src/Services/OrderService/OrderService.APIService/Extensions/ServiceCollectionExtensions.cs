@@ -25,6 +25,7 @@ namespace OrderService.APIService.Extensions
             // Services
             services.AddScoped<ICartService, CartService>();
             services.AddScoped<IOrderService, Application.Services.OrderService>();
+            services.AddScoped<IDashboardService, DashboardService>();
 
             // Register event consumers
             services.AddScoped<ProductEventConsumer>();
