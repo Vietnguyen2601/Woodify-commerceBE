@@ -451,13 +451,16 @@ public class PaymentAppService : IPaymentAppService
             // Convert cents → VND (1 VND = 100 cents)
             int amountVnd = (int)(request.TotalAmountCents / 100);
 
+            // Description đơn giản: khách hàng chỉ cần biết số đơn hàng và tổng tiền
+            var rawDesc = $"Thanh toan {request.OrderIds.Count} don hang Woodify";
             var payOsRequest = new PayOsCreatePaymentInput
             {
                 OrderCode = orderCode,
                 Amount = amountVnd, // PayOS dùng VND, không phải cents
-                Description = $"Thanh toán {request.OrderIds.Count} đơn hàng từ Woodify",
+                Description = rawDesc.Length > 25 ? rawDesc[..25] : rawDesc,
                 ReturnUrl = request.ReturnUrl ?? "https://woodify.vn/payment/success",
                 CancelUrl = request.CancelUrl ?? "https://woodify.vn/payment/cancel"
+                // Items = null (không cần chi tiết từng shop - khách hàng chỉ quan tâm tổng tiền)
             };
 
             // ===== Step 4: Call PayOS API =====

@@ -62,7 +62,13 @@ public class PayOsService : IPayOsService
                 BuyerName = input.BuyerName,
                 BuyerEmail = input.BuyerEmail,
                 BuyerPhone = input.BuyerPhone,
-                Signature = signature
+                Signature = signature,
+                Items = input.Items?.Select(i => new PayOsItem
+                {
+                    Name = i.Name,
+                    Quantity = i.Quantity,
+                    Price = i.Price
+                }).ToList()
             };
 
             // Gọi API PayOS

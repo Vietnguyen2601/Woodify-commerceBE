@@ -37,6 +37,16 @@ public interface IPayOsService
 #region PayOS DTOs for IPayOsService
 
 /// <summary>
+/// Item trong PayOS payment request (từ Application layer)
+/// </summary>
+public class PayOsInputItem
+{
+    public string Name { get; set; } = string.Empty;
+    public int Quantity { get; set; }
+    public int Price { get; set; } // VND
+}
+
+/// <summary>
 /// Input cho create payment link
 /// </summary>
 public class PayOsCreatePaymentInput
@@ -49,6 +59,7 @@ public class PayOsCreatePaymentInput
     public string? BuyerName { get; set; }
     public string? BuyerEmail { get; set; }
     public string? BuyerPhone { get; set; }
+    public List<PayOsInputItem>? Items { get; set; }
 }
 
 /// <summary>

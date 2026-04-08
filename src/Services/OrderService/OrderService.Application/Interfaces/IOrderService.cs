@@ -13,6 +13,15 @@ public interface IOrderService
     /// Tính commission + shipping fee cho mỗi order
     /// Trả về danh sách orderIds để frontend gửi tới PaymentService
     /// </summary>
+    /// <summary>
+    /// Tạo Order từ 1 shop (v2 refactored)
+    /// Frontend gọi N lần cho N shops, mỗi lần process 1 shop
+    /// </summary>
+    Task<ServiceResult<CreateOrderResponse>> CreateOrderAsync(CreateOrderRequest request);
+
+    /// <summary>
+    /// Legacy method - giữ cho backward compatibility (nếu cần)
+    /// </summary>
     Task<ServiceResult<CreateOrdersFromCartResultDto>> CreateOrderFromCartAsync(CreateOrderFromCartDto dto);
 
     Task<ServiceResult<OrderDto>> GetOrderByIdAsync(Guid orderId);
