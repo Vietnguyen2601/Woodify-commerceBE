@@ -112,7 +112,7 @@ public class DashboardService : IDashboardService
         var orders = await _orderRepository.GetAllAsync();
 
         var groupedData = orders
-            .Where(o => o.CreatedAt >= DateTime.UtcNow.AddYears(-1))
+            .Where(o => o.Status == OrderStatus.COMPLETED && o.CreatedAt >= DateTime.UtcNow.AddYears(-1))
             .GroupBy(o => new
             {
                 Year = o.CreatedAt.Year,
@@ -198,7 +198,7 @@ public class DashboardService : IDashboardService
         var orders = await _orderRepository.GetAllAsync();
 
         var groupedData = orders
-            .Where(o => o.CreatedAt >= DateTime.UtcNow.AddYears(-3))
+            .Where(o => o.Status == OrderStatus.COMPLETED && o.CreatedAt >= DateTime.UtcNow.AddYears(-3))
             .GroupBy(o => o.CreatedAt.Year)
             .OrderByDescending(g => g.Key)
             .ToList();
@@ -266,7 +266,7 @@ public class DashboardService : IDashboardService
         var orders = await _orderRepository.GetAllAsync();
 
         var filteredOrders = orders
-            .Where(o => o.CreatedAt >= startDate && o.CreatedAt <= endDate)
+            .Where(o => o.Status == OrderStatus.COMPLETED && o.CreatedAt >= startDate && o.CreatedAt <= endDate)
             .ToList();
 
         var chartData = GetDailyData(filteredOrders, startDate, endDate);
@@ -302,7 +302,7 @@ public class DashboardService : IDashboardService
         var orders = await _orderRepository.GetAllAsync();
 
         var filteredOrders = orders
-            .Where(o => o.CreatedAt >= startDate && o.CreatedAt <= endDate)
+            .Where(o => o.Status == OrderStatus.COMPLETED && o.CreatedAt >= startDate && o.CreatedAt <= endDate)
             .ToList();
 
         var chartData = GetMonthlyData(filteredOrders, startDate, endDate);
