@@ -6,7 +6,7 @@ using Shared.Results;
 namespace OrderService.APIService.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/order/[controller]")]
 public class CartsController : ControllerBase
 {
     private readonly ICartService _cartService;
@@ -38,13 +38,12 @@ public class CartsController : ControllerBase
     public async Task<ActionResult<ServiceResult<CartDto>>> AddToCart(Guid accountId, [FromBody] AddToCartDto dto)
     {
         var result = await _cartService.AddToCartAsync(accountId, dto);
-        
         if (result.Status == 404)
             return NotFound(result);
-        
+
         if (result.Status == 400)
             return BadRequest(result);
-        
+
         return Ok(result);
     }
 
@@ -58,13 +57,13 @@ public class CartsController : ControllerBase
     public async Task<ActionResult<ServiceResult<CartDto>>> UpdateCartItem(Guid accountId, [FromBody] UpdateCartItemDto dto)
     {
         var result = await _cartService.UpdateCartItemAsync(accountId, dto);
-        
+
         if (result.Status == 404)
             return NotFound(result);
-        
+
         if (result.Status == 400)
             return BadRequest(result);
-        
+
         return Ok(result);
     }
 
@@ -78,10 +77,10 @@ public class CartsController : ControllerBase
     public async Task<ActionResult<ServiceResult>> RemoveCartItem(Guid accountId, Guid cartItemId)
     {
         var result = await _cartService.RemoveCartItemAsync(accountId, cartItemId);
-        
+
         if (result.Status == 404)
             return NotFound(result);
-        
+
         return Ok(result);
     }
 
@@ -94,10 +93,10 @@ public class CartsController : ControllerBase
     public async Task<ActionResult<ServiceResult>> ClearCart(Guid accountId)
     {
         var result = await _cartService.ClearCartAsync(accountId);
-        
+
         if (result.Status == 404)
             return NotFound(result);
-        
+
         return Ok(result);
     }
 
@@ -105,10 +104,10 @@ public class CartsController : ControllerBase
     public async Task<IActionResult> GetCheckoutPreview(Guid accountId)
     {
         var result = await _cartService.GetCheckoutPreviewAsync(accountId);
-        
+
         if (result.Status == 404)
             return NotFound(result);
-        
+
         return Ok(result);
     }
 }

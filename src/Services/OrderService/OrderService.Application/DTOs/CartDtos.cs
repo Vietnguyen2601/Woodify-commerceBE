@@ -47,6 +47,7 @@ public class CartItemDto
     public string? ProductMasterName { get; set; }
     public string? ProductVersionName { get; set; }
     public string? ThumbnailUrl { get; set; }
+    public string? ShopName { get; set; }  // Shop name từ ShopCache
 }
 
 /// <summary>

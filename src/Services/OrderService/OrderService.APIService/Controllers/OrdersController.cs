@@ -6,7 +6,7 @@ using Shared.Results;
 namespace OrderService.APIService.Controllers;
 
 [ApiController]
-[Route("api/order/[controller]")]
+[Route("[controller]")]
 public class OrdersController : ControllerBase
 {
     private readonly IOrderService _orderService;

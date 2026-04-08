@@ -19,6 +19,9 @@ namespace OrderService.APIService.Extensions
                 new CartItemRepository(sp.GetRequiredService<OrderDbContext>()));
             services.AddScoped<IProductVersionCacheRepository>(sp =>
                 new ProductVersionCacheRepository(sp.GetRequiredService<OrderDbContext>()));
+            // ShopCacheRepository disabled temporarily - will be enabled later
+            // services.AddScoped<IShopCacheRepository>(sp =>
+            //     new ShopCacheRepository(sp.GetRequiredService<OrderDbContext>()));
             services.AddScoped<IOrderRepository>(sp =>
                 new OrderRepository(sp.GetRequiredService<OrderDbContext>()));
 
@@ -30,6 +33,8 @@ namespace OrderService.APIService.Extensions
             services.AddScoped<ProductEventConsumer>();
             services.AddScoped<ImageUrlEventConsumer>();
             services.AddScoped<ShippingFeeEventConsumer>();
+            // ShopEventConsumer disabled temporarily - will be enabled later
+            // services.AddScoped<ShopEventConsumer>();
 
             // Register HttpClient for ProductServiceClient to query product data
             services.AddHttpClient<IProductServiceClient, ProductServiceClient>(client =>
@@ -53,6 +58,10 @@ namespace OrderService.APIService.Extensions
             // Start Shipping Fee Event Consumer
             var shippingFeeConsumer = serviceProvider.GetService<ShippingFeeEventConsumer>();
             shippingFeeConsumer?.StartListening();
+
+            // Start Shop Event Consumer - disabled temporarily
+            // var shopConsumer = serviceProvider.GetService<ShopEventConsumer>();
+            // shopConsumer?.StartListening();
         }
     }
 }

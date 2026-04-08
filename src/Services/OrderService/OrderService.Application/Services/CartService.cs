@@ -43,7 +43,7 @@ public class CartService : ICartService
 
             var cartDto = cart.ToDto();
 
-            // Enrich each item with product name, version name, and thumbnail from local cache
+            // Enrich each item with product name, version name, thumbnail, and shop name from local caches
             foreach (var item in cartDto.Items)
             {
                 var cache = await _productCacheRepository.GetByVersionIdAsync(item.VersionId);
@@ -53,6 +53,9 @@ public class CartService : ICartService
                     item.ProductVersionName = cache.VersionName;
                     item.ThumbnailUrl = cache.ThumbnailUrl;
                 }
+
+                // TODO: ShopName will be populated from cache when ShopCache feature is enabled
+                // item.ShopName remains null for now
             }
 
             return ServiceResult<CartDto>.Success(cartDto);
@@ -133,7 +136,7 @@ public class CartService : ICartService
             var updatedCart = await _cartRepository.GetCartWithItemsAsync(cart.CartId);
             var cartDto = updatedCart!.ToDto();
 
-            // Enrich each item with product name, version name, and thumbnail from local cache
+            // Enrich each item with product name, version name, thumbnail, and shop name from local caches
             foreach (var item in cartDto.Items)
             {
                 var cache = await _productCacheRepository.GetByVersionIdAsync(item.VersionId);
@@ -143,6 +146,9 @@ public class CartService : ICartService
                     item.ProductVersionName = cache.VersionName;
                     item.ThumbnailUrl = cache.ThumbnailUrl;
                 }
+
+                // TODO: ShopName will be populated from cache when ShopCache feature is enabled
+                // item.ShopName remains null for now
             }
 
             return ServiceResult<CartDto>.Success(cartDto, "Product added to cart successfully");

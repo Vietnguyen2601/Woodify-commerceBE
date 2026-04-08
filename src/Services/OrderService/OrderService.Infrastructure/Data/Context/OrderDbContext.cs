@@ -19,6 +19,8 @@ public class OrderDbContext : DbContext
     public DbSet<Cart> Carts { get; set; }
     public DbSet<CartItem> CartItems { get; set; }
     public DbSet<ProductVersionCache> ProductVersionCaches { get; set; }
+    // ShopCache disabled temporarily - will be enabled later
+    // public DbSet<ShopCache> ShopCaches { get; set; }
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }
 
@@ -179,6 +181,17 @@ public class OrderDbContext : DbContext
             entity.HasIndex(e => e.SellerSku);
             entity.HasIndex(e => e.IsActive);
         });
+
+        // ========================================
+        // Cấu hình bảng Shop_Cache - DISABLED TEMPORARILY
+        // ========================================
+        // ShopCache configuration disabled - will be enabled later
+        // modelBuilder.Entity<ShopCache>(entity =>
+        // {
+        //     entity.ToTable("shop_cache");
+        //     entity.HasKey(e => e.ShopId);
+        //     ...
+        // });
 
         // ========================================
         // Cấu hình bảng Orders
