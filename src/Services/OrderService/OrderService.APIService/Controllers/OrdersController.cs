@@ -48,6 +48,61 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
+    /// Tạo Order từ 1 shop (v2 refactored)
+    /// 
+    /// Frontend Workflow:
+    /// 1. User chọn items từ multiple shops
+    /// 2. Frontend group by shop
+    /// 3. Gọi CreateOrder API N lần (1 lần per shop)
+    /// 4. Collect OrderIds + Sum TotalAmountCents
+    /// 5. Gọi /api/payments/create 1 lần với all orderIds
+    /// 
+    /// Example:
+    /// User chọn từ 2 shops:
+    /// - Shop A: 2 items → Call 1: POST /api/orders/create → response: {orderId-A, totalAmount-A}
+    /// - Shop B: 1 item  → Call 2: POST /api/orders/create → response: {orderId-B, totalAmount-B}
+    /// - Frontend sum: totalAmount = totalAmount-A + totalAmount-B
+    /// - Call Payment: POST /api/payments/create {orderIds: [A, B], totalAmount}
+    /// </summary>
+    /// <remarks>
+    /// KEY DIFFERENCES vs CreateFromCart:
+    /// - ShopId is REQUIRED (cannot be null/empty)
+    /// - CartItemIds is REQUIRED (user must explicitly select items)
+    /// - Returns 1 order object (not list)
+    /// - ShippingFeeCents is explicit in response
+    /// - All items MUST belong to the same shop (strict validation)
+    /// 
+    /// CRITICAL ISSUES FIXED:
+    /// 1. ✅ No multi-shop auto-grouping (each call = 1 shop)
+    /// 2. ✅ Explicit shop validation
+    /// 3. ✅ Return ShippingFeeCents transparency
+    /// 4. ✅ Better error messages
+    /// 5. ✅ Order stays PENDING until payment success
+    /// 
+    /// SECURITY:
+    /// - CartItemIds must all belong to specified ShopId
+    /// - Items removed from cart ONLY after success
+    /// </remarks>
+    [HttpPost("create")]
+    [ProducesResponseType(typeof(ServiceResult<CreateOrderResponse>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ServiceResult<CreateOrderResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ServiceResult<CreateOrderResponse>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ServiceResult<CreateOrderResponse>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ServiceResult<CreateOrderResponse>>> CreateOrder(
+        [FromBody] CreateOrderRequest request)
+    {
+        var result = await _orderService.CreateOrderAsync(request);
+
+        return result.Status switch
+        {
+            201 => CreatedAtAction(nameof(GetOrder), new { orderId = result.Data?.OrderId }, result),
+            404 => NotFound(result),
+            400 => BadRequest(result),
+            _ => StatusCode(result.Status, result)
+        };
+    }
+
+    /// <summary>
     /// Lấy order theo ID
     /// </summary>
     /// <param name="orderId">ID của order</param>

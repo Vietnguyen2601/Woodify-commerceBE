@@ -122,6 +122,9 @@ public class PaymentInfoResponse
 /// <summary>
 /// Request tạo Payment cho multi-order checkout
 /// Hỗ trợ 3 phương thức: COD, Wallet, PayOS
+/// 
+/// Thiết kế đơn giản: Khách hàng chỉ quan tâm thanh toán tổng tiền cho tất cả đơn hàng,
+/// không cần chi tiết từng shop. Backend có trách nhiệm verify và phân phối tiền.
 /// </summary>
 public class CreatePaymentRequest
 {
@@ -142,17 +145,20 @@ public class CreatePaymentRequest
 
     /// <summary>
     /// Tổng số tiền cần thanh toán (cents)
-    /// Được tính từ sum(Order.TotalAmountCents) ở CreateOrdersFromCart
+    /// Được tính từ sum(Order.TotalAmountCents) ở CreateOrdersFromCart response
+    /// Bao gồm tất cả subtotal + shipping fee cho các đơn hàng
     /// </summary>
     public long TotalAmountCents { get; set; }
 
     /// <summary>
-    /// Return URL sau khi thanh toán (dùng cho PayOS)
+    /// Return URL sau khi thanh toán thành công (tùy chọn, dùng cho PayOS)
+    /// Mặc định: https://woodify.vn/payment/success
     /// </summary>
     public string? ReturnUrl { get; set; }
 
     /// <summary>
-    /// Cancel URL khi user hủy (dùng cho PayOS)
+    /// Cancel URL khi user hủy thanh toán (tùy chọn, dùng cho PayOS)
+    /// Mặc định: https://woodify.vn/payment/cancel
     /// </summary>
     public string? CancelUrl { get; set; }
 }

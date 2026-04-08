@@ -238,6 +238,189 @@ public class OrderService : IOrderService
         }
     }
 
+    /// <summary>
+    /// Create Order từ 1 shop (v2 refactored) - Frontend gọi N lần cho N shops
+    /// 
+    /// CRITICAL IMPROVEMENTS:
+    /// 1. ✅ Only process 1 shop per request (no auto-grouping)
+    /// 2. ✅ Explicit shop validation (all items must belong to specified shop)
+    /// 3. ✅ Return 1 order object (not list) - simpler integration
+    /// 4. ✅ Return ShippingFeeCents explicitly (for transparency)
+    /// 5. ✅ Better error messages for debugging
+    /// 
+    /// SECURITY NOTES:
+    /// - CartItemIds must all belong to specified ShopId
+    /// - Items are removed from cart ONLY after successful order creation
+    /// - Idempotency: FE should track requests via timestamp or idempotency key (TODO)
+    /// </summary>
+    public async Task<ServiceResult<CreateOrderResponse>> CreateOrderAsync(CreateOrderRequest request)
+    {
+        try
+        {
+            // ===== VALIDATION =====
+            if (request.AccountId == Guid.Empty)
+                return ServiceResult<CreateOrderResponse>.BadRequest("AccountId is required");
+
+            if (request.ShopId == Guid.Empty)
+                return ServiceResult<CreateOrderResponse>.BadRequest("ShopId is required");
+
+            if (request.CartItemIds == null || !request.CartItemIds.Any())
+                return ServiceResult<CreateOrderResponse>.BadRequest("At least 1 cart item is required");
+
+            if (string.IsNullOrWhiteSpace(request.DeliveryAddress))
+                return ServiceResult<CreateOrderResponse>.BadRequest("DeliveryAddress is required");
+
+            // ===== GET CART =====
+            var cart = await _cartRepository.GetActiveCartByAccountIdAsync(request.AccountId);
+            if (cart == null || !cart.CartItems.Any())
+                return ServiceResult<CreateOrderResponse>.NotFound("Cart is empty or not found");
+
+            // ===== FILTER CART ITEMS BY SPECIFIED IDs =====
+            var selectedCartItems = cart.CartItems
+                .Where(ci => request.CartItemIds.Contains(ci.CartItemId))
+                .ToList();
+
+            if (!selectedCartItems.Any())
+                return ServiceResult<CreateOrderResponse>.BadRequest("No cart items found with specified IDs");
+
+            // ===== CRITICAL: All items MUST belong to the SAME specified SHOP =====
+            var uniqueShops = selectedCartItems.Select(ci => ci.ShopId).Distinct().ToList();
+            if (uniqueShops.Count > 1)
+                return ServiceResult<CreateOrderResponse>.BadRequest(
+                    $"Items belong to multiple shops. Expected shop {request.ShopId} but found items from {uniqueShops.Count} different shops");
+
+            if (uniqueShops.Single() != request.ShopId)
+                return ServiceResult<CreateOrderResponse>.BadRequest(
+                    $"Items don't belong to shop {request.ShopId}. Items are from shop {uniqueShops.Single()}");
+
+            // ===== VALIDATE ITEMS FOR CHECKOUT =====
+            var validationResult = await ValidateCartItemsForCheckoutAsync(selectedCartItems);
+            if (!validationResult.IsValid)
+            {
+                var errorDetails = validationResult.InvalidItems.Select(item =>
+                    $"Version {item.VersionId}: {item.Reason}").ToList();
+
+                return ServiceResult<CreateOrderResponse>.BadRequest(
+                    errorDetails,
+                    $"Cannot create order. {validationResult.InvalidItemsCount} of {validationResult.TotalItems} item(s) invalid.");
+            }
+
+            // ===== GET VALID ITEMS =====
+            var validCartItemIds = selectedCartItems
+                .Select(ci => ci.CartItemId)
+                .Except(validationResult.InvalidItems.Select(ii => ii.CartItemId))
+                .ToHashSet();
+
+            var validItems = selectedCartItems
+                .Where(ci => validCartItemIds.Contains(ci.CartItemId))
+                .ToList();
+
+            if (!validItems.Any())
+                return ServiceResult<CreateOrderResponse>.BadRequest("No valid items to create order");
+
+            // ===== CALCULATE ORDER AMOUNTS =====
+            double subtotalCents = validItems.Sum(item => item.Price * item.Quantity);
+            int totalWeightGrams = await CalculateTotalWeightAsync(validItems);
+
+            // Calculate shipping fee
+            int serviceId = ShippingServiceConstants.GetServiceId(request.ProviderServiceCode);
+            string bucketType = ShippingServiceConstants.GetBucketType(totalWeightGrams);
+            long baseFee = ShippingServiceConstants.GetBaseFee(serviceId, bucketType);
+            long weightSurcharge = (totalWeightGrams / ShippingServiceConstants.WEIGHT_SURCHARGE_UNIT) * ShippingServiceConstants.WEIGHT_SURCHARGE_PER_UNIT;
+            long shippingFeeCents = baseFee + weightSurcharge;
+
+            // Total amount = Subtotal + Shipping fee
+            double totalAmountCents = subtotalCents + shippingFeeCents;
+
+            // Calculate commission (6% of subtotal)
+            decimal commissionRate = CommissionCalculator.DEFAULT_COMMISSION_RATE;
+            long commissionCents = CommissionCalculator.CalculateCommissionCents(subtotalCents, commissionRate);
+
+            // ===== CREATE ORDER =====
+            var order = new Order
+            {
+                OrderId = Guid.NewGuid(),
+                AccountId = request.AccountId,
+                ShopId = request.ShopId,
+                SubtotalCents = subtotalCents,
+                TotalAmountCents = totalAmountCents,
+                CommissionRate = commissionRate,
+                CommissionCents = commissionCents,
+                VoucherId = request.VoucherId,
+                Status = OrderStatus.PENDING,  // ← Stay PENDING until payment succeeds
+                DeliveryAddress = request.DeliveryAddress,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            // Create Order Items (snapshot from cart items)
+            foreach (var cartItem in validItems)
+            {
+                var orderItem = new OrderItem
+                {
+                    OrderItemId = Guid.NewGuid(),
+                    OrderId = order.OrderId,
+                    VersionId = cartItem.VersionId,
+                    UnitPriceCents = (long)(cartItem.Price * 100),
+                    Quantity = cartItem.Quantity,
+                    DiscountCents = 0,
+                    TaxCents = 0,
+                    LineTotalCents = cartItem.Price * cartItem.Quantity,
+                    Status = FulfillmentStatus.UNFULFILLED,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                order.OrderItems.Add(orderItem);
+            }
+
+            // Save order to database
+            await _orderRepository.CreateAsync(order);
+
+            // ===== PUBLISH EVENT FOR SHIPMENT SERVICE =====
+            _orderEventPublisher.PublishOrderCreated(new OrderCreatedEvent
+            {
+                OrderId = order.OrderId,
+                ShopId = order.ShopId,
+                AccountId = order.AccountId,
+                DeliveryAddress = order.DeliveryAddress,
+                SubtotalCents = order.SubtotalCents,
+                TotalAmountCents = order.TotalAmountCents,
+                ProviderServiceCode = request.ProviderServiceCode,
+                TotalWeightGrams = totalWeightGrams,
+                VoucherId = request.VoucherId,
+                CreatedAt = order.CreatedAt
+            });
+
+            // ===== REMOVE SELECTED CART ITEMS =====
+            // Important: Remove only items that were processed (not entire cart)
+            var cartItemsToDelete = cart.CartItems
+                .Where(ci => request.CartItemIds.Contains(ci.CartItemId))
+                .ToList();
+
+            foreach (var cartItem in cartItemsToDelete)
+            {
+                await _cartItemRepository.RemoveAsync(cartItem);
+            }
+
+            // ===== BUILD RESPONSE =====
+            return ServiceResult<CreateOrderResponse>.Success(new CreateOrderResponse
+            {
+                OrderId = order.OrderId,
+                ShopId = order.ShopId,
+                SubtotalCents = subtotalCents,
+                ShippingFeeCents = shippingFeeCents,
+                CommissionCents = commissionCents,
+                TotalAmountCents = totalAmountCents,
+                ItemCount = validItems.Count,
+                Status = "PENDING",
+                CreatedAt = order.CreatedAt
+            }, $"Order created successfully. Total: {totalAmountCents} cents");
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<CreateOrderResponse>.InternalServerError($"Error creating order: {ex.Message}");
+        }
+    }
+
     public async Task<ServiceResult<OrderDto>> GetOrderByIdAsync(Guid orderId)
     {
         try

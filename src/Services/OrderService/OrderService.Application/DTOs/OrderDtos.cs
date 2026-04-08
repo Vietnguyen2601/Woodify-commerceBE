@@ -30,7 +30,34 @@ public class OrderListResultDto
 }
 
 /// <summary>
-/// DTO để tạo order từ cart - hỗ trợ checkout selected items
+/// Request tạo Order từ một shop (v2 refactored)
+/// 
+/// Workflow: Frontend group items by shop, sau đó gọi API này N lần (1 lần per shop)
+/// Ví dụ: User chọn từ 2 shops → Frontend gọi CreateOrder 2 lần
+/// </summary>
+public class CreateOrderRequest
+{
+    /// <summary>ID tài khoản customer</summary>
+    public Guid AccountId { get; set; }
+
+    /// <summary>ID shop (required - không thể null vì mỗi call chỉ process 1 shop)</summary>
+    public Guid ShopId { get; set; }
+
+    /// <summary>IDs của cart items user chọn từ shop này (required - phải có ít nhất 1 item)</summary>
+    public Guid[] CartItemIds { get; set; } = Array.Empty<Guid>();
+
+    /// <summary>Địa chỉ giao hàng (required)</summary>
+    public string DeliveryAddress { get; set; } = string.Empty;
+
+    /// <summary>Mã phương thức vận chuyển (ví dụ: "EXPRESS", "FAST", "STANDARD", "ECONOMY")</summary>
+    public string ProviderServiceCode { get; set; } = "STANDARD";
+
+    /// <summary>ID voucher (optional)</summary>
+    public Guid? VoucherId { get; set; }
+}
+
+/// <summary>
+/// Legacy DTO - giữ lại cho backward compatibility (nếu cần)
 /// </summary>
 public class CreateOrderFromCartDto
 {
@@ -38,52 +65,61 @@ public class CreateOrderFromCartDto
     public Guid ShopId { get; set; }
     public string? DeliveryAddress { get; set; }
     public Guid? VoucherId { get; set; }
-
-    /// <summary>
-    /// Mã phương thức vận chuyển mà customer chọn (ví dụ: "EXPRESS", "STANDARD")
-    /// </summary>
     public string? ProviderServiceCode { get; set; }
-
-    /// <summary>
-    /// IDs của cart items cần thanh toán. Nếu null/empty → thanh toán toàn bộ cart (backward compatible)
-    /// </summary>
     public Guid[]? SelectedCartItemIds { get; set; }
-
-    /// <summary>
-    /// Phương thức thanh toán (COD, WALLET, PAYOS) - chỉ dùng để log, CreateOrdersFromCart không xử lý payment
-    /// Payment sẽ được xử lý riêng ở PaymentService sau bước này
-    /// </summary>
     public string? PaymentMethod { get; set; }
 }
 
 /// <summary>
-/// DTO trả về kết quả tạo orders từ cart - danh sách orderIds
+/// Legacy Response DTO - giữ lại cho backward compatibility (nếu cần)
 /// </summary>
 public class CreateOrdersFromCartResultDto
 {
-    /// <summary>
-    /// Danh sách IDs của orders vừa tạo (mỗi shop 1 order)
-    /// </summary>
     public List<Guid> OrderIds { get; set; } = new List<Guid>();
-
-    /// <summary>
-    /// Tổng số tiền cần thanh toán (sum của tất cả orders' TotalAmountCents)
-    /// </summary>
     public long TotalAmountCents { get; set; }
-
-    /// <summary>
-    /// Số lượng orders được tạo
-    /// </summary>
     public int OrderCount { get; set; }
-
-    /// <summary>
-    /// Chi tiết từng order (optional - dùng để client preview)
-    /// </summary>
     public List<OrderSummaryDto> Orders { get; set; } = new List<OrderSummaryDto>();
 }
 
 /// <summary>
-/// DTO tóm tắt thông tin order (dùng trong CreateOrdersFromCartResultDto)
+/// Response tạo Order - trả về 1 order object (v2 refactored)
+/// 
+/// Frontend sẽ:
+/// 1. Gọi CreateOrder cho mỗi shop → nhận orderId + totalAmount
+/// 2. Sum tất cả totalAmount → gọi CreatePayment 1 lần
+/// </summary>
+public class CreateOrderResponse
+{
+    /// <summary>ID order vừa tạo</summary>
+    public Guid OrderId { get; set; }
+
+    /// <summary>ID shop</summary>
+    public Guid ShopId { get; set; }
+
+    /// <summary>Số tiền sản phẩm (không bao gồm shipping fee)</summary>
+    public double SubtotalCents { get; set; }
+
+    /// <summary>Phí vận chuyển (cents)</summary>
+    public long ShippingFeeCents { get; set; }
+
+    /// <summary>Số tiền hoa hồng 6% (cents)</summary>
+    public long CommissionCents { get; set; }
+
+    /// <summary>Tổng tiền = SubtotalCents + ShippingFeeCents (bao gồm mọi chi phí)</summary>
+    public double TotalAmountCents { get; set; }
+
+    /// <summary>Số lượng items trong order này</summary>
+    public int ItemCount { get; set; }
+
+    /// <summary>Trạng thái order (mặc định: PENDING - chờ thanh toán)</summary>
+    public string Status { get; set; } = "PENDING";
+
+    /// <summary>Thời điểm tạo</summary>
+    public DateTime CreatedAt { get; set; }
+}
+
+/// <summary>
+/// Legacy DTO - giữ lại cho backward compatibility (nếu cần)
 /// </summary>
 public class OrderSummaryDto
 {
