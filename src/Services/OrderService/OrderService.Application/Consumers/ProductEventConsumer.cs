@@ -124,10 +124,10 @@ public class ProductEventConsumer
 
                     // Shipping Dimensions
                     WoodType = evt.WoodType,
-                    WeightGrams = evt.WeightGrams,
-                    LengthCm = evt.LengthCm,
-                    WidthCm = evt.WidthCm,
-                    HeightCm = evt.HeightCm,
+                    WeightGrams = evt.WeightGrams ?? 0,
+                    LengthCm = evt.LengthCm ?? 0m,
+                    WidthCm = evt.WidthCm ?? 0m,
+                    HeightCm = evt.HeightCm ?? 0m,
 
                     // Status
                     IsActive = evt.IsActive,

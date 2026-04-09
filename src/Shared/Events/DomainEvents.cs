@@ -93,3 +93,109 @@ public class ShippingFeeCalculatedEvent
     public bool IsFreeShipping { get; set; }
     public DateTime CalculatedAt { get; set; }
 }
+
+/// <summary>
+/// Event khi ProductVersion được tạo mới hoặc cập nhật
+/// ProductService publish → OrderService consume
+/// Exchange: "product.events" / Routing key: "product.version.updated"
+/// </summary>
+public class ProductVersionUpdatedEvent
+{
+    public Guid VersionId { get; set; }
+    public Guid ProductId { get; set; }
+    public Guid ShopId { get; set; }
+    public string ProductName { get; set; } = string.Empty;
+    public string? ProductDescription { get; set; }
+    public string ProductStatus { get; set; } = string.Empty;
+    public string? SellerSku { get; set; }
+    public int? VersionNumber { get; set; }
+    public string? VersionName { get; set; }
+    public double Price { get; set; }
+    public string? Currency { get; set; }
+    public int StockQuantity { get; set; }
+    public string? WoodType { get; set; }
+    public int? WeightGrams { get; set; }
+    public decimal? LengthCm { get; set; }
+    public decimal? WidthCm { get; set; }
+    public decimal? HeightCm { get; set; }
+    public bool IsActive { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public string EventType { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Event khi trạng thái Product thay đổi
+/// ProductService publish → OrderService consume
+/// Exchange: "product.events" / Routing key: "product.status.changed"
+/// </summary>
+public class ProductStatusChangedEvent
+{
+    public Guid ProductId { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public DateTime ChangedAt { get; set; }
+}
+
+/// <summary>
+/// Event khi ProductVersion bị xóa
+/// ProductService publish → OrderService consume
+/// Exchange: "product.events" / Routing key: "product.version.deleted"
+/// </summary>
+public class ProductVersionDeletedEvent
+{
+    public Guid VersionId { get; set; }
+    public Guid ProductId { get; set; }
+    public DateTime DeletedAt { get; set; }
+}
+
+/// <summary>
+/// Event khi ProductVersion được khôi phục
+/// ProductService publish → OrderService consume
+/// Exchange: "product.events" / Routing key: "product.version.restored"
+/// </summary>
+public class ProductVersionRestoredEvent
+{
+    public Guid VersionId { get; set; }
+    public Guid ProductId { get; set; }
+    public DateTime RestoredAt { get; set; }
+}
+
+/// <summary>
+/// Event khi Product bị xóa
+/// ProductService publish → OrderService consume
+/// Exchange: "product.events" / Routing key: "product.deleted"
+/// </summary>
+public class ProductDeletedEvent
+{
+    public Guid ProductId { get; set; }
+    public Guid ShopId { get; set; }
+    public string ProductName { get; set; } = string.Empty;
+    public DateTime DeletedAt { get; set; }
+    public string EventType { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Event khi ảnh thumbnail của ProductVersion được cập nhật
+/// ProductService publish → OrderService consume
+/// Exchange: "product.events" / Routing key: "image.url.updated"
+/// </summary>
+public class ImageUrlUpdatedEvent
+{
+    public Guid VersionId { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public string EventType { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Event khi Product submission bị hủy
+/// ProductService publish → OrderService consume
+/// Exchange: "product.events" / Routing key: "product.submission.cancelled"
+/// </summary>
+public class ProductSubmissionCancelledEvent
+{
+    public Guid ProductId { get; set; }
+    public Guid ShopId { get; set; }
+    public string ProductName { get; set; } = string.Empty;
+    public DateTime CancelledAt { get; set; }
+}
