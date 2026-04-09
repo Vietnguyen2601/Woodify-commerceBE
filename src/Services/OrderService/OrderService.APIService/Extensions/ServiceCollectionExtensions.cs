@@ -32,12 +32,6 @@ namespace OrderService.APIService.Extensions
             services.AddScoped<ImageUrlEventConsumer>();
             services.AddScoped<ShippingFeeEventConsumer>();
 
-            // Register HttpClient for ProductServiceClient to query product data
-            services.AddHttpClient<IProductServiceClient, ProductServiceClient>(client =>
-            {
-                client.Timeout = TimeSpan.FromSeconds(10);
-            });
-
             return services;
         }
 
