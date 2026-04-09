@@ -126,3 +126,99 @@ public class RevenueDataPointDto
     public bool IsProjected { get; set; } = false;
     public string? ProjectionNote { get; set; }
 }
+
+/// <summary>
+/// Real-time metrics DTO cho SignalR (phía frontend nhận)
+/// Cập nhật mỗi 5 giây
+/// </summary>
+public class RealtimeMetricsDto
+{
+    /// <summary>
+    /// Timestamp khi data được generate
+    /// </summary>
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+
+    // ─── TODAY'S METRICS ───
+    /// <summary>
+    /// Tổng doanh thu hôm nay (từ 00:00 UTC) - tính bằng VND
+    /// </summary>
+    public decimal GrossRevenue { get; set; }
+
+    /// <summary>
+    /// Hoa hồng doanh thu hôm nay - tính bằng VND
+    /// </summary>
+    public decimal CommissionRevenue { get; set; }
+
+    /// <summary>
+    /// Doanh thu ròng hôm nay (Gross - Commission) - tính bằng VND
+    /// </summary>
+    public decimal NetRevenue { get; set; }
+
+    /// <summary>
+    /// Mức tăng trưởng so với hôm qua (%)
+    /// </summary>
+    public decimal? GrossRevenueGrowth { get; set; }
+
+    /// <summary>
+    /// Mức tăng trưởng commission so với hôm qua (%)
+    /// </summary>
+    public decimal? CommissionGrowth { get; set; }
+
+    /// <summary>
+    /// Mức tăng trưởng net revenue so với hôm qua (%)
+    /// </summary>
+    public decimal? NetRevenueGrowth { get; set; }
+
+    // ─── USER STATISTICS ───
+    /// <summary>
+    /// Tổng số user trên hệ thống
+    /// </summary>
+    public int TotalUsers { get; set; }
+
+    /// <summary>
+    /// Số user mới trong hôm nay
+    /// </summary>
+    public int NewUsers { get; set; }
+
+    /// <summary>
+    /// Mức tăng % user mới so với hôm qua
+    /// </summary>
+    public decimal? NewUsersGrowth { get; set; }
+
+    /// <summary>
+    /// Số user active trong hôm nay (tính từ 00:00 UTC)
+    /// </summary>
+    public int ActiveUsersToday { get; set; }
+
+    // ─── ORDER STATISTICS ───
+    /// <summary>
+    /// Số order mới trong hôm nay
+    /// </summary>
+    public int OrdersToday { get; set; }
+
+    /// <summary>
+    /// Số order đã hoàn thành hôm nay
+    /// </summary>
+    public int CompletedOrdersToday { get; set; }
+
+    /// <summary>
+    /// Số order pending (chưa xử lý)
+    /// </summary>
+    public int PendingOrdersCount { get; set; }
+
+    /// <summary>
+    /// Giá trị trung bình mỗi order hôm nay
+    /// </summary>
+    public decimal? AverageOrderValueToday { get; set; }
+
+    // ─── CACHE & STATUS ───
+    /// <summary>
+    /// Thông tin cache (HIT hoặc MISS)
+    /// </summary>
+    public string CacheStatus { get; set; } = "MISS";
+
+    /// <summary>
+    /// Time-to-live của cached data (giây)
+    /// </summary>
+    public int? CacheTTL { get; set; }
+}
