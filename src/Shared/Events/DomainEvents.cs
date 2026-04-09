@@ -2,7 +2,7 @@ namespace Shared.Events;
 
 /// <summary>
 /// Event khi Shop được tạo mới
-/// ShopService publish → AccountService consume, ShipmentService consume
+/// ShopService publish → AccountService consume, OrderService consume, ShipmentService consume
 /// </summary>
 public class ShopCreatedEvent
 {
@@ -25,7 +25,7 @@ public class AccountCreatedEvent
 
 /// <summary>
 /// Event khi Shop info được cập nhật
-/// ShopService publish → ShipmentService consume
+/// ShopService publish → OrderService consume, ShipmentService consume
 /// Exchange: "shop.events" / Routing key: "shop.updated"
 /// </summary>
 public class ShopUpdatedEvent

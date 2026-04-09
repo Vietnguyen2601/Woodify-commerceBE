@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Shared.Events;
 using Shared.Messaging;
 using ShipmentService.Infrastructure.Cache;
@@ -5,51 +7,65 @@ using ShipmentService.Infrastructure.Cache;
 namespace ShipmentService.Application.Consumers;
 
 /// <summary>
-/// Consumer để lắng nghe events từ ShopService
-/// Cập nhật shop info (địa chỉ, điểm giao hàng) để tính toán vận chuyển
+/// Đồng bộ shop từ ShopService qua RabbitMQ (shop.events) — không gọi HTTP.
 /// </summary>
-public class ShopEventConsumer
+public class ShopEventConsumer : BackgroundService
 {
     private readonly RabbitMQConsumer _rabbitMQConsumer;
     private readonly IShopInfoCacheRepository _shopInfoCache;
+    private readonly ILogger<ShopEventConsumer> _logger;
 
     public ShopEventConsumer(
         RabbitMQConsumer rabbitMQConsumer,
-        IShopInfoCacheRepository shopInfoCache)
+        IShopInfoCacheRepository shopInfoCache,
+        ILogger<ShopEventConsumer> logger)
     {
         _rabbitMQConsumer = rabbitMQConsumer;
         _shopInfoCache = shopInfoCache;
+        _logger = logger;
     }
 
-    public void StartListening()
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Subscribe to ShopUpdated events
-        _rabbitMQConsumer.Subscribe<ShopUpdatedEvent>(
-            queueName: "shipmentservice.shop.updated",
-            exchange: "shop.events",
-            routingKey: "shop.updated",
-            handler: async (message) => await HandleShopUpdated(message)
-        );
+        try
+        {
+            _logger.LogInformation("[ShipmentService] ShopEventConsumer listening on shop.events");
 
-        // Subscribe to ShopCreated events
-        _rabbitMQConsumer.Subscribe<ShopCreatedEvent>(
-            queueName: "shipmentservice.shop.created",
-            exchange: "shop.events",
-            routingKey: "shop.created",
-            handler: async (message) => await HandleShopCreated(message)
-        );
+            _rabbitMQConsumer.Subscribe<ShopUpdatedEvent>(
+                queueName: "shipmentservice.shop.updated",
+                exchange: "shop.events",
+                routingKey: "shop.updated",
+                handler: async (message) => await HandleShopUpdated(message)
+            );
 
-        Console.WriteLine("ShopEventConsumer started listening for Shop events");
-        Console.WriteLine("Subscribed to: shop.events exchange with routing keys: shop.updated, shop.created");
+            _rabbitMQConsumer.Subscribe<ShopCreatedEvent>(
+                queueName: "shipmentservice.shop.created",
+                exchange: "shop.events",
+                routingKey: "shop.created",
+                handler: async (message) => await HandleShopCreated(message)
+            );
+
+            await Task.Delay(Timeout.Infinite, stoppingToken);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("ShopEventConsumer is stopping...");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in ShopEventConsumer");
+            throw;
+        }
     }
 
     private async Task HandleShopUpdated(ShopUpdatedEvent evt)
     {
         try
         {
-            Console.WriteLine($"[ShipmentService] Received ShopUpdated event: ShopId={evt.ShopId}, ShopName={evt.ShopName}");
+            _logger.LogInformation(
+                "[RabbitMQ] shop.updated ShopId={ShopId}, ShopName={ShopName}",
+                evt.ShopId, evt.ShopName);
 
-            // Cache shop info locally (address, contact info for shipping calculations)
             var shopInfo = new ShopInfoCache
             {
                 ShopId = evt.ShopId,
@@ -62,11 +78,10 @@ public class ShopEventConsumer
             };
 
             await _shopInfoCache.SaveShopInfoAsync(shopInfo);
-            Console.WriteLine($"[ShipmentService] Shop info cached: {shopInfo.ShopName}, Provider: {evt.DefaultProvider}, Code: {shopInfo.DefaultProviderServiceCode}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ShipmentService] Error handling ShopUpdated: {ex.Message}");
+            _logger.LogError(ex, "Error handling ShopUpdated for ShopId={ShopId}", evt.ShopId);
         }
     }
 
@@ -74,9 +89,10 @@ public class ShopEventConsumer
     {
         try
         {
-            Console.WriteLine($"[ShipmentService] Received ShopCreated event: ShopId={evt.ShopId}, ShopName={evt.ShopName}");
+            _logger.LogInformation(
+                "[RabbitMQ] shop.created ShopId={ShopId}, ShopName={ShopName}",
+                evt.ShopId, evt.ShopName);
 
-            // Initialize shop info in cache
             var shopInfo = new ShopInfoCache
             {
                 ShopId = evt.ShopId,
@@ -89,11 +105,10 @@ public class ShopEventConsumer
             };
 
             await _shopInfoCache.SaveShopInfoAsync(shopInfo);
-            Console.WriteLine($"[ShipmentService] New shop cached: {evt.ShopName}, Provider: {evt.DefaultProvider}, Code: {shopInfo.DefaultProviderServiceCode}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ShipmentService] Error handling ShopCreated: {ex.Message}");
+            _logger.LogError(ex, "Error handling ShopCreated for ShopId={ShopId}", evt.ShopId);
         }
     }
 }

@@ -5,6 +5,7 @@ using ShipmentService.Application.DTOs;
 using ShipmentService.Application.Interfaces;
 using ShipmentService.Application.Mappers;
 using ShipmentService.Infrastructure.Repositories.IRepositories;
+using ShipmentService.Infrastructure.Cache;
 using Shared.Results;
 
 namespace ShipmentService.Application.Services;
@@ -17,17 +18,20 @@ public class ProviderServiceAppService : IProviderServiceService
     private readonly IProviderServiceRepository _serviceRepository;
     private readonly IShippingProviderRepository _providerRepository;
     private readonly IShipmentRepository _shipmentRepository;
+    private readonly IShopInfoCacheRepository _shopInfoCache;
     private readonly IMemoryCache _cache;
 
     public ProviderServiceAppService(
         IProviderServiceRepository serviceRepository,
         IShippingProviderRepository providerRepository,
         IShipmentRepository shipmentRepository,
+        IShopInfoCacheRepository shopInfoCache,
         IMemoryCache cache)
     {
         _serviceRepository = serviceRepository;
         _providerRepository = providerRepository;
         _shipmentRepository = shipmentRepository;
+        _shopInfoCache = shopInfoCache;
         _cache = cache;
     }
 
@@ -134,6 +138,20 @@ public class ProviderServiceAppService : IProviderServiceService
             return ServiceResult<ProviderServiceDto>.NotFound(ShipmentMessages.ServiceNotFound);
 
         return ServiceResult<ProviderServiceDto>.Success(service.ToDto());
+    }
+
+    public async Task<ServiceResult<IEnumerable<ProviderServiceDto>>> GetServicesByShopIdAsync(Guid shopId)
+    {
+        var shop = await _shopInfoCache.GetShopInfoAsync(shopId);
+        if (shop == null)
+            return ServiceResult<IEnumerable<ProviderServiceDto>>.NotFound(ShipmentMessages.ShopContextNotSynced);
+
+        if (!shop.DefaultProvider.HasValue || shop.DefaultProvider.Value == Guid.Empty)
+            return ServiceResult<IEnumerable<ProviderServiceDto>>.BadRequest(ShipmentMessages.ShopDefaultProviderMissing);
+
+        var services = await _serviceRepository.GetByProviderIdAsync(shop.DefaultProvider.Value);
+        var dtos = services.Where(s => s.IsActive).Select(s => s.ToDto()).ToList();
+        return ServiceResult<IEnumerable<ProviderServiceDto>>.Success(dtos);
     }
 
     public async Task<ServiceResult> DeleteAsync(Guid id)

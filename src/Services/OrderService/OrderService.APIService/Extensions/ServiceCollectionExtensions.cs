@@ -21,6 +21,8 @@ namespace OrderService.APIService.Extensions
                 new ProductVersionCacheRepository(sp.GetRequiredService<OrderDbContext>()));
             services.AddScoped<IOrderRepository>(sp =>
                 new OrderRepository(sp.GetRequiredService<OrderDbContext>()));
+            services.AddScoped<IShopInfoCacheRepository>(sp =>
+                new ShopInfoCacheRepository(sp.GetRequiredService<OrderDbContext>()));
 
             // Services
             services.AddScoped<ICartService, CartService>();
@@ -54,6 +56,9 @@ namespace OrderService.APIService.Extensions
             // Start Shipping Fee Event Consumer
             var shippingFeeConsumer = serviceProvider.GetService<ShippingFeeEventConsumer>();
             shippingFeeConsumer?.StartListening();
+
+            var shopConsumer = serviceProvider.GetService<ShopEventConsumer>();
+            shopConsumer?.StartListening();
         }
     }
 }

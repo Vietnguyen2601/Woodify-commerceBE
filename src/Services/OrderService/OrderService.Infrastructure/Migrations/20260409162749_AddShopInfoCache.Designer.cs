@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using OrderService.Infrastructure.Data.Context;
@@ -11,9 +12,11 @@ using OrderService.Infrastructure.Data.Context;
 namespace OrderService.Infrastructure.Migrations
 {
     [DbContext(typeof(OrderDbContext))]
-    partial class OrderDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260409162749_AddShopInfoCache")]
+    partial class AddShopInfoCache
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -335,46 +338,6 @@ namespace OrderService.Infrastructure.Migrations
                     b.HasIndex("ShopId");
 
                     b.ToTable("product_version_cache", (string)null);
-                });
-
-            modelBuilder.Entity("OrderService.Domain.Entities.ShopInfoCache", b =>
-                {
-                    b.Property<Guid>("ShopId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("shop_id");
-
-                    b.Property<string>("DefaultPickupAddress")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
-                        .HasColumnName("default_pickup_address");
-
-                    b.Property<Guid?>("DefaultProvider")
-                        .HasColumnType("uuid")
-                        .HasColumnName("default_provider");
-
-                    b.Property<string>("DefaultProviderServiceCode")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("default_provider_service_code");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("name");
-
-                    b.Property<Guid>("OwnerAccountId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("owner_account_id");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("ShopId");
-
-                    b.ToTable("shop_info_cache", (string)null);
                 });
 
             modelBuilder.Entity("OrderService.Domain.Entities.CartItem", b =>
