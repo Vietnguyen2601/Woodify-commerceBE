@@ -1,3 +1,8 @@
+using System.Data.Common;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Shared.Events;
 using Shared.Messaging;
 using ShipmentService.Infrastructure.Cache;
@@ -5,68 +10,111 @@ using ShipmentService.Infrastructure.Cache;
 namespace ShipmentService.Application.Consumers;
 
 /// <summary>
-/// Consumer để lắng nghe events từ ShopService
-/// Cập nhật shop info (địa chỉ, điểm giao hàng) để tính toán vận chuyển
+/// Đồng bộ shop từ ShopService (shop.events) vào bảng shop_cache — không gọi HTTP.
 /// </summary>
-public class ShopEventConsumer
+public class ShopEventConsumer : BackgroundService
 {
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly RabbitMQConsumer _rabbitMQConsumer;
-    private readonly IShopInfoCacheRepository _shopInfoCache;
+    private readonly ILogger<ShopEventConsumer> _logger;
 
     public ShopEventConsumer(
+        IServiceScopeFactory scopeFactory,
         RabbitMQConsumer rabbitMQConsumer,
-        IShopInfoCacheRepository shopInfoCache)
+        ILogger<ShopEventConsumer> logger)
     {
+        _scopeFactory = scopeFactory;
         _rabbitMQConsumer = rabbitMQConsumer;
-        _shopInfoCache = shopInfoCache;
+        _logger = logger;
     }
 
-    public void StartListening()
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Subscribe to ShopUpdated events
-        _rabbitMQConsumer.Subscribe<ShopUpdatedEvent>(
-            queueName: "shipmentservice.shop.updated",
-            exchange: "shop.events",
-            routingKey: "shop.updated",
-            handler: async (message) => await HandleShopUpdated(message)
-        );
+        try
+        {
+            _logger.LogInformation("[ShipmentService] ShopEventConsumer listening on shop.events");
 
-        // Subscribe to ShopCreated events
-        _rabbitMQConsumer.Subscribe<ShopCreatedEvent>(
-            queueName: "shipmentservice.shop.created",
-            exchange: "shop.events",
-            routingKey: "shop.created",
-            handler: async (message) => await HandleShopCreated(message)
-        );
+            _rabbitMQConsumer.Subscribe<ShopUpdatedEvent>(
+                queueName: "shipmentservice.shop.updated",
+                exchange: "shop.events",
+                routingKey: "shop.updated",
+                handler: async (message) => await HandleShopUpdated(message)
+            );
 
-        Console.WriteLine("ShopEventConsumer started listening for Shop events");
-        Console.WriteLine("Subscribed to: shop.events exchange with routing keys: shop.updated, shop.created");
+            _rabbitMQConsumer.Subscribe<ShopCreatedEvent>(
+                queueName: "shipmentservice.shop.created",
+                exchange: "shop.events",
+                routingKey: "shop.created",
+                handler: async (message) => await HandleShopCreated(message)
+            );
+
+            _rabbitMQConsumer.Subscribe<ShopDeletedEvent>(
+                queueName: "shipmentservice.shop.deleted",
+                exchange: "shop.events",
+                routingKey: "shop.deleted",
+                handler: async (message) => await HandleShopDeleted(message)
+            );
+
+            await Task.Delay(Timeout.Infinite, stoppingToken);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("ShopEventConsumer is stopping...");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in ShopEventConsumer");
+            throw;
+        }
     }
 
     private async Task HandleShopUpdated(ShopUpdatedEvent evt)
     {
         try
         {
-            Console.WriteLine($"[ShipmentService] Received ShopUpdated event: ShopId={evt.ShopId}, ShopName={evt.ShopName}");
+            using var scope = _scopeFactory.CreateScope();
+            var shopCache = scope.ServiceProvider.GetRequiredService<IShopInfoCacheRepository>();
 
-            // Cache shop info locally (address, contact info for shipping calculations)
+            _logger.LogInformation(
+                "[RabbitMQ] shop.updated ShopId={ShopId}, ShopName={ShopName}",
+                evt.ShopId, evt.ShopName);
+
+            var existing = await shopCache.GetShopInfoAsync(evt.ShopId);
+            var ownerAccountId = evt.OwnerAccountId != Guid.Empty
+                ? evt.OwnerAccountId
+                : (existing?.OwnerAccountId ?? Guid.Empty);
+
             var shopInfo = new ShopInfoCache
             {
                 ShopId = evt.ShopId,
+                OwnerAccountId = ownerAccountId,
                 ShopName = evt.ShopName,
                 DefaultPickupAddress = evt.DefaultPickupAddress,
                 DefaultProvider = evt.DefaultProvider,
-                DefaultProviderServiceCode = evt.DefaultProviderServiceCode ?? "STD",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = evt.UpdatedAt
+                DefaultProviderServiceCode = evt.DefaultProviderServiceCode
             };
 
-            await _shopInfoCache.SaveShopInfoAsync(shopInfo);
-            Console.WriteLine($"[ShipmentService] Shop info cached: {shopInfo.ShopName}, Provider: {evt.DefaultProvider}, Code: {shopInfo.DefaultProviderServiceCode}");
+            await shopCache.SaveShopInfoAsync(shopInfo);
         }
-        catch (Exception ex)
+        catch (ObjectDisposedException ex)
         {
-            Console.WriteLine($"[ShipmentService] Error handling ShopUpdated: {ex.Message}");
+            _logger.LogError(ex, "Error handling ShopUpdated for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopUpdated for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopUpdated for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (DbException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopUpdated for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopUpdated for ShopId={ShopId}", evt.ShopId);
         }
     }
 
@@ -74,26 +122,76 @@ public class ShopEventConsumer
     {
         try
         {
-            Console.WriteLine($"[ShipmentService] Received ShopCreated event: ShopId={evt.ShopId}, ShopName={evt.ShopName}");
+            using var scope = _scopeFactory.CreateScope();
+            var shopCache = scope.ServiceProvider.GetRequiredService<IShopInfoCacheRepository>();
 
-            // Initialize shop info in cache
+            _logger.LogInformation(
+                "[RabbitMQ] shop.created ShopId={ShopId}, ShopName={ShopName}",
+                evt.ShopId, evt.ShopName);
+
             var shopInfo = new ShopInfoCache
             {
                 ShopId = evt.ShopId,
+                OwnerAccountId = evt.OwnerId,
                 ShopName = evt.ShopName,
                 DefaultPickupAddress = evt.DefaultPickupAddress,
                 DefaultProvider = evt.DefaultProvider,
-                DefaultProviderServiceCode = evt.DefaultProviderServiceCode ?? "STD",
-                CreatedAt = evt.CreatedAt,
-                UpdatedAt = null
+                DefaultProviderServiceCode = evt.DefaultProviderServiceCode
             };
 
-            await _shopInfoCache.SaveShopInfoAsync(shopInfo);
-            Console.WriteLine($"[ShipmentService] New shop cached: {evt.ShopName}, Provider: {evt.DefaultProvider}, Code: {shopInfo.DefaultProviderServiceCode}");
+            await shopCache.SaveShopInfoAsync(shopInfo);
         }
-        catch (Exception ex)
+        catch (ObjectDisposedException ex)
         {
-            Console.WriteLine($"[ShipmentService] Error handling ShopCreated: {ex.Message}");
+            _logger.LogError(ex, "Error handling ShopCreated for ShopId={ShopId}", evt.ShopId);
         }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopCreated for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopCreated for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (DbException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopCreated for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopCreated for ShopId={ShopId}", evt.ShopId);
+        }
+    }
+
+    private async Task HandleShopDeleted(ShopDeletedEvent evt)
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var shopCache = scope.ServiceProvider.GetRequiredService<IShopInfoCacheRepository>();
+            await shopCache.DeleteByShopIdAsync(evt.ShopId);
+            _logger.LogInformation("[ShipmentService] shop.deleted → removed shop_cache row: {ShopId}", evt.ShopId);
+        }
+        catch (ObjectDisposedException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopDeleted for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopDeleted for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopDeleted for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (DbException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopDeleted for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopDeleted for ShopId={ShopId}", evt.ShopId);
+        }
+        await Task.CompletedTask;
     }
 }

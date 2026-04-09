@@ -12,15 +12,18 @@ public class CartService : ICartService
     private readonly ICartRepository _cartRepository;
     private readonly ICartItemRepository _cartItemRepository;
     private readonly IProductVersionCacheRepository _productCacheRepository;
+    private readonly IShopInfoCacheRepository _shopInfoCache;
 
     public CartService(
         ICartRepository cartRepository,
         ICartItemRepository cartItemRepository,
-        IProductVersionCacheRepository productCacheRepository)
+        IProductVersionCacheRepository productCacheRepository,
+        IShopInfoCacheRepository shopInfoCache)
     {
         _cartRepository = cartRepository;
         _cartItemRepository = cartItemRepository;
         _productCacheRepository = productCacheRepository;
+        _shopInfoCache = shopInfoCache;
     }
 
     public async Task<ServiceResult<CartDto>> GetCartByAccountIdAsync(Guid accountId)
@@ -42,18 +45,7 @@ public class CartService : ICartService
             }
 
             var cartDto = cart.ToDto();
-
-            // Enrich each item with product name, version name, and thumbnail from local cache
-            foreach (var item in cartDto.Items)
-            {
-                var cache = await _productCacheRepository.GetByVersionIdAsync(item.VersionId);
-                if (cache != null)
-                {
-                    item.ProductMasterName = cache.ProductName;
-                    item.ProductVersionName = cache.VersionName;
-                    item.ThumbnailUrl = cache.ThumbnailUrl;
-                }
-            }
+            await EnrichCartItemDtosAsync(cartDto.Items);
 
             return ServiceResult<CartDto>.Success(cartDto);
         }
@@ -132,18 +124,7 @@ public class CartService : ICartService
             // Reload cart with items
             var updatedCart = await _cartRepository.GetCartWithItemsAsync(cart.CartId);
             var cartDto = updatedCart!.ToDto();
-
-            // Enrich each item with product name, version name, and thumbnail from local cache
-            foreach (var item in cartDto.Items)
-            {
-                var cache = await _productCacheRepository.GetByVersionIdAsync(item.VersionId);
-                if (cache != null)
-                {
-                    item.ProductMasterName = cache.ProductName;
-                    item.ProductVersionName = cache.VersionName;
-                    item.ThumbnailUrl = cache.ThumbnailUrl;
-                }
-            }
+            await EnrichCartItemDtosAsync(cartDto.Items);
 
             return ServiceResult<CartDto>.Success(cartDto, "Product added to cart successfully");
         }
@@ -172,7 +153,9 @@ public class CartService : ICartService
             await _cartItemRepository.UpdateAsync(cartItem);
 
             var updatedCart = await _cartRepository.GetCartWithItemsAsync(cart.CartId);
-            return ServiceResult<CartDto>.Success(updatedCart!.ToDto(), "Cart item updated successfully");
+            var cartDto = updatedCart!.ToDto();
+            await EnrichCartItemDtosAsync(cartDto.Items);
+            return ServiceResult<CartDto>.Success(cartDto, "Cart item updated successfully");
         }
         catch (Exception ex)
         {
@@ -287,6 +270,7 @@ public class CartService : ICartService
                     validCount++;
                 }
 
+                await EnrichCheckoutItemDtoAsync(checkoutItem);
                 checkoutItems.Add(checkoutItem);
             }
 
@@ -308,6 +292,51 @@ public class CartService : ICartService
         catch (Exception ex)
         {
             return ServiceResult<CheckoutPreviewDto>.InternalServerError($"Error getting checkout preview: {ex.Message}");
+        }
+    }
+
+    private async Task EnrichCartItemDtosAsync(IEnumerable<CartItemDto> items)
+    {
+        foreach (var item in items)
+        {
+            var product = await _productCacheRepository.GetByVersionIdAsync(item.VersionId);
+            if (product != null)
+            {
+                item.ProductMasterName = product.ProductName;
+                item.ProductVersionName = product.VersionName;
+                item.ThumbnailUrl = product.ThumbnailUrl;
+            }
+
+            var shop = await _shopInfoCache.GetByShopIdAsync(item.ShopId);
+            if (shop != null)
+            {
+                item.ShopName = shop.Name;
+                if (shop.OwnerAccountId != Guid.Empty)
+                    item.ShopOwnerAccountId = shop.OwnerAccountId;
+                item.ShopDefaultPickupAddress = shop.DefaultPickupAddress;
+                item.ShopDefaultProviderId = shop.DefaultProvider;
+            }
+        }
+    }
+
+    private async Task EnrichCheckoutItemDtoAsync(CheckoutItemDto item)
+    {
+        var product = await _productCacheRepository.GetByVersionIdAsync(item.VersionId);
+        if (product != null)
+        {
+            item.ProductMasterName = product.ProductName;
+            item.ProductVersionName = product.VersionName;
+            item.ThumbnailUrl = product.ThumbnailUrl;
+        }
+
+        var shop = await _shopInfoCache.GetByShopIdAsync(item.ShopId);
+        if (shop != null)
+        {
+            item.ShopName = shop.Name;
+            if (shop.OwnerAccountId != Guid.Empty)
+                item.ShopOwnerAccountId = shop.OwnerAccountId;
+            item.ShopDefaultPickupAddress = shop.DefaultPickupAddress;
+            item.ShopDefaultProviderId = shop.DefaultProvider;
         }
     }
 }

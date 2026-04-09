@@ -19,6 +19,7 @@ public class OrderDbContext : DbContext
     public DbSet<Cart> Carts { get; set; }
     public DbSet<CartItem> CartItems { get; set; }
     public DbSet<ProductVersionCache> ProductVersionCaches { get; set; }
+    public DbSet<ShopInfoCache> ShopInfoCaches { get; set; }
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }
 
@@ -178,6 +179,24 @@ public class OrderDbContext : DbContext
             entity.HasIndex(e => e.ShopId);
             entity.HasIndex(e => e.SellerSku);
             entity.HasIndex(e => e.IsActive);
+        });
+
+        // ========================================
+        // Bảng mirror shop (ShopService → RabbitMQ)
+        // ========================================
+        modelBuilder.Entity<ShopInfoCache>(entity =>
+        {
+            entity.ToTable("shop_info_cache");
+            entity.HasKey(e => e.ShopId);
+
+            entity.Property(e => e.ShopId).HasColumnName("shop_id");
+            entity.Property(e => e.OwnerAccountId).HasColumnName("owner_account_id").IsRequired();
+            entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(500).IsRequired();
+            entity.Property(e => e.DefaultPickupAddress).HasColumnName("default_pickup_address").HasMaxLength(2000);
+            entity.Property(e => e.DefaultProvider).HasColumnName("default_provider");
+            entity.Property(e => e.DefaultProviderServiceCode).HasColumnName("default_provider_service_code")
+                .HasMaxLength(100);
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").IsRequired();
         });
 
         // ========================================

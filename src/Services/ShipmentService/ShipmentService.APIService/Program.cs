@@ -1,3 +1,4 @@
+using System.IO;
 using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -78,17 +79,10 @@ builder.Services.AddValidators();
 // ── GHN Shipping API Client ───────────────────────────────────────────────────
 builder.Services.AddShippingFeeCalculator();
 
-// ── External Service Clients (OrderService, ProductService) ──────────────────
-builder.Services.AddExternalServiceClients(builder.Configuration);
-
-// ── Event Consumers ───────────────────────────────────────────────────────────
-builder.Services.AddSingleton<OrderEventConsumer>();
-builder.Services.AddSingleton<ShopEventConsumer>();
-
 // ── In-Memory Cache ───────────────────────────────────────────────────────────
 builder.Services.AddMemoryCache();
 
-// ── RabbitMQ (with retry) ─────────────────────────────────────────────────────
+// ── RabbitMQ (retry giống IdentityService / PaymentService) ─────────────────
 var rabbitMQSettings = new RabbitMQSettings
 {
     Host = Environment.GetEnvironmentVariable("RabbitMQ_Host") ?? builder.Configuration["RabbitMQ:Host"] ?? "localhost",
@@ -103,24 +97,30 @@ for (int attempt = 1; attempt <= 5; attempt++)
     {
         var consumer = new RabbitMQConsumer(rabbitMQSettings);
         var publisher = new RabbitMQPublisher(rabbitMQSettings);
+
         builder.Services.AddSingleton(consumer);
         builder.Services.AddSingleton(publisher);
+        builder.Services.AddHostedService<OrderEventConsumer>();
+        builder.Services.AddHostedService<ShopEventConsumer>();
         break;
+    }
+    catch (IOException ex)
+    {
+        Console.Error.WriteLine($"Failed to initialize RabbitMQ on attempt {attempt}: {ex.Message}");
+        if (attempt < 5)
+            Thread.Sleep(5000);
     }
     catch (InvalidOperationException ex)
     {
-        Console.Error.WriteLine($"RabbitMQ attempt {attempt} failed: {ex.Message}");
-        if (attempt < 5) Thread.Sleep(5000);
+        Console.Error.WriteLine($"Unexpected error initializing RabbitMQ on attempt {attempt}: {ex.Message}");
+        if (attempt < 5)
+            Thread.Sleep(5000);
     }
-    catch (TimeoutException ex)
+    catch (ArgumentException ex)
     {
-        Console.Error.WriteLine($"RabbitMQ attempt {attempt} timed out: {ex.Message}");
-        if (attempt < 5) Thread.Sleep(5000);
-    }
-    catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
-    {
-        Console.Error.WriteLine($"RabbitMQ attempt {attempt} failed: {ex.Message}");
-        if (attempt < 5) Thread.Sleep(5000);
+        Console.Error.WriteLine($"Unexpected error initializing RabbitMQ on attempt {attempt}: {ex.Message}");
+        if (attempt < 5)
+            Thread.Sleep(5000);
     }
 }
 
@@ -147,13 +147,6 @@ using (var scope = app.Services.CreateScope())
         Console.Error.WriteLine($"Migration failed: {ex.Message}");
     }
 }
-
-// ── Start RabbitMQ Consumers ──────────────────────────────────────────────────
-var orderEventConsumer = app.Services.GetService<OrderEventConsumer>();
-orderEventConsumer?.StartListening();
-
-var shopEventConsumer = app.Services.GetService<ShopEventConsumer>();
-shopEventConsumer?.StartListening();
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
 app.UseSerilogRequestLogging(opts =>

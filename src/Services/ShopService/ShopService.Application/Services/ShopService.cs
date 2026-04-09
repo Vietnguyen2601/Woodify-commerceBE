@@ -115,6 +115,7 @@ public class ShopService : IShopService
                 var shopUpdatedEvent = new ShopUpdatedEvent
                 {
                     ShopId = shop.ShopId,
+                    OwnerAccountId = shop.OwnerAccountId,
                     ShopName = shop.Name,
                     ShopPhone = null,
                     ShopEmail = null,
@@ -338,12 +339,14 @@ public class ShopService : IShopService
                 var shopUpdatedEvent = new ShopUpdatedEvent
                 {
                     ShopId = shop.ShopId,
+                    OwnerAccountId = shop.OwnerAccountId,
                     ShopName = shop.Name,
                     ShopPhone = null,
                     ShopEmail = null,
                     ShopAddress = null,
                     DefaultPickupAddress = shop.DefaultPickupAddress,
-                    DefaultProviderServiceCode = shop.DefaultProvider?.ToString(),
+                    DefaultProvider = shop.DefaultProvider,
+                    DefaultProviderServiceCode = null,
                     UpdatedAt = shop.UpdatedAt ?? DateTime.UtcNow
                 };
 
@@ -375,6 +378,17 @@ public class ShopService : IShopService
             shop.UpdatedAt = DateTime.UtcNow;
             _unitOfWork.Shops.Update(shop);
             await _unitOfWork.SaveChangesAsync();
+
+            if (_rabbitPublisher != null)
+            {
+                var deleted = new ShopDeletedEvent
+                {
+                    ShopId = shopId,
+                    DeletedAt = DateTime.UtcNow
+                };
+                _rabbitPublisher.Publish("shop.events", "shop.deleted", deleted);
+                Console.WriteLine($"[ShopService] Published ShopDeleted event: ShopId={shopId}");
+            }
 
             return ServiceResult.Success("Shop deleted successfully");
         }
