@@ -54,4 +54,7 @@ public static class ShipmentMessages
         "delivery_address_id format: '{{district_id}}_{{ward_code}}'.";
     public const string FeePreviewProviderError =
         "Không thể lấy báo giá từ nhà cung cấp vận chuyển. Vui lòng thử lại sau.";
+
+    public const string ShopContextNotSynced = "Shop không tồn tại";
+    public const string ShopDefaultProviderMissing = "Shop chưa cài default provider";
 }

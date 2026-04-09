@@ -73,6 +73,29 @@ public class ProviderServicesController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>Dịch vụ vận chuyển của default provider theo shop (spec: services/by-shop).</summary>
+    [HttpGet("services/by-shop/{shopId:guid}")]
+    [ProducesResponseType(typeof(ServiceResult<IEnumerable<ProviderServiceDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ServiceResult<IEnumerable<ProviderServiceDto>>>> GetServicesByShopId(
+        [FromRoute] Guid shopId)
+    {
+        var result = await _serviceService.GetServicesByShopIdAsync(shopId);
+        return result.Status switch
+        {
+            404 => NotFound(result),
+            _ => Ok(result)
+        };
+    }
+
+    /// <summary>Alias: GET shops/{shopId}/services (cùng handler).</summary>
+    [HttpGet("shops/{shopId:guid}/services")]
+    [ProducesResponseType(typeof(ServiceResult<IEnumerable<ProviderServiceDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public Task<ActionResult<ServiceResult<IEnumerable<ProviderServiceDto>>>> GetServicesByShopIdAlias(
+        [FromRoute] Guid shopId) =>
+        GetServicesByShopId(shopId);
+
     [HttpGet("services/{id:guid}")]
     [ProducesResponseType(typeof(ServiceResult<ProviderServiceDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

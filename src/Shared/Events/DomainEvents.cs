@@ -2,7 +2,7 @@ namespace Shared.Events;
 
 /// <summary>
 /// Event khi Shop được tạo mới
-/// ShopService publish → AccountService consume, ShipmentService consume
+/// ShopService publish → AccountService consume, OrderService consume, ShipmentService consume
 /// </summary>
 public class ShopCreatedEvent
 {
@@ -25,12 +25,14 @@ public class AccountCreatedEvent
 
 /// <summary>
 /// Event khi Shop info được cập nhật
-/// ShopService publish → ShipmentService consume
+/// ShopService publish → OrderService consume, ShipmentService consume
 /// Exchange: "shop.events" / Routing key: "shop.updated"
 /// </summary>
 public class ShopUpdatedEvent
 {
     public Guid ShopId { get; set; }
+    /// <summary>Chủ shop — map vào owner_account_id (cùng ý nghĩa với ShopCreatedEvent.OwnerId).</summary>
+    public Guid OwnerAccountId { get; set; }
     public string ShopName { get; set; } = string.Empty;
     public string? ShopPhone { get; set; }
     public string? ShopEmail { get; set; }
@@ -43,6 +45,15 @@ public class ShopUpdatedEvent
     public Guid? DefaultProvider { get; set; }
     public string? DefaultProviderServiceCode { get; set; }
     public DateTime UpdatedAt { get; set; }
+}
+
+/// <summary>
+/// Shop bị xóa (mirror) — consumers xóa bản ghi shop local. Exchange shop.events, routing shop.deleted.
+/// </summary>
+public class ShopDeletedEvent
+{
+    public Guid ShopId { get; set; }
+    public DateTime DeletedAt { get; set; }
 }
 
 /// <summary>

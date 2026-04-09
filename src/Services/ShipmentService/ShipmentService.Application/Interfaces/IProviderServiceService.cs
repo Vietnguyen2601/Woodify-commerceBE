@@ -15,4 +15,7 @@ public interface IProviderServiceService
     Task<ServiceResult<ProviderServiceDto>> UpdateAsync(Guid id, UpdateProviderServiceDto dto);
     Task<ServiceResult> DeleteAsync(Guid id);
     Task<ServiceResult<ProviderServiceDto>> GetByShopIdAndCodeAsync(Guid shopId, string code);
+
+    /// <summary>Các dịch vụ (active) của nhà vận chuyển mặc định mà shop đã cấu hình.</summary>
+    Task<ServiceResult<IEnumerable<ProviderServiceDto>>> GetServicesByShopIdAsync(Guid shopId);
 }

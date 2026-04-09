@@ -46,7 +46,14 @@ public class CartItemDto
     public double TotalPrice { get; set; }
     public string? ProductMasterName { get; set; }
     public string? ProductVersionName { get; set; }
+    /// <summary>Ảnh đại diện biến thể (PRODUCT_VERSION) — đồng bộ từ ProductService.</summary>
     public string? ThumbnailUrl { get; set; }
+
+    /// <summary>Tên shop — từ ShopService qua RabbitMQ.</summary>
+    public string? ShopName { get; set; }
+    public Guid? ShopOwnerAccountId { get; set; }
+    public string? ShopDefaultPickupAddress { get; set; }
+    public Guid? ShopDefaultProviderId { get; set; }
 }
 
 /// <summary>
@@ -78,4 +85,12 @@ public class CheckoutItemDto
     public double TotalPrice { get; set; }
     public bool IsValid { get; set; } = true;
     public string? InvalidReason { get; set; }
+
+    public string? ProductMasterName { get; set; }
+    public string? ProductVersionName { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? ShopName { get; set; }
+    public Guid? ShopOwnerAccountId { get; set; }
+    public string? ShopDefaultPickupAddress { get; set; }
+    public Guid? ShopDefaultProviderId { get; set; }
 }

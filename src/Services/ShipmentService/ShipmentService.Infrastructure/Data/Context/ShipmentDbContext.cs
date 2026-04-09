@@ -21,6 +21,7 @@ public class ShipmentDbContext : DbContext
     public DbSet<Shipment> Shipments { get; set; } = null!;
     public DbSet<ShippingProvider> ShippingProviders { get; set; } = null!;
     public DbSet<ProviderService> ProviderServices { get; set; } = null!;
+    public DbSet<ShopCache> ShopCaches { get; set; } = null!;
 
     // ── Model configuration ───────────────────────────────────────────────────
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -126,6 +127,17 @@ public class ShipmentDbContext : DbContext
                   .WithMany(sp => sp.ProviderServices)
                   .HasForeignKey(e => e.ProviderId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ShopCache>(entity =>
+        {
+            entity.ToTable("shop_cache");
+            entity.HasKey(e => e.ShopId);
+            entity.Property(e => e.ShopId).HasColumnName("shop_id");
+            entity.Property(e => e.OwnerAccountId).HasColumnName("owner_account_id").IsRequired();
+            entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(500).IsRequired();
+            entity.Property(e => e.DefaultPickupAddress).HasColumnName("default_pickup_address").HasMaxLength(1000);
+            entity.Property(e => e.DefaultProvider).HasColumnName("default_provider");
         });
     }
 
