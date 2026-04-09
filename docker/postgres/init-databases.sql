@@ -23,6 +23,9 @@ CREATE DATABASE order_db;
 -- Payment Service Database (Payment, Wallet)
 CREATE DATABASE payment_db;
 
+-- Shipment Service Database (Shipment, Shipping Provider)
+CREATE DATABASE shipment_db;
+
 -- ================================================================
 -- CẤP QUYỀN CHO USER
 -- ================================================================
@@ -32,6 +35,7 @@ GRANT ALL PRIVILEGES ON DATABASE product_db TO woodify;
 GRANT ALL PRIVILEGES ON DATABASE inventory_db TO woodify;
 GRANT ALL PRIVILEGES ON DATABASE order_db TO woodify;
 GRANT ALL PRIVILEGES ON DATABASE payment_db TO woodify;
+GRANT ALL PRIVILEGES ON DATABASE shipment_db TO woodify;
 
 -- ================================================================
 -- TẠO EXTENSION uuid-ossp CHO TỪNG DATABASE
@@ -54,6 +58,9 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 \c payment_db
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+\c shipment_db
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ================================================================
