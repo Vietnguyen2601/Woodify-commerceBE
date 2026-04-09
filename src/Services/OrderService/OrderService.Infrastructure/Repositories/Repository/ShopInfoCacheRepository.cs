@@ -41,4 +41,14 @@ public class ShopInfoCacheRepository : IShopInfoCacheRepository
 
         await _context.SaveChangesAsync();
     }
+
+    public async Task DeleteByShopIdAsync(Guid shopId)
+    {
+        var row = await GetByShopIdAsync(shopId);
+        if (row != null)
+        {
+            _dbSet.Remove(row);
+            await _context.SaveChangesAsync();
+        }
+    }
 }

@@ -40,7 +40,13 @@ public class ShopEventConsumer
             routingKey: "shop.created",
             handler: async (evt) => await HandleShopCreated(evt));
 
-        _logger.LogInformation("ShopEventConsumer listening: shop.events (shop.created, shop.updated)");
+        _rabbitMQConsumer.Subscribe<ShopDeletedEvent>(
+            queueName: "orderservice.shop.deleted",
+            exchange: "shop.events",
+            routingKey: "shop.deleted",
+            handler: async (evt) => await HandleShopDeleted(evt));
+
+        _logger.LogInformation("ShopEventConsumer listening: shop.events (created, updated, deleted)");
     }
 
     private async Task HandleShopUpdated(ShopUpdatedEvent evt)
@@ -50,10 +56,13 @@ public class ShopEventConsumer
             using var scope = _scopeFactory.CreateScope();
             var cache = scope.ServiceProvider.GetRequiredService<IShopInfoCacheRepository>();
             var existing = await cache.GetByShopIdAsync(evt.ShopId);
+            var ownerId = evt.OwnerAccountId != Guid.Empty
+                ? evt.OwnerAccountId
+                : (existing?.OwnerAccountId ?? Guid.Empty);
             await cache.UpsertAsync(new ShopInfoCache
             {
                 ShopId = evt.ShopId,
-                OwnerAccountId = existing?.OwnerAccountId ?? Guid.Empty,
+                OwnerAccountId = ownerId,
                 Name = evt.ShopName,
                 DefaultPickupAddress = evt.DefaultPickupAddress,
                 DefaultProvider = evt.DefaultProvider,
@@ -90,6 +99,22 @@ public class ShopEventConsumer
         catch (Exception ex)
         {
             _logger.LogError(ex, "ShopCreated handler failed for {ShopId}", evt.ShopId);
+        }
+        await Task.CompletedTask;
+    }
+
+    private async Task HandleShopDeleted(ShopDeletedEvent evt)
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var cache = scope.ServiceProvider.GetRequiredService<IShopInfoCacheRepository>();
+            await cache.DeleteByShopIdAsync(evt.ShopId);
+            _logger.LogInformation("[OrderService] shop.deleted → removed shop_info_cache row: {ShopId}", evt.ShopId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "ShopDeleted handler failed for {ShopId}", evt.ShopId);
         }
         await Task.CompletedTask;
     }

@@ -29,9 +29,8 @@ namespace OrderService.APIService.Extensions
             services.AddScoped<IOrderService, Application.Services.OrderService>();
             services.AddScoped<IDashboardService, DashboardService>();
 
-            // Register event consumers
+            // Register event consumers (startup uses singletons from Program.cs when RabbitMQ is available)
             services.AddScoped<ProductEventConsumer>();
-            services.AddScoped<ImageUrlEventConsumer>();
             services.AddScoped<ShippingFeeEventConsumer>();
 
             return services;
@@ -42,10 +41,6 @@ namespace OrderService.APIService.Extensions
             // Start Product Event Consumer
             var productConsumer = serviceProvider.GetService<ProductEventConsumer>();
             productConsumer?.StartListening();
-
-            // Start Image URL Event Consumer
-            var imageUrlConsumer = serviceProvider.GetService<ImageUrlEventConsumer>();
-            imageUrlConsumer?.StartListening();
 
             // Start Shipping Fee Event Consumer
             var shippingFeeConsumer = serviceProvider.GetService<ShippingFeeEventConsumer>();

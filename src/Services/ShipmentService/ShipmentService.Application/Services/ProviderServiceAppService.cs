@@ -147,10 +147,10 @@ public class ProviderServiceAppService : IProviderServiceService
             return ServiceResult<IEnumerable<ProviderServiceDto>>.NotFound(ShipmentMessages.ShopContextNotSynced);
 
         if (!shop.DefaultProvider.HasValue || shop.DefaultProvider.Value == Guid.Empty)
-            return ServiceResult<IEnumerable<ProviderServiceDto>>.BadRequest(ShipmentMessages.ShopDefaultProviderMissing);
+            return ServiceResult<IEnumerable<ProviderServiceDto>>.NotFound(ShipmentMessages.ShopDefaultProviderMissing);
 
         var services = await _serviceRepository.GetByProviderIdAsync(shop.DefaultProvider.Value);
-        var dtos = services.Where(s => s.IsActive).Select(s => s.ToDto()).ToList();
+        var dtos = services.Select(s => s.ToDto()).ToList();
         return ServiceResult<IEnumerable<ProviderServiceDto>>.Success(dtos);
     }
 

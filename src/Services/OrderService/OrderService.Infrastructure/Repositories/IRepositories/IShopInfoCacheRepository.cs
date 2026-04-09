@@ -6,4 +6,5 @@ public interface IShopInfoCacheRepository
 {
     Task<ShopInfoCache?> GetByShopIdAsync(Guid shopId);
     Task UpsertAsync(ShopInfoCache row);
+    Task DeleteByShopIdAsync(Guid shopId);
 }

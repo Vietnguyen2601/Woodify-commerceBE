@@ -15,7 +15,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddShipmentServices(this IServiceCollection services)
     {
         services.AddSingleton<IOrderInfoCacheRepository, OrderInfoCacheRepository>();
-        services.AddSingleton<IShopInfoCacheRepository, ShopInfoCacheRepository>();
+        services.AddScoped<IShopInfoCacheRepository, ShopInfoCacheEfRepository>();
 
         // Unit of Work
         services.AddScoped<IUnitOfWork, UnitOfWork>();

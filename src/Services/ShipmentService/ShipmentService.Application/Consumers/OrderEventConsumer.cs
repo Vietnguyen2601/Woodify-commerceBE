@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Shared.Constants;
@@ -14,25 +15,25 @@ namespace ShipmentService.Application.Consumers;
 /// </summary>
 public class OrderEventConsumer : BackgroundService
 {
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly RabbitMQConsumer _rabbitMQConsumer;
     private readonly RabbitMQPublisher _rabbitMQPublisher;
     private readonly IOrderInfoCacheRepository _orderInfoCache;
-    private readonly IShopInfoCacheRepository _shopInfoCache;
     private readonly IShippingFeeCalculator _feeCalculator;
     private readonly ILogger<OrderEventConsumer> _logger;
 
     public OrderEventConsumer(
+        IServiceScopeFactory scopeFactory,
         RabbitMQConsumer rabbitMQConsumer,
         RabbitMQPublisher rabbitMQPublisher,
         IOrderInfoCacheRepository orderInfoCache,
-        IShopInfoCacheRepository shopInfoCache,
         IShippingFeeCalculator feeCalculator,
         ILogger<OrderEventConsumer> logger)
     {
+        _scopeFactory = scopeFactory;
         _rabbitMQConsumer = rabbitMQConsumer;
         _rabbitMQPublisher = rabbitMQPublisher;
         _orderInfoCache = orderInfoCache;
-        _shopInfoCache = shopInfoCache;
         _feeCalculator = feeCalculator;
         _logger = logger;
     }
@@ -113,7 +114,13 @@ public class OrderEventConsumer : BackgroundService
     {
         try
         {
-            var shopInfo = await _shopInfoCache.GetShopInfoAsync(evt.ShopId);
+            ShopInfoCache? shopInfo;
+            using (var scope = _scopeFactory.CreateScope())
+            {
+                var shopRepo = scope.ServiceProvider.GetRequiredService<IShopInfoCacheRepository>();
+                shopInfo = await shopRepo.GetShopInfoAsync(evt.ShopId);
+            }
+
             if (shopInfo == null)
                 _logger.LogWarning("Shop {ShopId} not in cache yet; using event-only service code", evt.ShopId);
 
