@@ -1,3 +1,5 @@
+using System.Data.Common;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -94,7 +96,23 @@ public class ShopEventConsumer : BackgroundService
 
             await shopCache.SaveShopInfoAsync(shopInfo);
         }
-        catch (Exception ex)
+        catch (ObjectDisposedException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopUpdated for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopUpdated for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopUpdated for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (DbException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopUpdated for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (TimeoutException ex)
         {
             _logger.LogError(ex, "Error handling ShopUpdated for ShopId={ShopId}", evt.ShopId);
         }
@@ -123,7 +141,23 @@ public class ShopEventConsumer : BackgroundService
 
             await shopCache.SaveShopInfoAsync(shopInfo);
         }
-        catch (Exception ex)
+        catch (ObjectDisposedException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopCreated for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopCreated for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopCreated for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (DbException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopCreated for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (TimeoutException ex)
         {
             _logger.LogError(ex, "Error handling ShopCreated for ShopId={ShopId}", evt.ShopId);
         }
@@ -138,7 +172,23 @@ public class ShopEventConsumer : BackgroundService
             await shopCache.DeleteByShopIdAsync(evt.ShopId);
             _logger.LogInformation("[ShipmentService] shop.deleted → removed shop_cache row: {ShopId}", evt.ShopId);
         }
-        catch (Exception ex)
+        catch (ObjectDisposedException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopDeleted for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopDeleted for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopDeleted for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (DbException ex)
+        {
+            _logger.LogError(ex, "Error handling ShopDeleted for ShopId={ShopId}", evt.ShopId);
+        }
+        catch (TimeoutException ex)
         {
             _logger.LogError(ex, "Error handling ShopDeleted for ShopId={ShopId}", evt.ShopId);
         }

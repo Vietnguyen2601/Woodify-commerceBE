@@ -86,7 +86,9 @@ public class ShippingFeePreviewAppService : IShippingFeePreviewService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Fee calculator error: service={Code}", request.ProviderServiceCode);
+            var safeCode = (providerServiceCode ?? string.Empty).Replace("\r", string.Empty)
+                .Replace("\n", string.Empty);
+            _logger.LogError(ex, "Fee calculator error: service={Code}", safeCode);
             return ServiceResult<ShippingFeePreviewResponse>.InternalServerError(
                 ShipmentMessages.FeePreviewProviderError);
         }

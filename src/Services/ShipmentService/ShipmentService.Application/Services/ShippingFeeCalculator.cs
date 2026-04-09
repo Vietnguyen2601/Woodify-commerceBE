@@ -43,11 +43,15 @@ public class ShippingFeeCalculator : IShippingFeeCalculator
 
         if (serviceId == 3)
         {
+            var safeCode = SanitizeLogFragment(providerServiceCode);
             _logger.LogWarning(
                 "Không tìm thấy mapping service_id cho code '{Code}', dùng default STANDARD (service_id=3).",
-                providerServiceCode ?? string.Empty);
+                safeCode);
         }
 
         return serviceId;
     }
+
+    private static string SanitizeLogFragment(string? value) =>
+        (value ?? string.Empty).Replace("\r", string.Empty).Replace("\n", string.Empty);
 }
