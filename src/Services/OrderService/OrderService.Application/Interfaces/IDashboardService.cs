@@ -25,4 +25,11 @@ public interface IDashboardService
         string startDate,
         string endDate,
         string? granularity = null);
+
+    /// <summary>
+    /// Lấy real-time metrics cho hôm nay
+    /// Dùng cho SignalR push updates (updated every 5 seconds)
+    /// Include: Gross/Net/Commission revenue, growth rates, order counts
+    /// </summary>
+    Task<RealtimeMetricsDto> GetTodayMetricsAsync();
 }

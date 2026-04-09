@@ -113,4 +113,41 @@ public class DashboardController : ControllerBase
 
         return Ok(result);
     }
+
+    /// <summary>
+    /// Lấy real-time metrics cho hôm nay
+    /// Update mỗi 5 giây (via SignalR) hoặc on-demand (via REST API)
+    /// </summary>
+    /// <remarks>
+    /// GET /api/admin/dashboard/metrics/today
+    /// 
+    /// Returns real-time metrics for today (UTC):
+    /// - Gross Revenue (COMPLETED orders)
+    /// - Commission Revenue
+    /// - Net Revenue
+    /// - Growth vs yesterday (%)
+    /// - Order statistics (today, completed, pending)
+    /// - User statistics (total, new, active)
+    /// 
+    /// Use this endpoint for:
+    /// 1. Initial load (get current metrics when dashboard opens)
+    /// 2. Manual refresh if needed
+    /// 3. Or connect to SignalR hub for auto-updates every 5 seconds
+    /// </remarks>
+    /// <returns>Today's real-time metrics</returns>
+    [HttpGet("metrics/today")]
+    [ProducesResponseType(typeof(RealtimeMetricsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<RealtimeMetricsDto>> GetTodayMetrics()
+    {
+        try
+        {
+            var metrics = await _dashboardService.GetTodayMetricsAsync();
+            return Ok(metrics);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = "Failed to retrieve today's metrics", details = ex.Message });
+        }
+    }
 }

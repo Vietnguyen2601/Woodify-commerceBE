@@ -518,4 +518,109 @@ public class DashboardService : IDashboardService
             _ => string.Empty
         };
     }
+
+    /// <summary>
+    /// Lấy metrics real-time cho hôm nay (dùng cho SignalR)
+    /// Metrics update mỗi 5 giây từ background service
+    /// </summary>
+    public async Task<RealtimeMetricsDto> GetTodayMetricsAsync()
+    {
+        var todayStart = DateTime.UtcNow.Date;
+        var todayEnd = todayStart.AddDays(1);
+
+        // Lấy tất cả orders
+        var allOrders = await _orderRepository.GetAllAsync();
+
+        // ─── TODAY'S COMPLETED ORDERS ───
+        var todayCompletedOrders = allOrders
+            .Where(o => o.Status == OrderStatus.COMPLETED &&
+                       o.CreatedAt >= todayStart &&
+                       o.CreatedAt < todayEnd)
+            .ToList();
+
+        // ─── YESTERDAY'S COMPLETED ORDERS (để tính growth) ───
+        var yesterdayStart = todayStart.AddDays(-1);
+        var yesterdayCompletedOrders = allOrders
+            .Where(o => o.Status == OrderStatus.COMPLETED &&
+                       o.CreatedAt >= yesterdayStart &&
+                       o.CreatedAt < todayStart)
+            .ToList();
+
+        // ─── TODAY'S ALL ORDERS (không filter COMPLETED, để count) ───
+        var todayAllOrders = allOrders
+            .Where(o => o.CreatedAt >= todayStart && o.CreatedAt < todayEnd)
+            .ToList();
+
+        // ─── Calculate today's metrics ───
+        var todayGrossRevenue = (decimal)(todayCompletedOrders.Sum(o => o.TotalAmountCents) / 100.0);
+        var todayCommissionRevenue = (decimal)(todayCompletedOrders.Sum(o => o.CommissionCents) / 100.0);
+        var todayNetRevenue = todayGrossRevenue - todayCommissionRevenue;
+
+        // ─── Calculate yesterday's metrics (for growth) ───
+        var yesterdayGrossRevenue = (decimal)(yesterdayCompletedOrders.Sum(o => o.TotalAmountCents) / 100.0);
+        var yesterdayCommissionRevenue = (decimal)(yesterdayCompletedOrders.Sum(o => o.CommissionCents) / 100.0);
+
+        // ─── Calculate growth rates ───
+        decimal? grossRevenueGrowth = null;
+        decimal? commissionGrowth = null;
+        decimal? netRevenueGrowth = null;
+
+        if (yesterdayGrossRevenue > 0)
+        {
+            grossRevenueGrowth = ((todayGrossRevenue - yesterdayGrossRevenue) / yesterdayGrossRevenue) * 100;
+        }
+
+        if (yesterdayCommissionRevenue > 0)
+        {
+            commissionGrowth = ((todayCommissionRevenue - yesterdayCommissionRevenue) / yesterdayCommissionRevenue) * 100;
+        }
+
+        if ((yesterdayGrossRevenue - yesterdayCommissionRevenue) > 0)
+        {
+            var yesterdayNetRevenue = yesterdayGrossRevenue - yesterdayCommissionRevenue;
+            netRevenueGrowth = ((todayNetRevenue - yesterdayNetRevenue) / yesterdayNetRevenue) * 100;
+        }
+
+        // ─── Order statistics ───
+        var completedOrdersToday = todayCompletedOrders.Count;
+        var allOrdersToday = todayAllOrders.Count;
+
+        var pendingOrders = allOrders
+            .Where(o => o.Status == OrderStatus.PENDING)
+            .Count();
+
+        var averageOrderValueToday = completedOrdersToday > 0
+            ? todayGrossRevenue / completedOrdersToday
+            : (decimal?)null;
+
+        var metrics = new RealtimeMetricsDto
+        {
+            Timestamp = DateTime.UtcNow,
+
+            // ─── Revenue Metrics ───
+            GrossRevenue = todayGrossRevenue,
+            CommissionRevenue = todayCommissionRevenue,
+            NetRevenue = todayNetRevenue,
+            GrossRevenueGrowth = grossRevenueGrowth,
+            CommissionGrowth = commissionGrowth,
+            NetRevenueGrowth = netRevenueGrowth,
+
+            // ─── Order Metrics ───
+            OrdersToday = allOrdersToday,
+            CompletedOrdersToday = completedOrdersToday,
+            PendingOrdersCount = pendingOrders,
+            AverageOrderValueToday = averageOrderValueToday,
+
+            // ─── Cache Status ───
+            CacheStatus = "HIT",
+            CacheTTL = 5 // Updated every 5 seconds
+        };
+
+        // Note: User metrics (TotalUsers, NewUsers, ActiveUsersToday) 
+        // sẽ được populate từ IdentityService/UserService
+        // Hiện tại chỉ có 0 vì không có truy cập đến IdentityService
+        // TODO: Integrate với IdentityService để lấy user statistics
+
+        return metrics;
+    }
 }

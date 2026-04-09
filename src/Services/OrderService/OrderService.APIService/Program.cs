@@ -6,6 +6,7 @@ using Shared.Messaging;
 using OrderService.Infrastructure.Data.Context;
 using OrderService.Infrastructure.Data.Seeders;
 using OrderService.APIService.Extensions;
+using OrderService.APIService.Services;
 using OrderService.Application.Consumers;
 using OrderService.Application.Services;
 
@@ -47,10 +48,16 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new() { Title = "Order Service API", Version = "v1" });
 });
 
+// Add SignalR for real-time dashboard metrics
+builder.Services.AddSignalR();
+
 builder.Services.AddDbContext<OrderDbContext>();
 
 // Register Order Services
 builder.Services.AddOrderServices(builder.Configuration);
+
+// Register MetricsPublisher background service (for real-time dashboard)
+builder.Services.AddHostedService<MetricsPublisherService>();
 
 var rabbitMQSettings = new RabbitMQSettings
 {
@@ -171,6 +178,9 @@ app.UseExceptionHandler(errApp => errApp.Run(async ctx =>
         }));
 }));
 
+// Enable static file serving for wwwroot (HTML, CSS, JS, etc.)
+app.UseStaticFiles();
+
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -182,6 +192,10 @@ app.UseSwaggerUI(c =>
 app.UseCors("AllowAll");
 
 app.MapControllers();
+
+// Map SignalR Hubs for real-time dashboard
+app.MapHub<OrderService.APIService.Hubs.DashboardHub>("/admin-dashboard-hub");
+
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "order-service" }));
 
 app.Run();
