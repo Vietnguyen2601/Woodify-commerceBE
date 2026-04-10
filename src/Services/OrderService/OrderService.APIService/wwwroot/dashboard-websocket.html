@@ -193,10 +193,9 @@
         <h1>Dashboard Real-Time Metrics</h1>
         
         <div class="info-box">
-            <strong>Real-Time Data (WebSocket):</strong><br>
-            1. Enter server URL (e.g., http://localhost:5014)<br>
-            2. Click CONNECT to establish WebSocket connection<br>
-            3. Metrics will auto-update every 5 seconds
+            <strong>Real-Time Data Options:</strong><br>
+            1. <strong>WebSocket (Persistent):</strong> Enter URL + Click CONNECT for continuous connection<br>
+            2. <strong>REST API (Auto-Refresh):</strong> Auto-fetches every 5 seconds when connected
         </div>
 
         <div class="controls">
@@ -378,8 +377,6 @@
 
             ws.onmessage = function(event) {
                 try {
-                    log('WebSocket message received', 'info');
-                    
                     const lines = event.data.trim().split('\n');
                     
                     for (let i = 0; i < lines.length; i++) {
@@ -397,7 +394,7 @@
                         }
                     }
                 } catch (e) {
-                    log('Parse error: ' + e.message, 'error');
+                    // Silently ignore parse errors - focus on valid messages
                 }
             };
 
@@ -413,7 +410,7 @@
                 if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
                     reconnectAttempts++;
                     const delay = Math.min(1000 * Math.pow(2, reconnectAttempts - 1), 10000);
-                    log('Reconnecting in ' + (delay/1000).toFixed(1) + 's (attempt ' + reconnectAttempts + ')', 'info');
+                    log('Reconnecting in ' + (delay/1000).toFixed(1) + 's (attempt ' + reconnectAttempts + '/' + MAX_RECONNECT_ATTEMPTS + ')', 'info');
                     setTimeout(connect, delay);
                 }
             };
