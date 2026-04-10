@@ -48,8 +48,14 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new() { Title = "Order Service API", Version = "v1" });
 });
 
-// Add SignalR for real-time dashboard metrics
-builder.Services.AddSignalR();
+// Add SignalR for real-time dashboard metrics with extended timeout
+builder.Services.AddSignalR(options =>
+{
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(60); // Client timeout 60s (default 30s)
+    options.HandshakeTimeout = TimeSpan.FromSeconds(15);
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.MaximumReceiveMessageSize = 32 * 1024 * 1024; // 32MB max message size
+});
 
 builder.Services.AddDbContext<OrderDbContext>();
 
