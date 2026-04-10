@@ -1,4 +1,5 @@
 using IdentityService.Domain.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace IdentityService.Infrastructure.Data.Seeders;
@@ -14,6 +15,8 @@ public static class AccountDbSeeder
         var dbContext = context as IdentityService.Infrastructure.Data.Context.AccountDbContext;
         if (dbContext == null)
             return;
+
+        var passwordHasher = new PasswordHasher<object>();
 
         // Seed Roles nếu chưa có
         if (!dbContext.Roles.Any())
@@ -56,17 +59,52 @@ public static class AccountDbSeeder
         // Seed Seller Accounts nếu chưa có
         if (!dbContext.Accounts.Any())
         {
+            var adminRoleId = dbContext.Roles.FirstOrDefault(r => r.RoleName == "Admin");
             var sellerRole = dbContext.Roles.FirstOrDefault(r => r.RoleName == "Seller");
             var customerRole = dbContext.Roles.FirstOrDefault(r => r.RoleName == "Customer");
 
             var accounts = new List<Account>
             {
+                // Admin 01
+                new()
+                {
+                    AccountId = new Guid("11111111-0000-4000-a000-000000000001"),
+                    Username = "admin01",
+                    Password = passwordHasher.HashPassword(null!, "admin_pass_01"),
+                    Email = "admin01@woodify.com",
+                    Name = "Admin Woodify 01",
+                    PhoneNumber = "0900000001",
+                    Address = "1 Lý Thái Tổ, Quận 1, TP.HCM",
+                    Dob = new DateTime(1990, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                    Gender = "Male",
+                    RoleId = adminRoleId?.RoleId,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    IsActive = true
+                },
+                // Admin 02
+                new()
+                {
+                    AccountId = new Guid("11111111-0000-4000-a000-000000000002"),
+                    Username = "admin02",
+                    Password = passwordHasher.HashPassword(null!, "admin_pass_02"),
+                    Email = "admin02@woodify.com",
+                    Name = "Admin Woodify 02",
+                    PhoneNumber = "0900000002",
+                    Address = "2 Lý Thái Tổ, Quận 1, TP.HCM",
+                    Dob = new DateTime(1991, 2, 2, 0, 0, 0, DateTimeKind.Utc),
+                    Gender = "Female",
+                    RoleId = adminRoleId?.RoleId,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    IsActive = true
+                },
                 // Seller 01
                 new()
                 {
                     AccountId = new Guid("a7b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d"),
                     Username = "seller01",
-                    Password = "seller_pass_01",
+                    Password = passwordHasher.HashPassword(null!, "seller_pass_01"),
                     Email = "seller01@woodify.com",
                     Name = "Nguyễn Văn Seller",
                     PhoneNumber = "0901111111",
@@ -83,7 +121,7 @@ public static class AccountDbSeeder
                 {
                     AccountId = new Guid("b8c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e"),
                     Username = "seller02",
-                    Password = "seller_pass_02",
+                    Password = passwordHasher.HashPassword(null!, "seller_pass_02"),
                     Email = "seller02@woodify.com",
                     Name = "Trần Thị Seller",
                     PhoneNumber = "0901222222",
@@ -100,7 +138,7 @@ public static class AccountDbSeeder
                 {
                     AccountId = new Guid("c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f"),
                     Username = "customer01",
-                    Password = "password7",
+                    Password = passwordHasher.HashPassword(null!, "password7"),
                     Email = "customer01@gmail.com",
                     Name = "Lê Văn Customer",
                     PhoneNumber = "0901000007",
@@ -116,7 +154,7 @@ public static class AccountDbSeeder
                 {
                     AccountId = new Guid("d2e3f4a5-b6c7-4d8e-9f0a-1b2c3d4e5f6a"),
                     Username = "customer02",
-                    Password = "password8",
+                    Password = passwordHasher.HashPassword(null!, "password8"),
                     Email = "customer02@gmail.com",
                     Name = "Phạm Thị Customer",
                     PhoneNumber = "0901000008",
@@ -132,7 +170,7 @@ public static class AccountDbSeeder
                 {
                     AccountId = new Guid("e3f4a5b6-c7d8-4e9f-0a1b-2c3d4e5f6a7b"),
                     Username = "customer03",
-                    Password = "password9",
+                    Password = passwordHasher.HashPassword(null!, "password9"),
                     Email = "customer03@gmail.com",
                     Name = "Trần Văn Khách",
                     PhoneNumber = "0901000009",
@@ -148,7 +186,7 @@ public static class AccountDbSeeder
                 {
                     AccountId = Guid.NewGuid(),
                     Username = "customer04",
-                    Password = "password10",
+                    Password = passwordHasher.HashPassword(null!, "password10"),
                     Email = "customer04@gmail.com",
                     Name = "Hoàng Thị Mua Hàng",
                     PhoneNumber = "0901000010",
@@ -164,7 +202,7 @@ public static class AccountDbSeeder
                 {
                     AccountId = Guid.NewGuid(),
                     Username = "customer05",
-                    Password = "password11",
+                    Password = passwordHasher.HashPassword(null!, "password11"),
                     Email = "customer05@gmail.com",
                     Name = "Ngô Quốc Huy",
                     PhoneNumber = "0901000011",

@@ -9,7 +9,7 @@ namespace PaymentService.APIService.Controllers;
 /// Controller xử lý thanh toán PayOS
 /// </summary>
 [ApiController]
-[Route("api/payments")]
+[Route("api/payment/[controller]")]
 public class PaymentsController : ControllerBase
 {
     private readonly IPaymentAppService _paymentAppService;
