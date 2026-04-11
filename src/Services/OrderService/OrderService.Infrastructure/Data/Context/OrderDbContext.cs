@@ -210,8 +210,10 @@ public class OrderDbContext : DbContext
             entity.Property(e => e.OrderId).HasColumnName("order_id");
             entity.Property(e => e.AccountId).HasColumnName("account_id").IsRequired();
             entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
-            entity.Property(e => e.SubtotalCents).HasColumnName("subtotal_cents").HasColumnType("double precision").IsRequired();
-            entity.Property(e => e.TotalAmountCents).HasColumnName("total_amount_cents").HasColumnType("double precision").IsRequired();
+            entity.Property(e => e.SubtotalVnd).HasColumnName("subtotal_cents").HasColumnType("double precision").IsRequired();
+            entity.Property(e => e.TotalAmountVnd).HasColumnName("total_amount_cents").HasColumnType("double precision").IsRequired();
+            entity.Property(e => e.CommissionRate).HasColumnName("CommissionRate").HasColumnType("numeric(5,2)").IsRequired();
+            entity.Property(e => e.CommissionVnd).HasColumnName("CommissionCents").IsRequired();
             entity.Property(e => e.VoucherId).HasColumnName("voucher_id");
 
             entity.Property(e => e.Status).HasColumnName("status")
@@ -219,6 +221,10 @@ public class OrderDbContext : DbContext
                 .HasMaxLength(50)
                 .HasDefaultValue(OrderStatus.PENDING);
             entity.Property(e => e.DeliveryAddress).HasColumnName("delivery_address");
+            entity.Property(e => e.ProviderServiceCode).HasColumnName("provider_service_code")
+                .HasMaxLength(20)
+                .IsRequired()
+                .HasDefaultValue("STD");
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 
@@ -239,12 +245,12 @@ public class OrderDbContext : DbContext
             entity.Property(e => e.OrderItemId).HasColumnName("order_item_id");
             entity.Property(e => e.OrderId).HasColumnName("order_id").IsRequired();
             entity.Property(e => e.VersionId).HasColumnName("version_id").IsRequired();
-            entity.Property(e => e.UnitPriceCents).HasColumnName("unit_price_cents").IsRequired();
+            entity.Property(e => e.UnitPriceVnd).HasColumnName("unit_price_cents").IsRequired();
             entity.Property(e => e.Quantity).HasColumnName("quantity").IsRequired().HasDefaultValue(1);
-            entity.Property(e => e.DiscountCents).HasColumnName("discount_cents").HasDefaultValue(0);
-            entity.Property(e => e.TaxCents).HasColumnName("tax_cents").HasColumnType("double precision").HasDefaultValue(0);
+            entity.Property(e => e.DiscountVnd).HasColumnName("discount_cents").HasDefaultValue(0);
+            entity.Property(e => e.TaxVnd).HasColumnName("tax_cents").HasColumnType("double precision").HasDefaultValue(0);
             entity.Property(e => e.ShipmentId).HasColumnName("shipment_id");
-            entity.Property(e => e.LineTotalCents).HasColumnName("line_total_cents").HasColumnType("double precision").IsRequired();
+            entity.Property(e => e.LineTotalVnd).HasColumnName("line_total_cents").HasColumnType("double precision").IsRequired();
             entity.Property(e => e.Status).HasColumnName("status")
                 .HasConversion<string>()
                 .HasMaxLength(50)

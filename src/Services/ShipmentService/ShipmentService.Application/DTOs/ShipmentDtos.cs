@@ -19,7 +19,7 @@ public class UpdateShipmentDto
     public string? DeliveryAddress { get; set; }
     public double? TotalWeightGrams { get; set; }
     public string? BulkyType { get; set; }
-    public long? FinalShippingFeeCents { get; set; }
+    public long? FinalShippingFeeVnd { get; set; }
     public bool? IsFreeShipping { get; set; }
     public DateTime? PickupScheduledAt { get; set; }
     public DateTime? PickedUpAt { get; set; }
@@ -47,7 +47,7 @@ public class ShipmentDto
     public string? DeliveryAddress { get; set; }
     public double TotalWeightGrams { get; set; }
     public string? BulkyType { get; set; }
-    public long FinalShippingFeeCents { get; set; }
+    public long FinalShippingFeeVnd { get; set; }
     public bool IsFreeShipping { get; set; }
     public DateTime? PickupScheduledAt { get; set; }
     public DateTime? PickedUpAt { get; set; }

@@ -33,9 +33,9 @@ public class Payment
     public string? ProviderPaymentId { get; set; }
 
     /// <summary>
-    /// Số tiền thanh toán (đơn vị: cents/đồng)
+    /// Số tiền thanh toán (đơn vị: đồng)
     /// </summary>
-    public long AmountCents { get; set; }
+    public long AmountVnd { get; set; }
 
     /// <summary>
     /// Đơn vị tiền tệ

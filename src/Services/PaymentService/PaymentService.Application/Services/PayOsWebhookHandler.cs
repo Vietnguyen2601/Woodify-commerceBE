@@ -123,10 +123,10 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
         }
 
         // Lưu balance trước
-        var balanceBefore = wallet.BalanceCents;
+        var balanceBefore = wallet.BalanceVnd;
 
         // Cộng tiền vào ví
-        wallet.BalanceCents += payment.AmountCents;
+        wallet.BalanceVnd += payment.AmountVnd;
         wallet.UpdatedAt = DateTime.UtcNow;
         await _walletRepository.UpdateAsync(wallet);
 
@@ -136,9 +136,9 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
             WalletTxId = Guid.NewGuid(),
             WalletId = wallet.WalletId,
             TxType = WalletTransactionType.Credit,
-            AmountCents = payment.AmountCents,
-            BalanceBeforeCents = balanceBefore,
-            BalanceAfterCents = wallet.BalanceCents,
+            AmountVnd = payment.AmountVnd,
+            BalanceBeforeVnd = balanceBefore,
+            BalanceAfterVnd = wallet.BalanceVnd,
             RelatedPaymentId = payment.PaymentId,
             Status = WalletTransactionStatus.Completed,
             CreatedAt = DateTime.UtcNow,
@@ -155,7 +155,7 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 
         _logger.LogInformation(
             "Payment processed successfully. WalletId: {WalletId}, TransactionId: {TransactionId}, NewBalance: {Balance}",
-            wallet.WalletId, transaction.WalletTxId, wallet.BalanceCents);
+            wallet.WalletId, transaction.WalletTxId, wallet.BalanceVnd);
     }
 
     /// <summary>

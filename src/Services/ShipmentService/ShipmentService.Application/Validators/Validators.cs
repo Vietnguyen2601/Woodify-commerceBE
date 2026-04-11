@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using ShipmentService.Application.DTOs;
 
 namespace ShipmentService.Application.Validators;
@@ -25,9 +25,9 @@ public class UpdateShipmentValidator : AbstractValidator<UpdateShipmentDto>
             .GreaterThan(0).WithMessage("TotalWeightGrams must be greater than 0")
             .When(x => x.TotalWeightGrams.HasValue);
 
-        RuleFor(x => x.FinalShippingFeeCents)
-            .GreaterThanOrEqualTo(0).WithMessage("FinalShippingFeeCents must be >= 0")
-            .When(x => x.FinalShippingFeeCents.HasValue);
+        RuleFor(x => x.FinalShippingFeeVnd)
+            .GreaterThanOrEqualTo(0).WithMessage("FinalShippingFeeVnd must be >= 0")
+            .When(x => x.FinalShippingFeeVnd.HasValue);
 
         RuleFor(x => x.BulkyType)
             .Must(b => b == null || AllowedBulkyTypes.Contains(b))

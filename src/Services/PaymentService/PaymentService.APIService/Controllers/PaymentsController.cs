@@ -46,7 +46,7 @@ public class PaymentsController : ControllerBase
     ///         "orderIds": ["guid1", "guid2"],
     ///         "paymentMethod": "COD",
     ///         "accountId": "account-guid",
-    ///         "totalAmountCents": 1500000
+    ///         "TotalAmountVnd": 1500000
     ///     }
     ///
     /// 2. Wallet Payment (same structure, method="WALLET"):
@@ -54,7 +54,7 @@ public class PaymentsController : ControllerBase
     ///         "orderIds": [...],
     ///         "paymentMethod": "WALLET",
     ///         "accountId": "...",
-    ///         "totalAmountCents": 1500000
+    ///         "TotalAmountVnd": 1500000
     ///     }
     ///
     /// 3. PayOS Payment (with return URLs):
@@ -62,7 +62,7 @@ public class PaymentsController : ControllerBase
     ///         "orderIds": [...],
     ///         "paymentMethod": "PAYOS",
     ///         "accountId": "...",
-    ///         "totalAmountCents": 1500000,
+    ///         "TotalAmountVnd": 1500000,
     ///         "returnUrl": "https://app.com/payment/success",
     ///         "cancelUrl": "https://app.com/payment/cancel"
     ///     }

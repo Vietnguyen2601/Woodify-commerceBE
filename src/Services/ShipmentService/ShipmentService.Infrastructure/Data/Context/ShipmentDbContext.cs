@@ -52,7 +52,7 @@ public class ShipmentDbContext : DbContext
 
             entity.Property(e => e.TotalWeightGrams).HasColumnName("total_weight_grams").IsRequired();
             entity.Property(e => e.BulkyType).HasColumnName("bulky_type").HasMaxLength(20);
-            entity.Property(e => e.FinalShippingFeeCents).HasColumnName("final_shipping_fee_cents").IsRequired();
+            entity.Property(e => e.FinalShippingFeeVnd).HasColumnName("final_shipping_fee_cents").IsRequired();
             entity.Property(e => e.IsFreeShipping).HasColumnName("is_free_shipping").HasDefaultValue(false);
 
             entity.Property(e => e.PickupScheduledAt).HasColumnName("pickup_scheduled_at");

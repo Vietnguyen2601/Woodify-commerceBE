@@ -100,7 +100,7 @@ public class PaymentAppService : IPaymentAppService
                 AccountId = request.AccountId,
                 Provider = PROVIDER_PAYOS,
                 ProviderPaymentId = request.OrderCode.ToString(),
-                AmountCents = request.Amount, // PayOS dùng VND, không phải cents
+                AmountVnd = request.Amount, // PayOS dùng VND, không phải cents
                 Currency = "VND",
                 Status = PaymentStatus.Created,
                 ProviderResponse = payOsResponse.RawResponse
@@ -180,8 +180,8 @@ public class PaymentAppService : IPaymentAppService
             {
                 PaymentId = payment.PaymentId,
                 OrderCode = orderCode,
-                Amount = (int)payment.AmountCents,
-                AmountPaid = payment.Status == PaymentStatus.Succeeded ? (int)payment.AmountCents : 0,
+                Amount = (int)payment.AmountVnd,
+                AmountPaid = payment.Status == PaymentStatus.Succeeded ? (int)payment.AmountVnd : 0,
                 Status = payment.Status.ToString(),
                 Provider = PROVIDER_PAYOS,
                 CreatedAt = payment.CreatedAt,
@@ -218,8 +218,8 @@ public class PaymentAppService : IPaymentAppService
             {
                 PaymentId = payment.PaymentId,
                 OrderCode = 0,
-                Amount = (int)payment.AmountCents,
-                AmountPaid = payment.Status == PaymentStatus.Succeeded ? (int)payment.AmountCents : 0,
+                Amount = (int)payment.AmountVnd,
+                AmountPaid = payment.Status == PaymentStatus.Succeeded ? (int)payment.AmountVnd : 0,
                 Status = payment.Status.ToString(),
                 Provider = payment.Provider ?? "",
                 CreatedAt = payment.CreatedAt,
@@ -242,7 +242,7 @@ public class PaymentAppService : IPaymentAppService
         try
         {
             _logger.LogInformation("Creating payment. Method: {Method}, Orders: {OrderCount}, Amount: {Amount}",
-                request.PaymentMethod, request.OrderIds.Count, request.TotalAmountCents);
+                request.PaymentMethod, request.OrderIds.Count, request.TotalAmountVnd);
 
             // ===== VALIDATION =====
             // Validate orderIds
@@ -260,9 +260,9 @@ public class PaymentAppService : IPaymentAppService
             if (request.AccountId == Guid.Empty)
                 return ServiceResult<CreatePaymentResponse>.BadRequest("AccountId không hợp lệ");
 
-            // Validate TotalAmountCents
-            if (request.TotalAmountCents <= 0)
-                return ServiceResult<CreatePaymentResponse>.BadRequest("TotalAmountCents phải lớn hơn 0");
+            // Validate TotalAmountVnd
+            if (request.TotalAmountVnd <= 0)
+                return ServiceResult<CreatePaymentResponse>.BadRequest("TotalAmountVnd phải lớn hơn 0");
 
             // ===== ROUTE BY PAYMENT METHOD =====
             return request.PaymentMethod.ToUpperInvariant() switch
@@ -296,11 +296,11 @@ public class PaymentAppService : IPaymentAppService
         try
         {
             _logger.LogInformation("Processing COD payment. OrderIds: {OrderCount}, Amount: {Amount}",
-                request.OrderIds.Count, request.TotalAmountCents);
+                request.OrderIds.Count, request.TotalAmountVnd);
 
             // ===== Step 1: Validate amount =====
-            if (request.TotalAmountCents <= 0)
-                return ServiceResult<CreatePaymentResponse>.BadRequest("TotalAmountCents phải lớn hơn 0");
+            if (request.TotalAmountVnd <= 0)
+                return ServiceResult<CreatePaymentResponse>.BadRequest("TotalAmountVnd phải lớn hơn 0");
 
             // ===== Step 2: Tạo Payment record =====
             // Payment entity - giữ nguyên như yêu cầu, không thêm trường
@@ -309,7 +309,7 @@ public class PaymentAppService : IPaymentAppService
                 OrderId = request.OrderIds.FirstOrDefault(), // Lưu order đầu tiên làm đại diện
                 AccountId = request.AccountId,
                 Provider = null, // COD không dùng provider
-                AmountCents = request.TotalAmountCents, // === Lưu số tiền chính xác ===
+                AmountVnd = request.TotalAmountVnd, // === Lưu số tiền chính xác ===
                 Status = PaymentStatus.Created, // Chờ thanh toán khi nhận hàng
                 CreatedAt = DateTime.UtcNow
             };
@@ -324,7 +324,7 @@ public class PaymentAppService : IPaymentAppService
             {
                 PaymentId = payment.PaymentId,
                 OrderIds = request.OrderIds,
-                TotalAmount = request.TotalAmountCents,
+                TotalAmount = request.TotalAmountVnd,
                 PaymentMethod = "COD",
                 Status = "PENDING",
                 Message = "Thanh toán COD đã được tạo. Chờ xác nhận khi nhận hàng"
@@ -350,11 +350,11 @@ public class PaymentAppService : IPaymentAppService
         try
         {
             _logger.LogInformation("Processing Wallet payment. Account: {AccountId}, Amount: {Amount}",
-                request.AccountId, request.TotalAmountCents);
+                request.AccountId, request.TotalAmountVnd);
 
             // ===== Step 1: Validate amount =====
-            if (request.TotalAmountCents <= 0)
-                return ServiceResult<CreatePaymentResponse>.BadRequest("TotalAmountCents phải lớn hơn 0");
+            if (request.TotalAmountVnd <= 0)
+                return ServiceResult<CreatePaymentResponse>.BadRequest("TotalAmountVnd phải lớn hơn 0");
 
             // ===== Step 2: Fetch wallet =====
             var wallet = await _walletRepository.GetByAccountIdAsync(request.AccountId);
@@ -362,24 +362,24 @@ public class PaymentAppService : IPaymentAppService
                 return ServiceResult<CreatePaymentResponse>.NotFound("Không tìm thấy ví của tài khoản");
 
             // ===== Step 3: Check balance =====
-            if (wallet.BalanceCents < request.TotalAmountCents)
+            if (wallet.BalanceVnd < request.TotalAmountVnd)
             {
                 _logger.LogWarning("Insufficient wallet balance. Account: {AccountId}, Balance: {Balance}, Amount: {Amount}",
-                    request.AccountId, wallet.BalanceCents, request.TotalAmountCents);
+                    request.AccountId, wallet.BalanceVnd, request.TotalAmountVnd);
 
                 return ServiceResult<CreatePaymentResponse>.BadRequest(
-                    $"Số dư không đủ. Cần: {request.TotalAmountCents} cents, Hiện có: {wallet.BalanceCents} cents"
+                    $"Số dư không đủ. Cần: {request.TotalAmountVnd} VND, Hiện có: {wallet.BalanceVnd} VND"
                 );
             }
 
             // ===== Step 4: Deduct from wallet =====
-            wallet.BalanceCents -= request.TotalAmountCents;
+            wallet.BalanceVnd -= request.TotalAmountVnd;
 
             var transaction = new WalletTransaction
             {
                 WalletId = wallet.WalletId,
                 TxType = WalletTransactionType.Debit,
-                AmountCents = request.TotalAmountCents,
+                AmountVnd = request.TotalAmountVnd,
                 Note = $"Thanh toán {request.OrderIds.Count} đơn hàng",
                 CreatedAt = DateTime.UtcNow
             };
@@ -390,7 +390,7 @@ public class PaymentAppService : IPaymentAppService
                 OrderId = request.OrderIds.FirstOrDefault(),
                 AccountId = request.AccountId,
                 Provider = null, // Wallet là internal
-                AmountCents = request.TotalAmountCents,
+                AmountVnd = request.TotalAmountVnd,
                 Status = PaymentStatus.Succeeded, // Thanh toán ngay lập tức
                 CreatedAt = DateTime.UtcNow
             };
@@ -406,16 +406,16 @@ public class PaymentAppService : IPaymentAppService
             // Hoặc: Call OrderService API để update orders
 
             _logger.LogInformation("Wallet payment succeeded. PaymentId: {PaymentId}, RemainingBalance: {Balance}",
-                payment.PaymentId, wallet.BalanceCents);
+                payment.PaymentId, wallet.BalanceVnd);
 
             return ServiceResult<CreatePaymentResponse>.Success(new CreatePaymentResponse
             {
                 PaymentId = payment.PaymentId,
                 OrderIds = request.OrderIds,
-                TotalAmount = request.TotalAmountCents,
+                TotalAmount = request.TotalAmountVnd,
                 PaymentMethod = "WALLET",
                 Status = "SUCCEEDED",
-                RemainingBalance = wallet.BalanceCents,
+                RemainingBalance = wallet.BalanceVnd,
                 Message = "Thanh toán ví điện tử thành công"
             });
         }
@@ -438,18 +438,20 @@ public class PaymentAppService : IPaymentAppService
         try
         {
             _logger.LogInformation("Processing PayOS payment. OrderIds: {OrderCount}, Amount: {Amount}",
-                request.OrderIds.Count, request.TotalAmountCents);
+                request.OrderIds.Count, request.TotalAmountVnd);
 
             // ===== Step 1: Validate amount =====
-            if (request.TotalAmountCents <= 0)
-                return ServiceResult<CreatePaymentResponse>.BadRequest("TotalAmountCents phải lớn hơn 0");
+            if (request.TotalAmountVnd <= 0)
+                return ServiceResult<CreatePaymentResponse>.BadRequest("TotalAmountVnd phải lớn hơn 0");
 
             // ===== Step 2: Generate unique order code =====
             long orderCode = PaymentHelper.GenerateOrderCode(request.OrderIds);
 
             // ===== Step 3: Prepare PayOS request =====
-            // Convert cents → VND (1 VND = 100 cents)
-            int amountVnd = (int)(request.TotalAmountCents / 100);
+            // PayOS Amount: integer VND (must match order TotalAmountVnd)
+            int amountVnd = request.TotalAmountVnd > int.MaxValue
+                ? int.MaxValue
+                : (int)request.TotalAmountVnd;
 
             // Description đơn giản: khách hàng chỉ cần biết số đơn hàng và tổng tiền
             var rawDesc = $"Thanh toan {request.OrderIds.Count} don hang Woodify";
@@ -484,7 +486,7 @@ public class PaymentAppService : IPaymentAppService
                 AccountId = request.AccountId,
                 Provider = PROVIDER_PAYOS,
                 ProviderPaymentId = orderCode.ToString(),
-                AmountCents = request.TotalAmountCents,
+                AmountVnd = request.TotalAmountVnd,
                 Status = PaymentStatus.Created, // Chờ webhook confirm
                 ProviderResponse = payOsResponse.RawResponse,
                 CreatedAt = DateTime.UtcNow
@@ -500,7 +502,7 @@ public class PaymentAppService : IPaymentAppService
             {
                 PaymentId = payment.PaymentId,
                 OrderIds = request.OrderIds,
-                TotalAmount = request.TotalAmountCents,
+                TotalAmount = request.TotalAmountVnd,
                 PaymentMethod = "PAYOS",
                 Status = "CREATED",
                 OrderCode = orderCode,

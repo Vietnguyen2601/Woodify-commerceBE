@@ -1,4 +1,4 @@
-﻿using ShipmentService.Application.Constants;
+using ShipmentService.Application.Constants;
 using ShipmentService.Application.DTOs;
 using ShipmentService.Application.Interfaces;
 using ShipmentService.Application.Mappers;
@@ -6,7 +6,9 @@ using ShipmentService.Application.Validators;
 using ShipmentService.Domain.Entities;
 using ShipmentService.Infrastructure.Cache;
 using ShipmentService.Infrastructure.Repositories.IRepositories;
+using Shared.Constants;
 using Shared.Results;
+using Shared.Shipping;
 
 namespace ShipmentService.Application.Services;
 
@@ -17,22 +19,19 @@ public class ShipmentAppService : IShipmentService
     private readonly IShippingProviderRepository _providerRepository;
     private readonly IOrderInfoCacheRepository _orderInfoCache;
     private readonly IShopInfoCacheRepository _shopInfoCache;
-    private readonly IShippingFeeCalculator _feeCalculator;
 
     public ShipmentAppService(
         IShipmentRepository shipmentRepository,
         IProviderServiceRepository providerServiceRepository,
         IShippingProviderRepository providerRepository,
         IOrderInfoCacheRepository orderInfoCache,
-        IShopInfoCacheRepository shopInfoCache,
-        IShippingFeeCalculator feeCalculator)
+        IShopInfoCacheRepository shopInfoCache)
     {
         _shipmentRepository = shipmentRepository;
         _providerServiceRepository = providerServiceRepository;
         _providerRepository = providerRepository;
         _orderInfoCache = orderInfoCache;
         _shopInfoCache = shopInfoCache;
-        _feeCalculator = feeCalculator;
     }
 
     public async Task<ServiceResult<IEnumerable<ShipmentDto>>> GetAllAsync()
@@ -72,7 +71,7 @@ public class ShipmentAppService : IShipmentService
             var orderInfo = await _orderInfoCache.GetOrderInfoAsync(dto.OrderId);
             if (orderInfo == null)
                 return ServiceResult<ShipmentDto>.BadRequest(
-                    "Order chưa có trong ShipmentService (cần event order.created qua RabbitMQ).");
+                    "Order chua c� trong ShipmentService (c?n event order.created qua RabbitMQ).");
 
             if (orderInfo.ShopId != dto.ShopId)
                 return ServiceResult<ShipmentDto>.BadRequest(
@@ -114,32 +113,15 @@ public class ShipmentAppService : IShipmentService
             int weightGrams = (int)Math.Ceiling(weight);
             string bulkyType = CalculateBulkyType(weight);
 
-            // Calculate base fee using mock calculator
-            int serviceId = _feeCalculator.MapServiceCode(providerServiceCode);
-            var feeResult = await _feeCalculator.CalculateAsync(serviceId, weightGrams);
-
-            long baseFee = feeResult.Total;
-
-            // Apply bulky surcharge
-            const double BulkySurchargeRate = 0.20;
-            const double SuperBulkySurchargeRate = 0.50;
-            long surcharge = bulkyType switch
-            {
-                "BULKY" => (long)Math.Round(baseFee * BulkySurchargeRate),
-                "SUPER_BULKY" => (long)Math.Round(baseFee * SuperBulkySurchargeRate),
-                _ => 0L
-            };
-
-            // Apply provider multiplier
-            double multiplier = providerService.MultiplierFee ?? 1.0;
-            long finalShippingFeeCents = (long)Math.Round((baseFee + surcharge) * multiplier);
-
-            // Simple free shipping check based on order total
-            long orderTotalCents = (long)orderInfo.TotalAmountCents;
-            const long FreeShipThreshold = 50000000; // 500k VND = 50M cents
-            bool isFreeShipping = orderTotalCents >= FreeShipThreshold;
-            if (isFreeShipping)
-                finalShippingFeeCents = 0;
+            double orderSubtotalVnd = orderInfo.SubtotalVnd > 0
+                ? orderInfo.SubtotalVnd
+                : 0;
+            var canonCode = ShippingServiceConstants.CanonicalizeProviderServiceCode(providerServiceCode);
+            long FinalShippingFeeVnd = ShippingPricing.FinalShippingFeeVnd(
+                canonCode,
+                weightGrams,
+                orderSubtotalVnd);
+            bool isFreeShipping = orderSubtotalVnd >= ShippingPricing.FreeShippingSubtotalThresholdVnd;
 
             // Use addresses from DTO or fallback to cached values
             string pickupAddress = dto.PickupAddress ?? shopInfo?.DefaultPickupAddress ?? "default_pickup";
@@ -163,7 +145,7 @@ public class ShipmentAppService : IShipmentService
                 TrackingNumber = GenerateTrackingNumber(),
                 TotalWeightGrams = weight,
                 BulkyType = bulkyType,
-                FinalShippingFeeCents = finalShippingFeeCents,
+                FinalShippingFeeVnd = FinalShippingFeeVnd,
                 IsFreeShipping = isFreeShipping,
                 DeliveryEstimatedAt = deliveryEstimatedAt,
                 CreatedAt = DateTime.UtcNow,

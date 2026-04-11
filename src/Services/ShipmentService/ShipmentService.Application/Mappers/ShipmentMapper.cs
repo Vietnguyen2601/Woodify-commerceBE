@@ -20,7 +20,7 @@ public static class ShipmentMapper
             DeliveryAddress = shipment.DeliveryAddressId,
             TotalWeightGrams = shipment.TotalWeightGrams,
             BulkyType = shipment.BulkyType,
-            FinalShippingFeeCents = shipment.FinalShippingFeeCents,
+            FinalShippingFeeVnd = shipment.FinalShippingFeeVnd,
             IsFreeShipping = shipment.IsFreeShipping,
             PickupScheduledAt = shipment.PickupScheduledAt,
             PickedUpAt = shipment.PickedUpAt,
@@ -38,7 +38,7 @@ public static class ShipmentMapper
         return new Shipment
         {
             OrderId = dto.OrderId,
-            // TrackingNumber, ProviderServiceId, BulkyType, FinalShippingFeeCents, DeliveryEstimatedAt are set by the service
+            // TrackingNumber, ProviderServiceId, BulkyType, FinalShippingFeeVnd, DeliveryEstimatedAt are set by the service
             PickupAddressId = dto.PickupAddress,
             DeliveryAddressId = dto.DeliveryAddress
         };
@@ -55,7 +55,7 @@ public static class ShipmentMapper
         if (dto.DeliveryAddress != null) shipment.DeliveryAddressId = dto.DeliveryAddress;
         if (dto.TotalWeightGrams.HasValue) shipment.TotalWeightGrams = dto.TotalWeightGrams.Value;
         if (dto.BulkyType != null) shipment.BulkyType = dto.BulkyType;
-        if (dto.FinalShippingFeeCents.HasValue) shipment.FinalShippingFeeCents = dto.FinalShippingFeeCents.Value;
+        if (dto.FinalShippingFeeVnd.HasValue) shipment.FinalShippingFeeVnd = dto.FinalShippingFeeVnd.Value;
         if (dto.IsFreeShipping.HasValue) shipment.IsFreeShipping = dto.IsFreeShipping.Value;
         if (dto.PickupScheduledAt.HasValue) shipment.PickupScheduledAt = dto.PickupScheduledAt;
         if (dto.PickedUpAt.HasValue) shipment.PickedUpAt = dto.PickedUpAt;

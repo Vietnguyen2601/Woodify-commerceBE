@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using OrderService.Infrastructure.Data.Context;
@@ -11,9 +12,11 @@ using OrderService.Infrastructure.Data.Context;
 namespace OrderService.Infrastructure.Migrations
 {
     [DbContext(typeof(OrderDbContext))]
-    partial class OrderDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260411091053_ServiceCode")]
+    partial class ServiceCode
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -93,13 +96,11 @@ namespace OrderService.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("account_id");
 
-                    b.Property<long>("CommissionVnd")
-                        .HasColumnType("bigint")
-                        .HasColumnName("CommissionCents");
+                    b.Property<long>("CommissionCents")
+                        .HasColumnType("bigint");
 
                     b.Property<decimal>("CommissionRate")
-                        .HasColumnType("numeric")
-                        .HasColumnName("CommissionRate");
+                        .HasColumnType("numeric");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -129,11 +130,11 @@ namespace OrderService.Infrastructure.Migrations
                         .HasDefaultValue("PENDING")
                         .HasColumnName("status");
 
-                    b.Property<double>("SubtotalVnd")
+                    b.Property<double>("SubtotalCents")
                         .HasColumnType("double precision")
                         .HasColumnName("subtotal_cents");
 
-                    b.Property<double>("TotalAmountVnd")
+                    b.Property<double>("TotalAmountCents")
                         .HasColumnType("double precision")
                         .HasColumnName("total_amount_cents");
 
@@ -167,13 +168,13 @@ namespace OrderService.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<long>("DiscountVnd")
+                    b.Property<long>("DiscountCents")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint")
                         .HasDefaultValue(0L)
                         .HasColumnName("discount_cents");
 
-                    b.Property<double>("LineTotalVnd")
+                    b.Property<double>("LineTotalCents")
                         .HasColumnType("double precision")
                         .HasColumnName("line_total_cents");
 
@@ -199,13 +200,13 @@ namespace OrderService.Infrastructure.Migrations
                         .HasDefaultValue("UNFULFILLED")
                         .HasColumnName("status");
 
-                    b.Property<double>("TaxVnd")
+                    b.Property<double>("TaxCents")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("double precision")
                         .HasDefaultValue(0.0)
                         .HasColumnName("tax_cents");
 
-                    b.Property<long>("UnitPriceVnd")
+                    b.Property<long>("UnitPriceCents")
                         .HasColumnType("bigint")
                         .HasColumnName("unit_price_cents");
 

@@ -1,4 +1,4 @@
-﻿namespace ShipmentService.Application.DTOs;
+namespace ShipmentService.Application.DTOs;
 
 /// <summary>Request DTO for the shipping fee preview endpoint.</summary>
 public class ShippingFeePreviewRequest
@@ -23,16 +23,16 @@ public class ShippingFeePreviewResponse
     public string? ServiceName { get; set; }
 
     /// <summary>Raw fee from the shipping provider (cents).</summary>
-    public long BaseFeeCents { get; set; }
+    public long BaseFeeVnd { get; set; }
 
-    /// <summary>Bulky surcharge applied on top of BaseFeeCents (cents).</summary>
-    public long SurchargeCents { get; set; }
+    /// <summary>Bulky surcharge applied on top of BaseFeeVnd (cents).</summary>
+    public long SurchargeVnd { get; set; }
 
     /// <summary>Multiplier from ProviderService.MultiplierFee - platform margin.</summary>
     public double MultiplierFee { get; set; }
 
     /// <summary>final = Round((base + surcharge) * multiplier). 0 when IsFreeShipping.</summary>
-    public long FinalShippingFeeCents { get; set; }
+    public long FinalShippingFeeVnd { get; set; }
 
     public bool IsFreeShipping { get; set; }
     public int? EstimatedDaysMin { get; set; }

@@ -23,7 +23,7 @@ public class Shipment
 
     public string? BulkyType { get; set; } // NORMAL, BULKY, SUPER_BULKY
 
-    public long FinalShippingFeeCents { get; set; }
+    public long FinalShippingFeeVnd { get; set; }
 
     public bool IsFreeShipping { get; set; } = false;
 

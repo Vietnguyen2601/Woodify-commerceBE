@@ -19,6 +19,9 @@ public interface IOrderService
     /// </summary>
     Task<ServiceResult<CreateOrderResponse>> CreateOrderAsync(CreateOrderRequest request);
 
+    /// <summary>ECO / STD / EXP fees + grand totals before placing order (matches create-order math).</summary>
+    Task<ServiceResult<CheckoutShippingPreviewResponseDto>> PreviewCheckoutShippingAsync(CheckoutShippingPreviewRequest request);
+
     /// <summary>
     /// Legacy method - giữ cho backward compatibility (nếu cần)
     /// </summary>
@@ -26,6 +29,12 @@ public interface IOrderService
 
     Task<ServiceResult<OrderDto>> GetOrderByIdAsync(Guid orderId);
     Task<ServiceResult<List<OrderDto>>> GetOrdersByAccountIdAsync(Guid accountId);
+
+    /// <summary>
+    /// Danh sách đơn của account cho customer: line items + chi tiết sản ph��m (cache), có PaymentStatus, không ShipmentId.
+    /// </summary>
+    Task<ServiceResult<List<CustomerAccountOrderDto>>> GetOrdersByAccountForCustomerAsync(Guid accountId);
+
     Task<ServiceResult<List<OrderWithProductDetailsDto>>> GetOrdersByShopIdAsync(Guid shopId);
     Task<ServiceResult<OrderDto>> UpdateOrderStatusAsync(UpdateOrderStatusDto dto);
     Task<ServiceResult<OrderListResultDto>> GetAllOrdersAsync(GetAllOrdersQueryDto query);

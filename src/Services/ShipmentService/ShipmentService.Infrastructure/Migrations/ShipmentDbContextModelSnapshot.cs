@@ -122,7 +122,7 @@ namespace ShipmentService.Infrastructure.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("failure_reason");
 
-                    b.Property<long>("FinalShippingFeeCents")
+                    b.Property<long>("FinalShippingFeeVnd")
                         .HasColumnType("bigint")
                         .HasColumnName("final_shipping_fee_cents");
 

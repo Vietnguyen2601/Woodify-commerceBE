@@ -4,30 +4,26 @@ using ShipmentService.Application.DTOs;
 using ShipmentService.Application.Interfaces;
 using ShipmentService.Infrastructure.Cache;
 using ShipmentService.Infrastructure.Repositories.IRepositories;
+using Shared.Constants;
 using Shared.Results;
+using Shared.Shipping;
 
 namespace ShipmentService.Application.Services;
 
 public class ShippingFeePreviewAppService : IShippingFeePreviewService
 {
-    private const double BulkySurchargeRate = 0.20;
-    private const double SuperBulkySurchargeRate = 0.50;
-
     private readonly IProviderServiceRepository _providerServiceRepository;
-    private readonly IShippingFeeCalculator _feeCalculator;
     private readonly IOrderInfoCacheRepository _orderInfoCache;
     private readonly IShopInfoCacheRepository _shopInfoCache;
     private readonly ILogger<ShippingFeePreviewAppService> _logger;
 
     public ShippingFeePreviewAppService(
         IProviderServiceRepository providerServiceRepository,
-        IShippingFeeCalculator feeCalculator,
         IOrderInfoCacheRepository orderInfoCache,
         IShopInfoCacheRepository shopInfoCache,
         ILogger<ShippingFeePreviewAppService> logger)
     {
         _providerServiceRepository = providerServiceRepository;
-        _feeCalculator = feeCalculator;
         _orderInfoCache = orderInfoCache;
         _shopInfoCache = shopInfoCache;
         _logger = logger;
@@ -52,77 +48,50 @@ public class ShippingFeePreviewAppService : IShippingFeePreviewService
             ? orderInfo.TotalWeightGrams
             : 1000.0;
 
-        string bulkyType = CalculateBulkyType(totalWeightGrams);
-        long subtotalCents = (long)(orderInfo?.TotalAmountCents ?? 10_000_000L);
+        double subtotalVnd = orderInfo?.SubtotalVnd > 0
+            ? orderInfo.SubtotalVnd
+            : 0;
 
         string providerServiceCode = !string.IsNullOrEmpty(request.ProviderServiceCode)
             ? request.ProviderServiceCode
             : orderInfo?.ProviderServiceCode
               ?? shopInfo?.DefaultProviderServiceCode
-              ?? "STD";
+              ?? ShippingServiceConstants.DEFAULT_PROVIDER_SERVICE_CODE;
 
-        var providerService = await _providerServiceRepository
-            .GetByCodeAsync(providerServiceCode);
-
-        if (providerService == null)
+        var canon = ShippingServiceConstants.CanonicalizeProviderServiceCode(providerServiceCode);
+        if (!ShippingServiceConstants.IsValidServiceCode(canon))
         {
-            var safeCode = providerServiceCode?.Replace("\r", "").Replace("\n", "");
-            _logger.LogWarning("ProviderService not found: code='{Code}'", safeCode);
             return ServiceResult<ShippingFeePreviewResponse>.BadRequest(
-                ShipmentMessages.FeePreviewServiceNotAvailable);
+                $"Invalid provider_service_code: {providerServiceCode}");
         }
+
+        int weightGrams = (int)Math.Ceiling(totalWeightGrams);
+        long feeBeforeFree = ShippingPricing.ComputeShippingFeeVnd(canon, weightGrams);
+        long finalFee = ShippingPricing.FinalShippingFeeVnd(canon, weightGrams, subtotalVnd);
+        bool isFreeShipping = subtotalVnd >= ShippingPricing.FreeShippingSubtotalThresholdVnd;
+
+        var providerService = await _providerServiceRepository.GetByCodeAsync(canon);
 
         _logger.LogInformation(
-            "Fee preview: service={Code} ({Name}), weight={Weight}g, bulky={Bulky}",
-            providerService.Code, providerService.Name, totalWeightGrams, bulkyType);
-
-        int serviceId = _feeCalculator.MapServiceCode(providerServiceCode);
-        int weightGrams = (int)Math.Ceiling(totalWeightGrams);
-
-        ShippingFeeResult feeResult;
-        try
-        {
-            feeResult = await _feeCalculator.CalculateAsync(serviceId, weightGrams);
-        }
-        catch (Exception ex)
-        {
-            var safeCode = (providerServiceCode ?? string.Empty).Replace("\r", string.Empty)
-                .Replace("\n", string.Empty);
-            _logger.LogError(ex, "Fee calculator error: service={Code}", safeCode);
-            return ServiceResult<ShippingFeePreviewResponse>.InternalServerError(
-                ShipmentMessages.FeePreviewProviderError);
-        }
-
-        long baseFee = feeResult.Total;
-        long surcharge = bulkyType switch
-        {
-            "BULKY" => (long)Math.Round(baseFee * BulkySurchargeRate),
-            "SUPER_BULKY" => (long)Math.Round(baseFee * SuperBulkySurchargeRate),
-            _ => 0L
-        };
-
-        double multiplier = providerService.MultiplierFee ?? 1.0;
-        long rawFinal = (long)Math.Round((baseFee + surcharge) * multiplier);
-
-        var (isFreeShipping, freeShipReason) = CheckFreeShipping(subtotalCents);
-        long finalFee = isFreeShipping ? 0L : rawFinal;
+            "Fee preview (unified): service={Code}, weight={Weight}g, subtotal={Subtotal}, fee={Fee}",
+            canon, totalWeightGrams, subtotalVnd, finalFee);
 
         string message = isFreeShipping
-            ? $"Miễn phí vận chuyển — {freeShipReason}"
+            ? $"Free shipping — subtotal ≥ {ShippingPricing.FreeShippingSubtotalThresholdVnd:N0} VND"
             : ShipmentMessages.FeePreviewSuccess;
 
         return ServiceResult<ShippingFeePreviewResponse>.Success(
             new ShippingFeePreviewResponse
             {
-                ProviderServiceCode = providerService.Code,
-                ServiceName = providerService.Name,
-                BaseFeeCents = baseFee,
-                SurchargeCents = surcharge,
-                MultiplierFee = multiplier,
-                FinalShippingFeeCents = finalFee,
+                ProviderServiceCode = canon,
+                ServiceName = providerService?.Name,
+                BaseFeeVnd = feeBeforeFree,
+                SurchargeVnd = 0,
+                MultiplierFee = 1.0,
+                FinalShippingFeeVnd = finalFee,
                 IsFreeShipping = isFreeShipping,
-                EstimatedDaysMin = providerService.EstimatedDaysMin,
-                EstimatedDaysMax = providerService.EstimatedDaysMax,
+                EstimatedDaysMin = providerService?.EstimatedDaysMin,
+                EstimatedDaysMax = providerService?.EstimatedDaysMax,
                 Message = message
             },
             message);
@@ -131,24 +100,9 @@ public class ShippingFeePreviewAppService : IShippingFeePreviewService
     private static string? ValidateInput(ShippingFeePreviewRequest request)
     {
         if (request.ShopId == Guid.Empty)
-            return "shop_id là bắt buộc.";
+            return "shop_id is required.";
         if (request.OrderId == Guid.Empty)
-            return "order_id là bắt buộc.";
+            return "order_id is required.";
         return null;
-    }
-
-    private static (bool isFree, string reason) CheckFreeShipping(long subtotalCents)
-    {
-        const long threshold = 50_000_000L;
-        if (subtotalCents >= threshold)
-            return (true, "Đơn hàng đủ điều kiện freeship (đơn ≥ 500.000đ)");
-        return (false, string.Empty);
-    }
-
-    private static string CalculateBulkyType(double weightGrams)
-    {
-        if (weightGrams >= 5000.0) return "SUPER_BULKY";
-        if (weightGrams >= 2000.0) return "BULKY";
-        return "NORMAL";
     }
 }

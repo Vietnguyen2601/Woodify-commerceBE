@@ -16,42 +16,34 @@ public static class CommissionCalculator
     /// Sử dụng FLOOR (làm tròn xuống) để tính toán chính xác
     /// 
     /// Example:
-    ///   subtotalCents = 1,000,000 (10k VND)
+    ///   SubtotalVnd = 1,000,000 (10k VND)
     ///   commissionRate = 0.06 (6%)
-    ///   Result = FLOOR(1,000,000 × 0.06) = FLOOR(60,000) = 60,000 cents
+    ///   Result = FLOOR(1,000,000 × 0.06) = 60,000 VND
     /// </summary>
-    /// <param name="subtotalCents">Tổng tiền sản phẩm (đơn vị: cents)</param>
+    /// <param name="subtotalVnd">Tổng tiền sản phẩm (VND)</param>
     /// <param name="commissionRate">Tỷ lệ hoa hồng (decimal: 0.06 = 6%)</param>
-    /// <returns>Tiền hoa hồng đã tính (cents)</returns>
-    public static long CalculateCommissionCents(double subtotalCents, decimal commissionRate)
+    /// <returns>Tiền hoa hồng đã tính (VND)</returns>
+    public static long CalculateCommissionVnd(double subtotalVnd, decimal commissionRate)
     {
-        // Step 1: Validate inputs
-        if (subtotalCents <= 0)
+        if (subtotalVnd <= 0)
             return 0;
 
-        // Step 2: Validate commission rate (0% to 100%)
         if (commissionRate < 0 || commissionRate > 1)
             return 0;
 
-        // Step 3: Calculate commission
-        // Convert to double for multiplication, then back to long
-        double commissionAmount = subtotalCents * (double)commissionRate;
-
-        // Step 4: Floor (làm tròn xuống) để đảm bảo không overcharge
-        long commissionCents = (long)Math.Floor(commissionAmount);
-
-        return commissionCents;
+        double commissionAmount = subtotalVnd * (double)commissionRate;
+        return (long)Math.Floor(commissionAmount);
     }
 
     /// <summary>
     /// Tính tiền hoa hồng với default rate (6%)
     /// Convenience method khi không được cung cấp commission rate từ shop
     /// </summary>
-    /// <param name="subtotalCents">Tổng tiền sản phẩm (cents)</param>
-    /// <returns>Tiền hoa hồng đã tính (cents)</returns>
-    public static long CalculateCommissionCentsWithDefault(double subtotalCents)
+    /// <param name="subtotalVnd">Tổng tiền sản phẩm (cents)</param>
+    /// <returns>Tiền hoa hồng đã tính (VND)</returns>
+    public static long CalculateCommissionVndWithDefault(double subtotalVnd)
     {
-        return CalculateCommissionCents(subtotalCents, DEFAULT_COMMISSION_RATE);
+        return CalculateCommissionVnd(subtotalVnd, DEFAULT_COMMISSION_RATE);
     }
 
     /// <summary>
@@ -69,15 +61,15 @@ public static class CommissionCalculator
     /// Trace calculation (for logging/debugging)
     /// Returns breakdown of commission calculation
     /// </summary>
-    public static string GetCalculationBreakdown(double subtotalCents, decimal commissionRate)
+    public static string GetCalculationBreakdown(double subtotalVnd, decimal commissionRate)
     {
-        if (subtotalCents <= 0) return $"Subtotal invalid: {subtotalCents}";
+        if (subtotalVnd <= 0) return $"Subtotal invalid: {subtotalVnd}";
         if (!IsValidCommissionRate(commissionRate)) return $"Commission rate invalid: {commissionRate}";
 
-        double commissionAmount = subtotalCents * (double)commissionRate;
-        long commissionCents = (long)Math.Floor(commissionAmount);
+        double commissionAmount = subtotalVnd * (double)commissionRate;
+        long commissionVnd = (long)Math.Floor(commissionAmount);
 
-        return $"Subtotal: {subtotalCents:N0}đ × Rate: {commissionRate:P} = {commissionAmount:N0}đ → " +
-               $"FLOOR = {commissionCents:N0}đ";
+        return $"Subtotal: {subtotalVnd:N0}đ × Rate: {commissionRate:P} = {commissionAmount:N0}đ → " +
+               $"FLOOR = {commissionVnd:N0}đ";
     }
 }
