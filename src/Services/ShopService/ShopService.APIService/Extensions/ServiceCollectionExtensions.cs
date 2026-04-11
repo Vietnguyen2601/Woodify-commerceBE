@@ -21,6 +21,9 @@ namespace ShopService.APIService.Extensions
 
             // Repositories
             services.AddScoped<IShopRepository, ShopRepository>();
+            
+            // Dashboard Repository
+            services.AddScoped<IDashboardRepository, DashboardRepository>();
 
             // Services
             services.AddScoped<IShopService>(sp =>
@@ -28,6 +31,18 @@ namespace ShopService.APIService.Extensions
                 var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
                 var publisher = sp.GetService<RabbitMQPublisher>();
                 return new ShopService.Application.Services.ShopService(unitOfWork, publisher);
+            });
+            
+            // Dashboard Service
+            services.AddScoped<IDashboardService, DashboardService>();
+
+            // Redis Cache for Dashboard metrics
+            services.AddStackExchangeRedisCache(options =>
+            {
+                var redisConnectionString = configuration.GetConnectionString("Redis") 
+                    ?? Environment.GetEnvironmentVariable("Redis_ConnectionString") 
+                    ?? "localhost:6379";
+                options.Configuration = redisConnectionString;
             });
 
             return services;

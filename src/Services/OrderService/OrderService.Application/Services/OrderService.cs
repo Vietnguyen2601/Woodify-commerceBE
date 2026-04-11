@@ -496,20 +496,122 @@ public class OrderService : IOrderService
                 return ServiceResult<OrderDto>.NotFound("Order not found");
             }
 
-            // 3. Update status
+            // 3. Store old status for event
+            var oldStatus = order.Status.ToString();
+
+            // 4. Update status
             order.Status = newStatus;
             order.UpdatedAt = DateTime.UtcNow;
 
-            // 4. Save changes
+            // 5. Save changes
             await _orderRepository.UpdateAsync(order);
 
-            // 5. Return updated order
+            // 6. Publish events for dashboard metrics
+            PublishDashboardEvents(order, oldStatus, newStatus.ToString());
+
+            // 7. Return updated order
             var orderDto = MapToOrderDto(order);
             return ServiceResult<OrderDto>.Success(orderDto, "Order status updated successfully");
         }
         catch (Exception ex)
         {
             return ServiceResult<OrderDto>.InternalServerError($"Error updating order status: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Publish events for dashboard metrics when order status changes
+    /// </summary>
+    private void PublishDashboardEvents(Order order, string oldStatus, string newStatus)
+    {
+        try
+        {
+            // Calculate item count from orderItems
+            var itemCount = order.OrderItems?.Sum(x => x.Quantity) ?? 0;
+            
+            // Get first product version as main product (most common scenario)
+            var mainProduct = order.OrderItems?.FirstOrDefault();
+            var productVersionId = mainProduct?.VersionId;
+            
+            // Always publish OrderStatusChangedEvent
+            var statusChangeEvent = new OrderStatusChangedEvent
+            {
+                OrderId = order.OrderId,
+                ShopId = order.ShopId,
+                PreviousStatus = oldStatus,
+                NewStatus = newStatus,
+                TotalAmountCents = (long)order.TotalAmountCents,
+                StatusChangedAt = DateTime.UtcNow,
+                OrderCreatedAt = order.CreatedAt,
+                ItemCount = itemCount,
+                ProductVersionId = productVersionId
+                // Note: ProductVersionName, CategoryId, CategoryName akan được populated
+                // qua ProductService cache lookup ở ShopService consumer layer
+            };
+            _orderEventPublisher.PublishOrderStatusChanged(statusChangeEvent);
+
+            // Publish OrderCompletedEvent if status became COMPLETED
+            if (newStatus.Equals("COMPLETED", StringComparison.OrdinalIgnoreCase) &&
+                !oldStatus.Equals("COMPLETED", StringComparison.OrdinalIgnoreCase))
+            {
+                var totalAmountCents = (long)order.TotalAmountCents;
+                var commissionCents = (long)(totalAmountCents * 0.05m);
+                
+                var completedEvent = new OrderCompletedEvent
+                {
+                    OrderId = order.OrderId,
+                    ShopId = order.ShopId,
+                    TotalAmountCents = totalAmountCents,
+                    CommissionRate = 0.05m, // 5% default commission
+                    CommissionCents = commissionCents,
+                    CompletedAt = DateTime.UtcNow,
+                    ItemCount = itemCount,
+                    ProductVersionId = productVersionId
+                };
+                _orderEventPublisher.PublishOrderCompleted(completedEvent);
+            }
+
+            // Publish OrderCancelledEvent if status became CANCELLED
+            if (newStatus.Equals("CANCELLED", StringComparison.OrdinalIgnoreCase) &&
+                !oldStatus.Equals("CANCELLED", StringComparison.OrdinalIgnoreCase))
+            {
+                var cancelledEvent = new OrderCancelledEvent
+                {
+                    OrderId = order.OrderId,
+                    ShopId = order.ShopId,
+                    CancelReason = "Order cancelled via dashboard",
+                    CancelledAmountCents = (long)order.TotalAmountCents,
+                    CancelledAt = DateTime.UtcNow,
+                    ItemCount = itemCount,
+                    ProductVersionId = productVersionId
+                };
+                _orderEventPublisher.PublishOrderCancelled(cancelledEvent);
+            }
+
+            // Publish OrderRefundedEvent if status became REFUNDED/REFUNDING
+            if ((newStatus.Equals("REFUNDED", StringComparison.OrdinalIgnoreCase) ||
+                 newStatus.Equals("REFUNDING", StringComparison.OrdinalIgnoreCase)) &&
+                !oldStatus.Equals("REFUNDED", StringComparison.OrdinalIgnoreCase) &&
+                !oldStatus.Equals("REFUNDING", StringComparison.OrdinalIgnoreCase))
+            {
+                var refundedEvent = new OrderRefundedEvent
+                {
+                    OrderId = order.OrderId,
+                    ShopId = order.ShopId,
+                    RefundAmountCents = (long)order.TotalAmountCents,
+                    RefundReason = "Order refunded via dashboard",
+                    RefundedAt = DateTime.UtcNow,
+                    OrderCreatedAt = order.CreatedAt,
+                    ItemCount = itemCount,
+                    ProductVersionId = productVersionId
+                };
+                _orderEventPublisher.PublishOrderRefunded(refundedEvent);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[OrderService] Error publishing dashboard events: {ex.Message}");
+            // Don't throw - events are not critical, order update should still succeed
         }
     }
 

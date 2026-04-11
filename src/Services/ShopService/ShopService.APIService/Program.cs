@@ -7,6 +7,7 @@ using Shared.Messaging;
 using ShopService.APIService.Extensions;
 using ShopService.APIService.Middlewares;
 using ShopService.APIService.Filters;
+using ShopService.Application.Consumers;
 using ShopService.Infrastructure.Data.Context;
 using ShopService.Infrastructure.Data.Seeders;
 
@@ -77,6 +78,15 @@ catch (Exception ex)
 
 builder.Services.AddShopServices(builder.Configuration);
 builder.Services.AddValidators();
+
+// Register Dashboard Event Consumers
+builder.Services.AddScoped<OrderStatusChangedEventConsumer>();
+builder.Services.AddScoped<OrderCompletedEventConsumer>();
+builder.Services.AddScoped<OrderCancelledEventConsumer>();
+builder.Services.AddScoped<OrderRefundedEventConsumer>();
+builder.Services.AddScoped<OrderAwaitingPickupEventConsumer>();
+builder.Services.AddScoped<OrderReadyToShipEventConsumer>();
+builder.Services.AddScoped<MetricsAggregatedEventConsumer>();
 
 var rootPath = Directory.GetParent(Directory.GetCurrentDirectory())?.Parent?.Parent?.Parent?.FullName;
 var envPath = Path.Combine(rootPath ?? "", ".env");
@@ -165,5 +175,15 @@ app.MapControllers();
 
 // Health check endpoint
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "shop-service" }));
+
+// Setup RabbitMQ Dashboard Event Consumers (after app is configured)
+try
+{
+    app.Services.SetupDashboardEventConsumers(rabbitMQSettings);
+}
+catch (Exception ex)
+{
+    Log.Warning("Dashboard event consumers not setup: {Message}", ex.Message);
+}
 
 app.Run();

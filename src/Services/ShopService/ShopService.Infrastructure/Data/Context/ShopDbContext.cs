@@ -12,6 +12,7 @@ public class ShopDbContext : DbContext
 
     public DbSet<Shop> Shops { get; set; }
     public DbSet<ShopFollower> ShopFollowers { get; set; }
+    public DbSet<OrderMetricsSnapshot> OrderMetricsSnapshots { get; set; }
 
     private static string? GetConnectionString(string connectionStringName)
     {
