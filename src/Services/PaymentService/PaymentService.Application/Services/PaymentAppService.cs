@@ -17,6 +17,7 @@ public class PaymentAppService : IPaymentAppService
     private readonly IPaymentRepository _paymentRepository;
     private readonly IWalletRepository _walletRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IPaymentPollingTrigger _pollingTrigger;
     private readonly ILogger<PaymentAppService> _logger;
 
     private const string PROVIDER_PAYOS = "PAYOS";
@@ -26,12 +27,14 @@ public class PaymentAppService : IPaymentAppService
         IPaymentRepository paymentRepository,
         IWalletRepository walletRepository,
         IUnitOfWork unitOfWork,
+        IPaymentPollingTrigger pollingTrigger,
         ILogger<PaymentAppService> logger)
     {
         _payOsService = payOsService;
         _paymentRepository = paymentRepository;
         _walletRepository = walletRepository;
         _unitOfWork = unitOfWork;
+        _pollingTrigger = pollingTrigger;
         _logger = logger;
     }
 
@@ -485,13 +488,15 @@ public class PaymentAppService : IPaymentAppService
                 Provider = PROVIDER_PAYOS,
                 ProviderPaymentId = orderCode.ToString(),
                 AmountCents = request.TotalAmountCents,
-                Status = PaymentStatus.Created, // Chờ webhook confirm
+                Status = PaymentStatus.Processing,
                 ProviderResponse = payOsResponse.RawResponse,
                 CreatedAt = DateTime.UtcNow
             };
 
             await _paymentRepository.CreateAsync(payment);
             await _unitOfWork.SaveChangesAsync();
+
+            _pollingTrigger.Trigger();
 
             _logger.LogInformation("PayOS payment created. PaymentId: {PaymentId}, OrderCode: {OrderCode}, Amount: {Amount}",
                 payment.PaymentId, orderCode, amountVnd);
