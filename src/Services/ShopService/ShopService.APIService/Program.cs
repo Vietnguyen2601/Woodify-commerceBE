@@ -4,6 +4,7 @@ using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.SystemConsole.Themes;
 using Shared.Messaging;
+using ShopService.Application.Consumers;
 using ShopService.APIService.Extensions;
 using ShopService.APIService.Middlewares;
 using ShopService.APIService.Filters;
@@ -64,15 +65,27 @@ var rabbitMQSettings = new RabbitMQSettings
     Password = Environment.GetEnvironmentVariable("RabbitMQ_Password") ?? builder.Configuration["RabbitMQ:Password"] ?? "guest"
 };
 
-// Đăng ký RabbitMQ Publisher (chỉ khi có RabbitMQ)
-try
+// RabbitMQ: publisher + consumer (review stats from ProductService)
+for (int attempt = 0; attempt < 5; attempt++)
 {
-    var publisher = new RabbitMQPublisher(rabbitMQSettings);
-    builder.Services.AddSingleton(publisher);
-}
-catch (Exception ex)
-{
-    // RabbitMQ not available - continue without messaging
+    try
+    {
+        var publisher = new RabbitMQPublisher(rabbitMQSettings);
+        builder.Services.AddSingleton(publisher);
+        var consumer = new RabbitMQConsumer(rabbitMQSettings);
+        builder.Services.AddSingleton(consumer);
+        builder.Services.AddSingleton<ShopReviewStatsUpdatedConsumer>();
+        break;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"RabbitMQ connection attempt {attempt + 1} failed: {ex.Message}");
+        if (attempt < 4)
+        {
+            Console.WriteLine("Retrying in 5 seconds...");
+            Thread.Sleep(5000);
+        }
+    }
 }
 
 builder.Services.AddShopServices(builder.Configuration);
@@ -98,7 +111,7 @@ using (var scope = app.Services.CreateScope())
         // Seed initial data
         await ShopDbSeeder.SeedAsync(dbContext);
     }
-    catch (Exception ex)
+    catch (Exception)
     {
         // Log error but continue startup
     }
@@ -165,5 +178,15 @@ app.MapControllers();
 
 // Health check endpoint
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "shop-service" }));
+
+try
+{
+    var statsConsumer = app.Services.GetService<ShopReviewStatsUpdatedConsumer>();
+    statsConsumer?.StartListening();
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"[ShopService] Failed to start ShopReviewStatsUpdatedConsumer: {ex.Message}");
+}
 
 app.Run();

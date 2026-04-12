@@ -38,4 +38,7 @@ public interface IOrderService
     Task<ServiceResult<List<OrderWithProductDetailsDto>>> GetOrdersByShopIdAsync(Guid shopId);
     Task<ServiceResult<OrderDto>> UpdateOrderStatusAsync(UpdateOrderStatusDto dto);
     Task<ServiceResult<OrderListResultDto>> GetAllOrdersAsync(GetAllOrdersQueryDto query);
+
+    /// <summary>Top product masters by units sold; enriched from product_version_cache and shop_info_cache (no cross-service HTTP).</summary>
+    Task<ServiceResult<List<TopSellingProductAnalyticsDto>>> GetTopSellingProductsAsync(int limit = 5, Guid? shopId = null);
 }

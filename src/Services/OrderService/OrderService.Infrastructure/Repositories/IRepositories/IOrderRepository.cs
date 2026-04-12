@@ -21,4 +21,9 @@ public interface IOrderRepository : IGenericRepository<Order>
     /// Admin: Lấy tất cả orders có pagination và filter
     /// </summary>
     Task<(List<Order> Items, int Total)> GetAllPagedAsync(int page, int pageSize, string? status, Guid? shopId, Guid? accountId);
+
+    /// <summary>
+    /// Top N product masters by units sold (joins version cache for product_id; excludes cancelled/refunded orders). Optional shop filter.
+    /// </summary>
+    Task<List<(Guid ProductId, long UnitsSold)>> GetTopSellingProductMasterAggregatesAsync(int productLimit, Guid? shopId, CancellationToken cancellationToken = default);
 }

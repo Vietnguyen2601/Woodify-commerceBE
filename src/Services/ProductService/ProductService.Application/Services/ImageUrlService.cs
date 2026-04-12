@@ -12,6 +12,8 @@ public class ImageUrlService : IImageUrlService
     private readonly IImageUrlRepository _imageUrlRepository;
     private readonly ProductEventPublisher _eventPublisher;
 
+    private const int MaxReviewImagesPerReview = 5;
+
     private static readonly HashSet<string> ValidImageTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         "PRODUCT", "PRODUCT_VERSION", "REVIEW", "AVATAR",
@@ -35,6 +37,14 @@ public class ImageUrlService : IImageUrlService
 
         if (dto.ReferenceId == Guid.Empty)
             return ServiceResult<ImageUrlDto>.BadRequest("ReferenceId is required");
+
+        if (string.Equals(dto.ImageType, "REVIEW", StringComparison.OrdinalIgnoreCase))
+        {
+            var existing = await _imageUrlRepository.CountByTypeAndReferenceAsync("REVIEW", dto.ReferenceId);
+            if (existing >= MaxReviewImagesPerReview)
+                return ServiceResult<ImageUrlDto>.BadRequest(
+                    $"A review can have at most {MaxReviewImagesPerReview} images.");
+        }
 
         var sortOrder = dto.SortOrder ??
             await _imageUrlRepository.GetNextSortOrderAsync(dto.ImageType.ToUpper(), dto.ReferenceId);
@@ -71,6 +81,17 @@ public class ImageUrlService : IImageUrlService
     {
         if (dto.Images == null || dto.Images.Count == 0)
             return ServiceResult<List<ImageUrlDto>>.BadRequest("No images provided");
+
+        var reviewGroups = dto.Images
+            .Where(i => string.Equals(i.ImageType, "REVIEW", StringComparison.OrdinalIgnoreCase))
+            .GroupBy(i => i.ReferenceId);
+        foreach (var g in reviewGroups)
+        {
+            var existing = await _imageUrlRepository.CountByTypeAndReferenceAsync("REVIEW", g.Key);
+            if (existing + g.Count() > MaxReviewImagesPerReview)
+                return ServiceResult<List<ImageUrlDto>>.BadRequest(
+                    $"A review can have at most {MaxReviewImagesPerReview} images.");
+        }
 
         var entities = new List<ImageUrl>();
 

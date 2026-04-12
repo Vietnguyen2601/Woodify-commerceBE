@@ -22,6 +22,12 @@ public class ImageUrlRepository : GenericRepository<ImageUrl>, IImageUrlReposito
             .ToListAsync();
     }
 
+    public async Task<int> CountByTypeAndReferenceAsync(string imageType, Guid referenceId)
+    {
+        return await _dbSet.CountAsync(i =>
+            i.ImageType == imageType && i.ReferenceId == referenceId);
+    }
+
     public async Task<int> GetNextSortOrderAsync(string imageType, Guid referenceId)
     {
         var max = await _dbSet

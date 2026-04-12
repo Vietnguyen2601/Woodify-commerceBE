@@ -28,6 +28,8 @@ namespace ProductService.APIService.Extensions
                 new CategoryRepository(sp.GetRequiredService<ProductDbContext>()));
             services.AddScoped<IProductReviewRepository>(sp =>
                 new ProductReviewRepository(sp.GetRequiredService<ProductDbContext>()));
+            services.AddScoped<IReviewPurchaseEligibilityRepository>(sp =>
+                new ReviewPurchaseEligibilityRepository(sp.GetRequiredService<ProductDbContext>()));
             services.AddScoped<IImageUrlRepository>(sp =>
                 new ImageUrlRepository(sp.GetRequiredService<ProductDbContext>()));
 
@@ -44,6 +46,8 @@ namespace ProductService.APIService.Extensions
             // Shop name cache (populated by ShopEventConsumer via RabbitMQ)
             services.AddSingleton<ShopNameCacheService>();
 
+            services.AddScoped<OrderReviewEligibilityIngestService>();
+
             return services;
         }
 
@@ -51,6 +55,9 @@ namespace ProductService.APIService.Extensions
         {
             var shopEventConsumer = serviceProvider.GetService<ShopEventConsumer>();
             shopEventConsumer?.StartListening();
+
+            var orderReviewEligibilityConsumer = serviceProvider.GetService<OrderReviewEligibilityConsumer>();
+            orderReviewEligibilityConsumer?.StartListening();
         }
 
         public static IServiceCollection AddValidators(this IServiceCollection services)

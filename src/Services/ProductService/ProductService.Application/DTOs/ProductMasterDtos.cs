@@ -109,6 +109,12 @@ public class ProductMasterDto
 
     /// <summary>Wood type (from first ProductVersion), null if no version exists</summary>
     public string? WoodType { get; set; }
+
+    /// <summary>Mean rating (1–5) from visible reviews; null if none.</summary>
+    public double? AverageRating { get; set; }
+
+    /// <summary>Visible review count for this product master.</summary>
+    public int ReviewCount { get; set; }
 }
 
 /// <summary>
@@ -134,6 +140,9 @@ public class ProductMasterDetailDto
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public DateTime? PublishedAt { get; set; }
+
+    public double? AverageRating { get; set; }
+    public int ReviewCount { get; set; }
 
     /// <summary>All images for this product, sorted by SortOrder</summary>
     public List<ImageUrlDto> Images { get; set; } = new();
