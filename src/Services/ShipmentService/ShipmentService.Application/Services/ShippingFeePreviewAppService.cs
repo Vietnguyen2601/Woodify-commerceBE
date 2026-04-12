@@ -72,9 +72,10 @@ public class ShippingFeePreviewAppService : IShippingFeePreviewService
 
         var providerService = await _providerServiceRepository.GetByCodeAsync(canon);
 
+        var safeCodeForLog = SanitizeForLog(canon);
         _logger.LogInformation(
             "Fee preview (unified): service={Code}, weight={Weight}g, subtotal={Subtotal}, fee={Fee}",
-            canon, totalWeightGrams, subtotalVnd, finalFee);
+            safeCodeForLog, totalWeightGrams, subtotalVnd, finalFee);
 
         string message = isFreeShipping
             ? $"Free shipping — subtotal ≥ {ShippingPricing.FreeShippingSubtotalThresholdVnd:N0} VND"
@@ -96,6 +97,9 @@ public class ShippingFeePreviewAppService : IShippingFeePreviewService
             },
             message);
     }
+
+    private static string SanitizeForLog(string value) =>
+        value.Replace("\r", string.Empty).Replace("\n", string.Empty);
 
     private static string? ValidateInput(ShippingFeePreviewRequest request)
     {
