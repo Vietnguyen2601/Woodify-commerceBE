@@ -8,7 +8,7 @@ public static class PaymentHelper
     /// <summary>
     /// Tính tổng tiền từ danh sách orders
     /// </summary>
-    /// <param name="orders">Danh sách Order DTOs từ OrderService (có TotalAmountCents đã bao gồm shipping fee)</param>
+    /// <param name="orders">Danh sách Order DTOs từ OrderService (có TotalAmountVnd đã bao gồm shipping fee)</param>
     /// <returns>Tổng tiền (cents)</returns>
     public static long CalculateTotalAmount(List<dynamic> orders)
     {
@@ -18,8 +18,8 @@ public static class PaymentHelper
         long total = 0;
         foreach (var order in orders)
         {
-            // OrderDto có double TotalAmountCents
-            total += (long)order.TotalAmountCents;
+            // OrderDto có double TotalAmountVnd
+            total += (long)order.TotalAmountVnd;
         }
         return total;
     }
@@ -54,8 +54,8 @@ public static class PaymentHelper
     /// <summary>
     /// Validate payment amount
     /// </summary>
-    public static bool ValidateAmount(long amountCents)
+    public static bool ValidateAmount(long AmountVnd)
     {
-        return amountCents > 0;
+        return AmountVnd > 0;
     }
 }

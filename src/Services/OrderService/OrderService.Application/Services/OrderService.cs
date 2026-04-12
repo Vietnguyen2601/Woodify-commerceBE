@@ -6,6 +6,7 @@ using OrderService.Infrastructure.Repositories.IRepositories;
 using Shared.Results;
 using Shared.Events;
 using Shared.Constants;
+using Shared.Shipping;
 
 namespace OrderService.Application.Services;
 
@@ -111,6 +112,7 @@ public class OrderService : IOrderService
 
             // 9. CREATE ORDER FOR EACH SHOP
             var createdOrders = new List<Order>();
+            var providerServiceCode = NormalizeProviderServiceCode(dto.ProviderServiceCode);
 
             foreach (var shopGroup in shopsToProcess)
             {
@@ -118,25 +120,24 @@ public class OrderService : IOrderService
                 var shopItems = shopGroup.Value;
 
                 // Calculate subtotal for this shop
-                double subtotalCents = shopItems.Sum(item => item.Price * item.Quantity);
+                double subtotalVnd = shopItems.Sum(item => item.Price * item.Quantity);
 
                 // ✨ Calculate total weight FOR THIS SHOP (not total for all shops)
                 int totalWeightGrams = await CalculateTotalWeightAsync(shopItems);
 
                 // ✨ Calculate shipping fee immediately using ShippingServiceConstants
-                int serviceId = ShippingServiceConstants.GetServiceId(dto.ProviderServiceCode);
-                string bucketType = ShippingServiceConstants.GetBucketType(totalWeightGrams);
-                long baseFee = ShippingServiceConstants.GetBaseFee(serviceId, bucketType);
-                long weightSurcharge = (totalWeightGrams / ShippingServiceConstants.WEIGHT_SURCHARGE_UNIT) * ShippingServiceConstants.WEIGHT_SURCHARGE_PER_UNIT;
-                long shippingFeeCents = baseFee + weightSurcharge;
+                long shippingFeeVnd = ShippingPricing.FinalShippingFeeVnd(
+                    providerServiceCode,
+                    totalWeightGrams,
+                    subtotalVnd);
 
                 // Total amount = Subtotal + Shipping fee
-                double orderTotalAmountCents = subtotalCents + shippingFeeCents;
+                double orderTotalAmountVnd = subtotalVnd + shippingFeeVnd;
 
                 // === THÊM MỚI: Tính tiền hoa hồng ===
                 // Sử dụng default commission rate (6%) vì không fetch từ shop
                 decimal commissionRate = CommissionCalculator.DEFAULT_COMMISSION_RATE;
-                long commissionCents = CommissionCalculator.CalculateCommissionCents(subtotalCents, commissionRate);
+                long commissionVnd = CommissionCalculator.CalculateCommissionVnd(subtotalVnd, commissionRate);
 
                 // Create Order entity for this shop
                 var order = new Order
@@ -144,13 +145,14 @@ public class OrderService : IOrderService
                     OrderId = Guid.NewGuid(),
                     AccountId = dto.AccountId,
                     ShopId = shopId,
-                    SubtotalCents = subtotalCents,
-                    TotalAmountCents = orderTotalAmountCents, // ✨ Includes calculated shipping fee
+                    SubtotalVnd = subtotalVnd,
+                    TotalAmountVnd = orderTotalAmountVnd, // ✨ Includes calculated shipping fee
                     CommissionRate = commissionRate,     // === THÊM: Commission rate (6%)
-                    CommissionCents = commissionCents,   // === THÊM: Tính hoa hồng
+                    CommissionVnd = commissionVnd,   // === THÊM: Tính hoa hồng
                     VoucherId = dto.VoucherId,
                     Status = OrderStatus.PENDING,
                     DeliveryAddress = dto.DeliveryAddress,
+                    ProviderServiceCode = providerServiceCode,
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -162,11 +164,11 @@ public class OrderService : IOrderService
                         OrderItemId = Guid.NewGuid(),
                         OrderId = order.OrderId,
                         VersionId = cartItem.VersionId,
-                        UnitPriceCents = (long)(cartItem.Price * 100),
+                        UnitPriceVnd = (long)Math.Round(cartItem.Price),
                         Quantity = cartItem.Quantity,
-                        DiscountCents = 0,
-                        TaxCents = 0,
-                        LineTotalCents = cartItem.Price * cartItem.Quantity,
+                        DiscountVnd = 0,
+                        TaxVnd = 0,
+                        LineTotalVnd = cartItem.Price * cartItem.Quantity,
                         Status = FulfillmentStatus.UNFULFILLED,
                         CreatedAt = DateTime.UtcNow
                     };
@@ -179,7 +181,7 @@ public class OrderService : IOrderService
                 createdOrders.Add(order);
 
                 // Publish OrderCreated event to RabbitMQ for ShipmentService
-                // ✨ TotalAmountCents already includes calculated shipping fee
+                // ✨ TotalAmountVnd already includes calculated shipping fee
                 // ShipmentService can verify/log the calculation if needed
                 _orderEventPublisher.PublishOrderCreated(new OrderCreatedEvent
                 {
@@ -187,9 +189,9 @@ public class OrderService : IOrderService
                     ShopId = order.ShopId,
                     AccountId = order.AccountId,
                     DeliveryAddress = order.DeliveryAddress,
-                    SubtotalCents = order.SubtotalCents,
-                    TotalAmountCents = order.TotalAmountCents,
-                    ProviderServiceCode = dto.ProviderServiceCode,
+                    SubtotalVnd = order.SubtotalVnd,
+                    TotalAmountVnd = order.TotalAmountVnd,
+                    ProviderServiceCode = order.ProviderServiceCode,
                     TotalWeightGrams = totalWeightGrams,
                     VoucherId = dto.VoucherId,
                     CreatedAt = order.CreatedAt
@@ -209,22 +211,23 @@ public class OrderService : IOrderService
 
             // 11. === BUILD RESULT: Danh sách orderIds + tổng tiền ===
             var orderIds = createdOrders.Select(o => o.OrderId).ToList();
-            var totalAmountCents = createdOrders.Sum(o => (long)o.TotalAmountCents);
+            var totalAmountVnd = createdOrders.Sum(o => (long)o.TotalAmountVnd);
 
             var orderSummaries = createdOrders.Select(o => new OrderSummaryDto
             {
                 OrderId = o.OrderId,
                 ShopId = o.ShopId,
-                SubtotalCents = o.SubtotalCents,
-                TotalAmountCents = o.TotalAmountCents,
-                CommissionCents = o.CommissionCents,
-                ItemCount = o.OrderItems.Count
+                SubtotalVnd = o.SubtotalVnd,
+                TotalAmountVnd = o.TotalAmountVnd,
+                CommissionVnd = o.CommissionVnd,
+                ItemCount = o.OrderItems.Count,
+                ProviderServiceCode = o.ProviderServiceCode
             }).ToList();
 
             var result = new CreateOrdersFromCartResultDto
             {
                 OrderIds = orderIds,
-                TotalAmountCents = totalAmountCents,
+                TotalAmountVnd = totalAmountVnd,
                 OrderCount = createdOrders.Count,
                 Orders = orderSummaries
             };
@@ -245,7 +248,7 @@ public class OrderService : IOrderService
     /// 1. ✅ Only process 1 shop per request (no auto-grouping)
     /// 2. ✅ Explicit shop validation (all items must belong to specified shop)
     /// 3. ✅ Return 1 order object (not list) - simpler integration
-    /// 4. ✅ Return ShippingFeeCents explicitly (for transparency)
+    /// 4. ✅ Return ShippingFeeVnd explicitly (for transparency)
     /// 5. ✅ Better error messages for debugging
     /// 
     /// SECURITY NOTES:
@@ -319,22 +322,22 @@ public class OrderService : IOrderService
                 return ServiceResult<CreateOrderResponse>.BadRequest("No valid items to create order");
 
             // ===== CALCULATE ORDER AMOUNTS =====
-            double subtotalCents = validItems.Sum(item => item.Price * item.Quantity);
+            double subtotalVnd = validItems.Sum(item => item.Price * item.Quantity);
             int totalWeightGrams = await CalculateTotalWeightAsync(validItems);
 
-            // Calculate shipping fee
-            int serviceId = ShippingServiceConstants.GetServiceId(request.ProviderServiceCode);
-            string bucketType = ShippingServiceConstants.GetBucketType(totalWeightGrams);
-            long baseFee = ShippingServiceConstants.GetBaseFee(serviceId, bucketType);
-            long weightSurcharge = (totalWeightGrams / ShippingServiceConstants.WEIGHT_SURCHARGE_UNIT) * ShippingServiceConstants.WEIGHT_SURCHARGE_PER_UNIT;
-            long shippingFeeCents = baseFee + weightSurcharge;
+            var providerServiceCode = NormalizeProviderServiceCode(request.ProviderServiceCode);
+
+            long shippingFeeVnd = ShippingPricing.FinalShippingFeeVnd(
+                providerServiceCode,
+                totalWeightGrams,
+                subtotalVnd);
 
             // Total amount = Subtotal + Shipping fee
-            double totalAmountCents = subtotalCents + shippingFeeCents;
+            double totalAmountVnd = subtotalVnd + shippingFeeVnd;
 
             // Calculate commission (6% of subtotal)
             decimal commissionRate = CommissionCalculator.DEFAULT_COMMISSION_RATE;
-            long commissionCents = CommissionCalculator.CalculateCommissionCents(subtotalCents, commissionRate);
+            long commissionVnd = CommissionCalculator.CalculateCommissionVnd(subtotalVnd, commissionRate);
 
             // ===== CREATE ORDER =====
             var order = new Order
@@ -342,13 +345,14 @@ public class OrderService : IOrderService
                 OrderId = Guid.NewGuid(),
                 AccountId = request.AccountId,
                 ShopId = request.ShopId,
-                SubtotalCents = subtotalCents,
-                TotalAmountCents = totalAmountCents,
+                SubtotalVnd = subtotalVnd,
+                TotalAmountVnd = totalAmountVnd,
                 CommissionRate = commissionRate,
-                CommissionCents = commissionCents,
+                CommissionVnd = commissionVnd,
                 VoucherId = request.VoucherId,
                 Status = OrderStatus.PENDING,  // ← Stay PENDING until payment succeeds
                 DeliveryAddress = request.DeliveryAddress,
+                ProviderServiceCode = providerServiceCode,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -360,11 +364,11 @@ public class OrderService : IOrderService
                     OrderItemId = Guid.NewGuid(),
                     OrderId = order.OrderId,
                     VersionId = cartItem.VersionId,
-                    UnitPriceCents = (long)(cartItem.Price * 100),
+                    UnitPriceVnd = (long)Math.Round(cartItem.Price),
                     Quantity = cartItem.Quantity,
-                    DiscountCents = 0,
-                    TaxCents = 0,
-                    LineTotalCents = cartItem.Price * cartItem.Quantity,
+                    DiscountVnd = 0,
+                    TaxVnd = 0,
+                    LineTotalVnd = cartItem.Price * cartItem.Quantity,
                     Status = FulfillmentStatus.UNFULFILLED,
                     CreatedAt = DateTime.UtcNow
                 };
@@ -382,9 +386,9 @@ public class OrderService : IOrderService
                 ShopId = order.ShopId,
                 AccountId = order.AccountId,
                 DeliveryAddress = order.DeliveryAddress,
-                SubtotalCents = order.SubtotalCents,
-                TotalAmountCents = order.TotalAmountCents,
-                ProviderServiceCode = request.ProviderServiceCode,
+                SubtotalVnd = order.SubtotalVnd,
+                TotalAmountVnd = order.TotalAmountVnd,
+                ProviderServiceCode = order.ProviderServiceCode,
                 TotalWeightGrams = totalWeightGrams,
                 VoucherId = request.VoucherId,
                 CreatedAt = order.CreatedAt
@@ -406,18 +410,101 @@ public class OrderService : IOrderService
             {
                 OrderId = order.OrderId,
                 ShopId = order.ShopId,
-                SubtotalCents = subtotalCents,
-                ShippingFeeCents = shippingFeeCents,
-                CommissionCents = commissionCents,
-                TotalAmountCents = totalAmountCents,
+                SubtotalVnd = subtotalVnd,
+                ShippingFeeVnd = shippingFeeVnd,
+                CommissionVnd = commissionVnd,
+                TotalAmountVnd = totalAmountVnd,
                 ItemCount = validItems.Count,
                 Status = "PENDING",
-                CreatedAt = order.CreatedAt
-            }, $"Order created successfully. Total: {totalAmountCents} cents");
+                CreatedAt = order.CreatedAt,
+                ProviderServiceCode = order.ProviderServiceCode
+            }, $"Order created successfully. Total: {totalAmountVnd} VND");
         }
         catch (Exception ex)
         {
             return ServiceResult<CreateOrderResponse>.InternalServerError($"Error creating order: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<CheckoutShippingPreviewResponseDto>> PreviewCheckoutShippingAsync(
+        CheckoutShippingPreviewRequest request)
+    {
+        try
+        {
+            if (request.AccountId == Guid.Empty)
+                return ServiceResult<CheckoutShippingPreviewResponseDto>.BadRequest("AccountId is required");
+            if (request.ShopId == Guid.Empty)
+                return ServiceResult<CheckoutShippingPreviewResponseDto>.BadRequest("ShopId is required");
+            if (request.CartItemIds == null || !request.CartItemIds.Any())
+                return ServiceResult<CheckoutShippingPreviewResponseDto>.BadRequest("At least 1 cart item is required");
+
+            var cart = await _cartRepository.GetActiveCartByAccountIdAsync(request.AccountId);
+            if (cart == null || !cart.CartItems.Any())
+                return ServiceResult<CheckoutShippingPreviewResponseDto>.NotFound("Cart is empty or not found");
+
+            var selectedCartItems = cart.CartItems
+                .Where(ci => request.CartItemIds.Contains(ci.CartItemId))
+                .ToList();
+
+            if (!selectedCartItems.Any())
+                return ServiceResult<CheckoutShippingPreviewResponseDto>.BadRequest("No cart items found with specified IDs");
+
+            var uniqueShops = selectedCartItems.Select(ci => ci.ShopId).Distinct().ToList();
+            if (uniqueShops.Count != 1 || uniqueShops[0] != request.ShopId)
+                return ServiceResult<CheckoutShippingPreviewResponseDto>.BadRequest(
+                    "All items must belong to the specified shop.");
+
+            var validationResult = await ValidateCartItemsForCheckoutAsync(selectedCartItems);
+            if (!validationResult.IsValid)
+            {
+                var errorDetails = validationResult.InvalidItems.Select(item =>
+                    $"Version {item.VersionId}: {item.Reason}").ToList();
+                return ServiceResult<CheckoutShippingPreviewResponseDto>.BadRequest(
+                    errorDetails,
+                    $"Cannot preview. {validationResult.InvalidItemsCount} of {validationResult.TotalItems} item(s) invalid.");
+            }
+
+            var validCartItemIds = selectedCartItems
+                .Select(ci => ci.CartItemId)
+                .Except(validationResult.InvalidItems.Select(ii => ii.CartItemId))
+                .ToHashSet();
+
+            var validItems = selectedCartItems
+                .Where(ci => validCartItemIds.Contains(ci.CartItemId))
+                .ToList();
+
+            if (!validItems.Any())
+                return ServiceResult<CheckoutShippingPreviewResponseDto>.BadRequest("No valid items to preview");
+
+            double subtotalVnd = validItems.Sum(item => item.Price * item.Quantity);
+            int totalWeightGrams = await CalculateTotalWeightAsync(validItems);
+
+            var quotes = ShippingPricing.QuoteAllCheckoutTiers(totalWeightGrams, subtotalVnd);
+            var options = quotes.Select(q => new CheckoutShippingPreviewOptionDto
+            {
+                ProviderServiceCode = q.ProviderServiceCode,
+                DisplayLabel = q.DisplayLabel,
+                TotalAmountVnd = q.ShippingFeeVnd,
+                IsFreeShipping = q.IsFreeShipping
+            }).ToList();
+
+            bool qualifiesFree = subtotalVnd >= ShippingPricing.FreeShippingSubtotalThresholdVnd;
+
+            return ServiceResult<CheckoutShippingPreviewResponseDto>.Success(
+                new CheckoutShippingPreviewResponseDto
+                {
+                    ShopId = request.ShopId,
+                    SubtotalVnd = subtotalVnd,
+                    TotalWeightGrams = totalWeightGrams,
+                    FreeShippingThresholdVnd = ShippingPricing.FreeShippingSubtotalThresholdVnd,
+                    SubtotalQualifiesForFreeShipping = qualifiesFree,
+                    Options = options
+                });
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<CheckoutShippingPreviewResponseDto>.InternalServerError(
+                $"Error previewing shipping: {ex.Message}");
         }
     }
 
@@ -454,6 +541,22 @@ public class OrderService : IOrderService
         catch (Exception ex)
         {
             return ServiceResult<List<OrderDto>>.InternalServerError($"Error getting orders: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<List<CustomerAccountOrderDto>>> GetOrdersByAccountForCustomerAsync(Guid accountId)
+    {
+        try
+        {
+            var orders = await _orderRepository.GetOrdersByAccountIdAsync(accountId);
+            var list = new List<CustomerAccountOrderDto>(orders.Count);
+            foreach (var order in orders)
+                list.Add(await MapToCustomerAccountOrderDtoAsync(order));
+            return ServiceResult<List<CustomerAccountOrderDto>>.Success(list);
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<List<CustomerAccountOrderDto>>.InternalServerError($"Error getting orders: {ex.Message}");
         }
     }
 
@@ -546,13 +649,14 @@ public class OrderService : IOrderService
             OrderId = order.OrderId,
             AccountId = order.AccountId,
             ShopId = order.ShopId,
-            SubtotalCents = order.SubtotalCents,
-            TotalAmountCents = order.TotalAmountCents,
+            SubtotalVnd = order.SubtotalVnd,
+            TotalAmountVnd = order.TotalAmountVnd,
             CommissionRate = order.CommissionRate,      // === Commission rate (6%)
-            CommissionCents = order.CommissionCents,    // === Commission cents
+            CommissionVnd = order.CommissionVnd,    // === Commission cents
             VoucherId = order.VoucherId,
             Status = order.Status.ToString(),
             DeliveryAddress = order.DeliveryAddress,
+            ProviderServiceCode = order.ProviderServiceCode,
             CreatedAt = order.CreatedAt,
             UpdatedAt = order.UpdatedAt,
             OrderItems = order.OrderItems.Select(oi => new OrderItemDto
@@ -560,11 +664,11 @@ public class OrderService : IOrderService
                 OrderItemId = oi.OrderItemId,
                 OrderId = oi.OrderId,
                 VersionId = oi.VersionId,
-                UnitPriceCents = oi.UnitPriceCents,
+                UnitPriceVnd = oi.UnitPriceVnd,
                 Quantity = oi.Quantity,
-                DiscountCents = oi.DiscountCents,
-                TaxCents = oi.TaxCents,
-                LineTotalCents = oi.LineTotalCents,
+                DiscountVnd = oi.DiscountVnd,
+                TaxVnd = oi.TaxVnd,
+                LineTotalVnd = oi.LineTotalVnd,
                 ShipmentId = oi.ShipmentId,
                 Status = oi.Status.ToString(),
                 CreatedAt = oi.CreatedAt
@@ -765,11 +869,12 @@ public class OrderService : IOrderService
             OrderId = order.OrderId,
             AccountId = order.AccountId,
             ShopId = order.ShopId,
-            SubtotalCents = order.SubtotalCents,
-            TotalAmountCents = order.TotalAmountCents,
+            SubtotalVnd = order.SubtotalVnd,
+            TotalAmountVnd = order.TotalAmountVnd,
             VoucherId = order.VoucherId,
             Status = order.Status.ToString(),
             DeliveryAddress = order.DeliveryAddress,
+            ProviderServiceCode = order.ProviderServiceCode,
             CreatedAt = order.CreatedAt,
             UpdatedAt = order.UpdatedAt,
             OrderItems = new List<OrderItemWithProductDetailsDto>()
@@ -785,11 +890,11 @@ public class OrderService : IOrderService
                 OrderItemId = orderItem.OrderItemId,
                 OrderId = orderItem.OrderId,
                 VersionId = orderItem.VersionId,
-                UnitPriceCents = orderItem.UnitPriceCents,
+                UnitPriceVnd = orderItem.UnitPriceVnd,
                 Quantity = orderItem.Quantity,
-                DiscountCents = orderItem.DiscountCents,
-                TaxCents = orderItem.TaxCents,
-                LineTotalCents = orderItem.LineTotalCents,
+                DiscountVnd = orderItem.DiscountVnd,
+                TaxVnd = orderItem.TaxVnd,
+                LineTotalVnd = orderItem.LineTotalVnd,
                 ShipmentId = orderItem.ShipmentId,
                 Status = orderItem.Status.ToString(),
                 CreatedAt = orderItem.CreatedAt,
@@ -809,6 +914,72 @@ public class OrderService : IOrderService
         }
 
         return orderDto;
+    }
+
+    private static string NormalizeProviderServiceCode(string? code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+            return ShippingServiceConstants.DEFAULT_PROVIDER_SERVICE_CODE;
+        var s = ShippingServiceConstants.CanonicalizeProviderServiceCode(code);
+        return s.Length <= 20 ? s : s[..20];
+    }
+
+    private static string MapPaymentStatusForCustomer(OrderStatus orderStatus) => orderStatus switch
+    {
+        OrderStatus.PENDING => "PENDING",
+        OrderStatus.CANCELLED => "CANCELLED",
+        OrderStatus.REFUNDING => "REFUNDING",
+        OrderStatus.REFUNDED => "REFUNDED",
+        _ => "PAID"
+    };
+
+    private async Task<CustomerAccountOrderDto> MapToCustomerAccountOrderDtoAsync(Order order)
+    {
+        var dto = new CustomerAccountOrderDto
+        {
+            OrderId = order.OrderId,
+            AccountId = order.AccountId,
+            ShopId = order.ShopId,
+            SubtotalVnd = order.SubtotalVnd,
+            TotalAmountVnd = order.TotalAmountVnd,
+            VoucherId = order.VoucherId,
+            Status = order.Status.ToString(),
+            DeliveryAddress = order.DeliveryAddress,
+            ProviderServiceCode = order.ProviderServiceCode,
+            PaymentStatus = MapPaymentStatusForCustomer(order.Status),
+            CreatedAt = order.CreatedAt,
+            UpdatedAt = order.UpdatedAt,
+            OrderItems = new List<CustomerAccountOrderItemDto>()
+        };
+
+        foreach (var orderItem in order.OrderItems)
+        {
+            var productCache = await _productCacheRepository.GetByVersionIdAsync(orderItem.VersionId);
+            dto.OrderItems.Add(new CustomerAccountOrderItemDto
+            {
+                OrderItemId = orderItem.OrderItemId,
+                OrderId = orderItem.OrderId,
+                VersionId = orderItem.VersionId,
+                UnitPriceVnd = orderItem.UnitPriceVnd,
+                Quantity = orderItem.Quantity,
+                DiscountVnd = orderItem.DiscountVnd,
+                TaxVnd = orderItem.TaxVnd,
+                LineTotalVnd = orderItem.LineTotalVnd,
+                Status = orderItem.Status.ToString(),
+                CreatedAt = orderItem.CreatedAt,
+                ProductName = productCache?.ProductName ?? "Unknown Product",
+                ProductDescription = productCache?.ProductDescription,
+                SellerSku = productCache?.SellerSku ?? "",
+                VersionName = productCache?.VersionName,
+                WoodType = productCache?.WoodType,
+                WeightGrams = productCache?.WeightGrams ?? 0,
+                LengthCm = productCache?.LengthCm ?? 0,
+                WidthCm = productCache?.WidthCm ?? 0,
+                HeightCm = productCache?.HeightCm ?? 0
+            });
+        }
+
+        return dto;
     }
 
     /// <summary>

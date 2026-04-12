@@ -8,10 +8,15 @@ public static class ShippingServiceConstants
 {
     // ─── SERVICE CODES ────────────────────────────────────────────────
     // Mã dịch vụ chuẩn (tương ứng với provider: GHN, Grab, v.v.)
-    public const string SERVICE_EXPRESS = "EXPRESS";       // Service ID 1 - Super Express
-    public const string SERVICE_FAST = "FAST";             // Service ID 2 - Fast
-    public const string SERVICE_STANDARD = "STANDARD";     // Service ID 3 - Standard (Default)
-    public const string SERVICE_ECONOMY = "ECONOMY";       // Service ID 4 - Economy
+    public const string CODE_EXP = "EXP";
+    public const string CODE_STD = "STD";
+    public const string CODE_ECO = "ECO";
+    public const string DEFAULT_PROVIDER_SERVICE_CODE = CODE_STD;
+
+    public const string SERVICE_EXPRESS = "EXPRESS";
+    public const string SERVICE_FAST = "FAST";
+    public const string SERVICE_STANDARD = "STANDARD";
+    public const string SERVICE_ECONOMY = "ECONOMY";
 
     // ─── BUCKET TYPES ────────────────────────────────────────────────
     // Phân loại kích thước đơn hàng
@@ -43,17 +48,17 @@ public static class ShippingServiceConstants
             (2, BUCKET_BULKY) => 50000,
             (2, BUCKET_OVERSIZED) => 85000,
 
-            // STANDARD: 20,000 - 35,000 VND
+            // STD (service3): mid tier — ECO < STD < EXP per bucket
             (3, BUCKET_LETTER) => 12000,
-            (3, BUCKET_STANDARD) => 20000,
-            (3, BUCKET_BULKY) => 35000,
-            (3, BUCKET_OVERSIZED) => 70000,
+            (3, BUCKET_STANDARD) => 24000,
+            (3, BUCKET_BULKY) => 38000,
+            (3, BUCKET_OVERSIZED) => 72000,
 
-            // ECONOMY: 20,000 - 30,000 VND
-            (4, BUCKET_LETTER) => 12000,
-            (4, BUCKET_STANDARD) => 20000,
-            (4, BUCKET_BULKY) => 30000,
-            (4, BUCKET_OVERSIZED) => 60000,
+            // ECO (service 4): lowest base per bucket
+            (4, BUCKET_LETTER) => 8000,
+            (4, BUCKET_STANDARD) => 15000,
+            (4, BUCKET_BULKY) => 26000,
+            (4, BUCKET_OVERSIZED) => 52000,
 
             // Default: 25,000 VND
             _ => 25000
@@ -70,13 +75,27 @@ public static class ShippingServiceConstants
     /// </summary>
     public static int GetServiceId(string? code)
     {
-        return code?.ToUpperInvariant() switch
+        return code?.Trim().ToUpperInvariant() switch
         {
-            SERVICE_EXPRESS => 1,
-            SERVICE_FAST => 2,
-            SERVICE_STANDARD => 3,
-            SERVICE_ECONOMY => 4,
-            _ => 3  // Default: STANDARD
+            CODE_EXP or SERVICE_EXPRESS or "SUPER_EXPRESS" => 1,
+            SERVICE_FAST or "FST" => 2,
+            CODE_STD or SERVICE_STANDARD => 3,
+            CODE_ECO or SERVICE_ECONOMY => 4,
+            _ => 3
+        };
+    }
+
+    /// <summary>Map legacy names (e.g. EXPRESS) to short codes (EXP) before persisting.</summary>
+    public static string CanonicalizeProviderServiceCode(string code)
+    {
+        var u = code.Trim().ToUpperInvariant();
+        return u switch
+        {
+            CODE_EXP or SERVICE_EXPRESS or "SUPER_EXPRESS" => CODE_EXP,
+            SERVICE_FAST or "FST" => SERVICE_FAST,
+            CODE_STD or SERVICE_STANDARD => CODE_STD,
+            CODE_ECO or SERVICE_ECONOMY => CODE_ECO,
+            _ => u
         };
     }
 
@@ -88,11 +107,12 @@ public static class ShippingServiceConstants
         if (string.IsNullOrWhiteSpace(code))
             return false;
 
-        var upperCode = code.ToUpperInvariant();
-        return upperCode == SERVICE_EXPRESS ||
-               upperCode == SERVICE_FAST ||
-               upperCode == SERVICE_STANDARD ||
-               upperCode == SERVICE_ECONOMY;
+        var upperCode = code.Trim().ToUpperInvariant();
+        return upperCode is CODE_EXP or CODE_STD or CODE_ECO
+            or SERVICE_EXPRESS or "SUPER_EXPRESS"
+            or SERVICE_FAST or "FST"
+            or SERVICE_STANDARD
+            or SERVICE_ECONOMY;
     }
 
     // ─── BUCKET TYPE DETERMINATION ────────────────────────────────────

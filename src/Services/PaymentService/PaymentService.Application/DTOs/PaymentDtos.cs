@@ -145,10 +145,10 @@ public class CreatePaymentRequest
 
     /// <summary>
     /// Tổng số tiền cần thanh toán (cents)
-    /// Được tính từ sum(Order.TotalAmountCents) ở CreateOrdersFromCart response
+    /// Được tính từ sum(Order.TotalAmountVnd) ở CreateOrdersFromCart response
     /// Bao gồm tất cả subtotal + shipping fee cho các đơn hàng
     /// </summary>
-    public long TotalAmountCents { get; set; }
+    public long TotalAmountVnd { get; set; }
 
     /// <summary>
     /// Return URL sau khi thanh toán thành công (tùy chọn, dùng cho PayOS)

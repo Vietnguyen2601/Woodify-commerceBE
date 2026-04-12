@@ -33,7 +33,7 @@ namespace PaymentService.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("account_id");
 
-                    b.Property<long>("AmountCents")
+                    b.Property<long>("AmountVnd")
                         .HasColumnType("bigint")
                         .HasColumnName("amount_cents");
 
@@ -101,7 +101,7 @@ namespace PaymentService.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("account_id");
 
-                    b.Property<long>("BalanceCents")
+                    b.Property<long>("BalanceVnd")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint")
                         .HasDefaultValue(0L)
@@ -145,15 +145,15 @@ namespace PaymentService.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("wallet_tx_id");
 
-                    b.Property<long>("AmountCents")
+                    b.Property<long>("AmountVnd")
                         .HasColumnType("bigint")
                         .HasColumnName("amount_cents");
 
-                    b.Property<long?>("BalanceAfterCents")
+                    b.Property<long?>("BalanceAfterVnd")
                         .HasColumnType("bigint")
                         .HasColumnName("balance_after_cents");
 
-                    b.Property<long?>("BalanceBeforeCents")
+                    b.Property<long?>("BalanceBeforeVnd")
                         .HasColumnType("bigint")
                         .HasColumnName("balance_before_cents");
 

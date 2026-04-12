@@ -67,8 +67,8 @@ public class OrderCreatedEvent
     public Guid ShopId { get; set; }
     public Guid AccountId { get; set; }
     public string? DeliveryAddress { get; set; }
-    public double SubtotalCents { get; set; }
-    public double TotalAmountCents { get; set; }
+    public double SubtotalVnd { get; set; }
+    public double TotalAmountVnd { get; set; }
     public string? ProviderServiceCode { get; set; }
     public Guid? VoucherId { get; set; }
 
@@ -87,7 +87,7 @@ public class ShippingFeeCalculatedEvent
 {
     public Guid OrderId { get; set; }
     public Guid ShopId { get; set; }
-    public long ShippingFeeCents { get; set; }
+    public long ShippingFeeVnd { get; set; }
     public string? ProviderServiceCode { get; set; }
     public bool IsFreeShipping { get; set; }
     public DateTime CalculatedAt { get; set; }

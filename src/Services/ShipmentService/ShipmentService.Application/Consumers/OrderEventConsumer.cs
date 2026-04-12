@@ -2,9 +2,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Shared.Constants;
+using Shared.Shipping;
 using Shared.Events;
 using Shared.Messaging;
-using ShipmentService.Application.Interfaces;
 using ShipmentService.Infrastructure.Cache;
 
 namespace ShipmentService.Application.Consumers;
@@ -19,7 +19,6 @@ public class OrderEventConsumer : BackgroundService
     private readonly RabbitMQConsumer _rabbitMQConsumer;
     private readonly RabbitMQPublisher _rabbitMQPublisher;
     private readonly IOrderInfoCacheRepository _orderInfoCache;
-    private readonly IShippingFeeCalculator _feeCalculator;
     private readonly ILogger<OrderEventConsumer> _logger;
 
     public OrderEventConsumer(
@@ -27,14 +26,12 @@ public class OrderEventConsumer : BackgroundService
         RabbitMQConsumer rabbitMQConsumer,
         RabbitMQPublisher rabbitMQPublisher,
         IOrderInfoCacheRepository orderInfoCache,
-        IShippingFeeCalculator feeCalculator,
         ILogger<OrderEventConsumer> logger)
     {
         _scopeFactory = scopeFactory;
         _rabbitMQConsumer = rabbitMQConsumer;
         _rabbitMQPublisher = rabbitMQPublisher;
         _orderInfoCache = orderInfoCache;
-        _feeCalculator = feeCalculator;
         _logger = logger;
     }
 
@@ -79,13 +76,14 @@ public class OrderEventConsumer : BackgroundService
                 ShopId = evt.ShopId,
                 AccountId = evt.AccountId,
                 DeliveryAddress = evt.DeliveryAddress,
-                TotalAmountCents = evt.TotalAmountCents,
+                SubtotalVnd = evt.SubtotalVnd,
+                TotalAmountVnd = evt.TotalAmountVnd,
                 TotalWeightGrams = evt.TotalWeightGrams,
                 ProviderServiceCode = evt.ProviderServiceCode,
                 CreatedAt = evt.CreatedAt
             });
 
-            long shippingFeeCents = await CalculateShippingFeeAsync(evt);
+            long ShippingFeeVnd = await CalculateShippingFeeAsync(evt);
 
             _rabbitMQPublisher.Publish(
                 exchange: "shipment.events",
@@ -94,15 +92,15 @@ public class OrderEventConsumer : BackgroundService
                 {
                     OrderId = evt.OrderId,
                     ShopId = evt.ShopId,
-                    ShippingFeeCents = shippingFeeCents,
+                    ShippingFeeVnd = ShippingFeeVnd,
                     ProviderServiceCode = evt.ProviderServiceCode,
-                    IsFreeShipping = shippingFeeCents == 0,
+                    IsFreeShipping = ShippingFeeVnd == 0,
                     CalculatedAt = DateTime.UtcNow
                 });
 
             _logger.LogInformation(
-                "Published ShippingFeeCalculatedEvent Order {OrderId}: Fee = {Fee} cents",
-                evt.OrderId, shippingFeeCents);
+                "Published ShippingFeeCalculatedEvent Order {OrderId}: Fee = {Fee} VND",
+                evt.OrderId, ShippingFeeVnd);
         }
         catch (Exception ex)
         {
@@ -126,21 +124,20 @@ public class OrderEventConsumer : BackgroundService
 
             var providerServiceCode = evt.ProviderServiceCode
                 ?? shopInfo?.DefaultProviderServiceCode
-                ?? ShippingServiceConstants.SERVICE_STANDARD;
+                ?? ShippingServiceConstants.DEFAULT_PROVIDER_SERVICE_CODE;
 
             if (!ShippingServiceConstants.IsValidServiceCode(providerServiceCode))
             {
                 _logger.LogWarning(
-                    "Invalid service code '{Code}' for Order {OrderId}; using STANDARD",
-                    providerServiceCode, evt.OrderId);
-                providerServiceCode = ShippingServiceConstants.SERVICE_STANDARD;
+                    "Invalid service code '{Code}' for Order {OrderId}; using {Fallback}",
+                    providerServiceCode, evt.OrderId, ShippingServiceConstants.DEFAULT_PROVIDER_SERVICE_CODE);
+                providerServiceCode = ShippingServiceConstants.DEFAULT_PROVIDER_SERVICE_CODE;
             }
+            else
+                providerServiceCode = ShippingServiceConstants.CanonicalizeProviderServiceCode(providerServiceCode);
 
             int weightGrams = evt.TotalWeightGrams > 0 ? evt.TotalWeightGrams : 5000;
-            int serviceId = ShippingServiceConstants.GetServiceId(providerServiceCode);
-            var feeResult = await _feeCalculator.CalculateAsync(serviceId, weightGrams);
-
-            return feeResult.Total;
+            return ShippingPricing.FinalShippingFeeVnd(providerServiceCode, weightGrams, evt.SubtotalVnd);
         }
         catch (Exception ex)
         {

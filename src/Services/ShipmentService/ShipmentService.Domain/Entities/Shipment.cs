@@ -10,6 +10,9 @@ public class Shipment
 
     public Guid OrderId { get; set; }
 
+    /// <summary>Shop that owns this shipment (matches <c>CreateShipmentDto.ShopId</c>); used for seller listing.</summary>
+    public Guid ShopId { get; set; }
+
     public string? TrackingNumber { get; set; }
 
     public Guid? ProviderServiceId { get; set; }
@@ -23,7 +26,7 @@ public class Shipment
 
     public string? BulkyType { get; set; } // NORMAL, BULKY, SUPER_BULKY
 
-    public long FinalShippingFeeCents { get; set; }
+    public long FinalShippingFeeVnd { get; set; }
 
     public bool IsFreeShipping { get; set; } = false;
 

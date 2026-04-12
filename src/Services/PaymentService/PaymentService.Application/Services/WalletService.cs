@@ -47,7 +47,7 @@ public class WalletService : IWalletService
             {
                 AccountId = request.AccountId,
                 Currency = request.Currency,
-                BalanceCents = 0,
+                BalanceVnd = 0,
                 Status = WalletStatus.Active
             };
 
@@ -139,16 +139,16 @@ public class WalletService : IWalletService
             }
 
             // Lưu balance trước giao dịch
-            var balanceBefore = wallet.BalanceCents;
+            var balanceBefore = wallet.BalanceVnd;
 
             // Tạo transaction
             var transaction = new WalletTransaction
             {
                 WalletId = walletId,
                 TxType = WalletTransactionType.Credit,
-                AmountCents = request.Amount,
-                BalanceBeforeCents = balanceBefore,
-                BalanceAfterCents = balanceBefore + request.Amount,
+                AmountVnd = request.Amount,
+                BalanceBeforeVnd = balanceBefore,
+                BalanceAfterVnd = balanceBefore + request.Amount,
                 RelatedPaymentId = request.RelatedPaymentId,
                 RelatedOrderId = request.RelatedOrderId,
                 Note = request.Note,
@@ -157,7 +157,7 @@ public class WalletService : IWalletService
             };
 
             // Cập nhật balance
-            wallet.BalanceCents += request.Amount;
+            wallet.BalanceVnd += request.Amount;
             wallet.UpdatedAt = DateTime.UtcNow;
 
             // Save
@@ -166,14 +166,14 @@ public class WalletService : IWalletService
 
             _logger.LogInformation(
                 "Credit successful. WalletId: {WalletId}, Amount: {Amount}, NewBalance: {Balance}",
-                walletId, request.Amount, wallet.BalanceCents);
+                walletId, request.Amount, wallet.BalanceVnd);
 
             return ServiceResult<WalletTransactionResult>.Success(new WalletTransactionResult
             {
                 Success = true,
                 TransactionId = transaction.WalletTxId,
-                NewBalance = wallet.BalanceCents,
-                Message = $"Nạp tiền thành công. Số dư mới: {wallet.BalanceCents:N0} VND"
+                NewBalance = wallet.BalanceVnd,
+                Message = $"Nạp tiền thành công. Số dư mới: {wallet.BalanceVnd:N0} VND"
             });
         }
         catch (Exception ex)
@@ -213,23 +213,23 @@ public class WalletService : IWalletService
             }
 
             // Check đủ số dư
-            if (wallet.BalanceCents < request.Amount)
+            if (wallet.BalanceVnd < request.Amount)
             {
                 return ServiceResult<WalletTransactionResult>.BadRequest(
-                    $"Số dư không đủ. Hiện có: {wallet.BalanceCents:N0} VND, cần: {request.Amount:N0} VND");
+                    $"Số dư không đủ. Hiện có: {wallet.BalanceVnd:N0} VND, cần: {request.Amount:N0} VND");
             }
 
             // Lưu balance trước giao dịch
-            var balanceBefore = wallet.BalanceCents;
+            var balanceBefore = wallet.BalanceVnd;
 
             // Tạo transaction
             var transaction = new WalletTransaction
             {
                 WalletId = walletId,
                 TxType = WalletTransactionType.Debit,
-                AmountCents = request.Amount,
-                BalanceBeforeCents = balanceBefore,
-                BalanceAfterCents = balanceBefore - request.Amount,
+                AmountVnd = request.Amount,
+                BalanceBeforeVnd = balanceBefore,
+                BalanceAfterVnd = balanceBefore - request.Amount,
                 RelatedPaymentId = request.RelatedPaymentId,
                 RelatedOrderId = request.RelatedOrderId,
                 Note = request.Note,
@@ -238,7 +238,7 @@ public class WalletService : IWalletService
             };
 
             // Cập nhật balance
-            wallet.BalanceCents -= request.Amount;
+            wallet.BalanceVnd -= request.Amount;
             wallet.UpdatedAt = DateTime.UtcNow;
 
             // Save
@@ -247,14 +247,14 @@ public class WalletService : IWalletService
 
             _logger.LogInformation(
                 "Debit successful. WalletId: {WalletId}, Amount: {Amount}, NewBalance: {Balance}",
-                walletId, request.Amount, wallet.BalanceCents);
+                walletId, request.Amount, wallet.BalanceVnd);
 
             return ServiceResult<WalletTransactionResult>.Success(new WalletTransactionResult
             {
                 Success = true,
                 TransactionId = transaction.WalletTxId,
-                NewBalance = wallet.BalanceCents,
-                Message = $"Trừ tiền thành công. Số dư mới: {wallet.BalanceCents:N0} VND"
+                NewBalance = wallet.BalanceVnd,
+                Message = $"Trừ tiền thành công. Số dư mới: {wallet.BalanceVnd:N0} VND"
             });
         }
         catch (Exception ex)
@@ -310,7 +310,7 @@ public class WalletService : IWalletService
         {
             WalletId = wallet.WalletId,
             AccountId = wallet.AccountId,
-            Balance = wallet.BalanceCents,
+            Balance = wallet.BalanceVnd,
             Currency = wallet.Currency,
             Status = wallet.Status.ToString(),
             CreatedAt = wallet.CreatedAt,
@@ -325,9 +325,9 @@ public class WalletService : IWalletService
             TransactionId = tx.WalletTxId,
             WalletId = tx.WalletId,
             TransactionType = tx.TxType.ToString(),
-            Amount = tx.AmountCents,
-            BalanceBefore = tx.BalanceBeforeCents,
-            BalanceAfter = tx.BalanceAfterCents,
+            Amount = tx.AmountVnd,
+            BalanceBefore = tx.BalanceBeforeVnd,
+            BalanceAfter = tx.BalanceAfterVnd,
             RelatedOrderId = tx.RelatedOrderId,
             RelatedPaymentId = tx.RelatedPaymentId,
             Status = tx.Status.ToString(),

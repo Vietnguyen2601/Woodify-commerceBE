@@ -249,6 +249,7 @@ public static class ShipmentDbSeeder
             if (!dbContext.Shipments.Any())
             {
                 var now = DateTime.UtcNow;
+                var demoShopId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 
                 var shipments = new List<Shipment>
                 {
@@ -256,13 +257,14 @@ public static class ShipmentDbSeeder
                     {
                         ShipmentId             = Guid.NewGuid(),
                         OrderId                = Guid.NewGuid(),
+                        ShopId                 = demoShopId,
                         TrackingNumber         = "GHN2026030001",
                         ProviderServiceId      = ghnStdId,
                         PickupAddressId        = "Kho Woodify - 123 Nguyễn Huệ, Q.1, TP.HCM",
                         DeliveryAddressId      = "456 Lê Lợi, Q.10, TP.HCM",
                         TotalWeightGrams       = 1200,
                         BulkyType              = "NORMAL",
-                        FinalShippingFeeCents  = 3500000,
+                        FinalShippingFeeVnd  = 3500000,
                         IsFreeShipping         = false,
                         PickupScheduledAt      = now.AddHours(2),
                         PickedUpAt             = now.AddHours(3),
@@ -275,13 +277,14 @@ public static class ShipmentDbSeeder
                     {
                         ShipmentId             = Guid.NewGuid(),
                         OrderId                = Guid.NewGuid(),
+                        ShopId                 = demoShopId,
                         TrackingNumber         = "GHN2026030002",
                         ProviderServiceId      = ghnExpId,
                         PickupAddressId        = "Kho Woodify - 123 Nguyễn Huệ, Q.1, TP.HCM",
                         DeliveryAddressId      = "789 Trần Hưng Đạo, Q.5, TP.HCM",
                         TotalWeightGrams       = 800,
                         BulkyType              = "NORMAL",
-                        FinalShippingFeeCents  = 6000000,
+                        FinalShippingFeeVnd  = 6000000,
                         IsFreeShipping         = false,
                         PickupScheduledAt      = now.AddHours(1),
                         PickedUpAt             = now.AddHours(1.5),
@@ -294,13 +297,14 @@ public static class ShipmentDbSeeder
                     {
                         ShipmentId             = Guid.NewGuid(),
                         OrderId                = Guid.NewGuid(),
+                        ShopId                 = demoShopId,
                         TrackingNumber         = "GHTK2026030001",
                         ProviderServiceId      = ghtkEcoId,
                         PickupAddressId        = "Kho Woodify - 123 Nguyễn Huệ, Q.1, TP.HCM",
                         DeliveryAddressId      = "321 Cách Mạng Tháng Tám, Q.3, TP.HCM",
                         TotalWeightGrams       = 2500,
                         BulkyType              = "NORMAL",
-                        FinalShippingFeeCents  = 2500000,
+                        FinalShippingFeeVnd  = 2500000,
                         IsFreeShipping         = true,
                         PickupScheduledAt      = now.AddDays(1),
                         DeliveryEstimatedAt    = now.AddDays(5),
@@ -312,13 +316,14 @@ public static class ShipmentDbSeeder
                     {
                         ShipmentId             = Guid.NewGuid(),
                         OrderId                = Guid.NewGuid(),
+                        ShopId                 = demoShopId,
                         TrackingNumber         = "VTP2026030001",
                         ProviderServiceId      = vtpStdId,
                         PickupAddressId        = "Kho Woodify - 123 Nguyễn Huệ, Q.1, TP.HCM",
                         DeliveryAddressId      = "654 Võ Văn Tần, Q.3, TP.HCM",
                         TotalWeightGrams       = 5000,
                         BulkyType              = "BULKY",
-                        FinalShippingFeeCents  = 8500000,
+                        FinalShippingFeeVnd  = 8500000,
                         IsFreeShipping         = false,
                         PickupScheduledAt      = now.AddDays(-3),
                         PickedUpAt             = now.AddDays(-3).AddHours(1),
@@ -331,13 +336,14 @@ public static class ShipmentDbSeeder
                     {
                         ShipmentId             = Guid.NewGuid(),
                         OrderId                = Guid.NewGuid(),
+                        ShopId                 = demoShopId,
                         TrackingNumber         = "JT2026030001",
                         ProviderServiceId      = jtStdId,
                         PickupAddressId        = "Kho Woodify - 123 Nguyễn Huệ, Q.1, TP.HCM",
                         DeliveryAddressId      = "97 Đinh Tiên Hoàng, Q.Bình Thạnh, TP.HCM",
                         TotalWeightGrams       = 1800,
                         BulkyType              = "NORMAL",
-                        FinalShippingFeeCents  = 4200000,
+                        FinalShippingFeeVnd  = 4200000,
                         IsFreeShipping         = false,
                         PickupScheduledAt      = now.AddDays(-2),
                         PickedUpAt             = now.AddDays(-2).AddHours(2),
@@ -351,13 +357,14 @@ public static class ShipmentDbSeeder
                     {
                         ShipmentId             = Guid.NewGuid(),
                         OrderId                = Guid.NewGuid(),
+                        ShopId                 = demoShopId,
                         TrackingNumber         = "GHN2026030003",
                         ProviderServiceId      = ghnEcoId,
                         PickupAddressId        = "Kho Woodify - 123 Nguyễn Huệ, Q.1, TP.HCM",
                         DeliveryAddressId      = "200 Hoàng Văn Thụ, Q.Phú Nhuận, TP.HCM",
                         TotalWeightGrams       = 600,
                         BulkyType              = "NORMAL",
-                        FinalShippingFeeCents  = 2000000,
+                        FinalShippingFeeVnd  = 2000000,
                         IsFreeShipping         = false,
                         Status                 = "CANCELLED",
                         CancelReason           = "Khách hàng hủy đơn hàng trước khi lấy hàng",

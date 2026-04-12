@@ -43,6 +43,7 @@ public class ShipmentDbContext : DbContext
             entity.Property(e => e.ShipmentId).HasColumnName("shipment_id");
 
             entity.Property(e => e.OrderId).HasColumnName("order_id").IsRequired();
+            entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
             entity.Property(e => e.TrackingNumber).HasColumnName("tracking_number").HasMaxLength(50);
             entity.Property(e => e.ProviderServiceId).HasColumnName("provider_service_id");
 
@@ -52,7 +53,7 @@ public class ShipmentDbContext : DbContext
 
             entity.Property(e => e.TotalWeightGrams).HasColumnName("total_weight_grams").IsRequired();
             entity.Property(e => e.BulkyType).HasColumnName("bulky_type").HasMaxLength(20);
-            entity.Property(e => e.FinalShippingFeeCents).HasColumnName("final_shipping_fee_cents").IsRequired();
+            entity.Property(e => e.FinalShippingFeeVnd).HasColumnName("final_shipping_fee_cents").IsRequired();
             entity.Property(e => e.IsFreeShipping).HasColumnName("is_free_shipping").HasDefaultValue(false);
 
             entity.Property(e => e.PickupScheduledAt).HasColumnName("pickup_scheduled_at");
@@ -68,6 +69,7 @@ public class ShipmentDbContext : DbContext
 
             // Indexes
             entity.HasIndex(e => e.OrderId).HasDatabaseName("IX_Shipments_order_id");
+            entity.HasIndex(e => e.ShopId).HasDatabaseName("IX_Shipments_shop_id");
             entity.HasIndex(e => e.TrackingNumber)
                   .IsUnique()
                   .HasFilter("tracking_number IS NOT NULL")

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Shared.Constants;
+using Shared.Shipping;
 using ShipmentService.Application.DTOs;
 using ShipmentService.Application.Interfaces;
 
@@ -20,7 +21,7 @@ public class ShippingFeeCalculator : IShippingFeeCalculator
         long baseFee = ShippingServiceConstants.GetBaseFee(serviceId, bucketType);
         long weightSurcharge = (weightGrams / ShippingServiceConstants.WEIGHT_SURCHARGE_UNIT)
             * ShippingServiceConstants.WEIGHT_SURCHARGE_PER_UNIT;
-        long totalFee = baseFee + weightSurcharge;
+        long totalFee = Math.Min(baseFee + weightSurcharge, ShippingPricing.AbsoluteMaxShippingFeeVnd);
 
         _logger.LogInformation(
             "Shipping fee: service_id={ServiceId}, weight={Weight}g, bucket={Bucket} → base={Base}đ + surcharge={Surcharge}đ = {Total}đ",
@@ -39,17 +40,15 @@ public class ShippingFeeCalculator : IShippingFeeCalculator
 
     public int MapServiceCode(string providerServiceCode)
     {
-        int serviceId = ShippingServiceConstants.GetServiceId(providerServiceCode);
-
-        if (serviceId == 3)
+        if (!ShippingServiceConstants.IsValidServiceCode(providerServiceCode))
         {
             var safeCode = SanitizeLogFragment(providerServiceCode);
             _logger.LogWarning(
-                "Không tìm thấy mapping service_id cho code '{Code}', dùng default STANDARD (service_id=3).",
+                "Không tìm thấy mapping service_id cho code '{Code}', dùng default STD (service_id=3).",
                 safeCode);
         }
 
-        return serviceId;
+        return ShippingServiceConstants.GetServiceId(providerServiceCode);
     }
 
     private static string SanitizeLogFragment(string? value) =>

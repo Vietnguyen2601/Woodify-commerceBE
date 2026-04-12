@@ -183,7 +183,7 @@ public class WalletTopUpService
                 AccountId = wallet.AccountId,
                 Provider = PROVIDER_PAYOS,
                 ProviderPaymentId = orderCode.ToString(),
-                AmountCents = request.Amount,
+                AmountVnd = request.Amount,
                 Currency = "VND",
                 Status = PaymentStatus.Processing,
                 ProviderResponse = payOsResponse.RawResponse,

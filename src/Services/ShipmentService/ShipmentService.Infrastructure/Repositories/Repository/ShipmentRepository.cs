@@ -29,6 +29,21 @@ public class ShipmentRepository : GenericRepository<Shipment>, IShipmentReposito
             .ToListAsync();
     }
 
+    public async Task<List<Shipment>> GetByShopIdAsync(Guid shopId, string? status = null)
+    {
+        var q = _dbSet
+            .Include(s => s.ProviderService)
+                .ThenInclude(ps => ps!.ShippingProvider)
+            .Where(s => s.ShopId == shopId);
+
+        if (!string.IsNullOrWhiteSpace(status))
+            q = q.Where(s => s.Status == status.Trim().ToUpperInvariant());
+
+        return await q
+            .OrderByDescending(s => s.CreatedAt)
+            .ToListAsync();
+    }
+
     public async Task<List<Shipment>> GetByStatusAsync(string status)
     {
         return await _dbSet
