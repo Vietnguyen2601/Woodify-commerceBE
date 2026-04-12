@@ -131,6 +131,8 @@ public class OrderStatusChangedEventConsumer : DashboardEventConsumerBase
                 ShopId = @event.ShopId,
                 Status = @event.NewStatus,
                 TotalAmountCents = @event.TotalAmountCents,
+                CommissionCents = @event.CommissionCents,
+                NetAmountCents = @event.NetAmountCents,
                 OrderCreatedAt = @event.OrderCreatedAt,
                 OrderYear = @event.OrderCreatedAt.Year,
                 OrderMonth = @event.OrderCreatedAt.Month,

@@ -32,6 +32,12 @@ public class OrderStatusChangedEvent
     /// <summary>Tổng số tiền order (VND)</summary>
     public long TotalAmountCents { get; set; }
 
+    /// <summary>Tiền hoa hồng (VND)</summary>
+    public long CommissionCents { get; set; }
+
+    /// <summary>Tiền ròng shop nhận được (TotalAmountCents - CommissionCents)</summary>
+    public long NetAmountCents { get; set; }
+
     /// <summary>Thời gian thay đổi status</summary>
     public DateTime StatusChangedAt { get; set; }
 

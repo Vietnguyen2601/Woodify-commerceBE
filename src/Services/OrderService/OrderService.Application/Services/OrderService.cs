@@ -200,8 +200,8 @@ public class OrderService : IOrderService
                 // Publish OrderCreated event to RabbitMQ for ShopService
                 var itemCount = order.OrderItems.Count;
                 var mainProduct = order.OrderItems.FirstOrDefault();
-                var totalAmountCents = (long)(order.TotalAmountVnd * 10);
-                var commissionCents = (long)(order.CommissionVnd * 10);
+                var totalAmountCents = (long)(order.TotalAmountVnd);
+                var commissionCents = (long)(order.CommissionVnd);
 
                 _orderEventPublisher.PublishOrderCreatedForShop(new OrderCreatedForShopEvent
                 {
@@ -421,8 +421,8 @@ public class OrderService : IOrderService
             // ===== PUBLISH EVENT FOR SHOP SERVICE =====
             var itemCount = validItems.Count;
             var mainProduct = order.OrderItems?.FirstOrDefault();
-            var totalAmountCents = (long)(order.TotalAmountVnd * 10);
-            var commissionCents = (long)(order.CommissionVnd * 10);
+            var totalAmountCents = (long)(order.TotalAmountVnd);
+            var commissionCents = (long)(order.CommissionVnd);
 
             _orderEventPublisher.PublishOrderCreatedForShop(new OrderCreatedForShopEvent
             {
@@ -692,6 +692,8 @@ public class OrderService : IOrderService
                 PreviousStatus = oldStatus,
                 NewStatus = newStatus,
                 TotalAmountCents = (long)(order.TotalAmountVnd),
+                CommissionCents = (long)(order.CommissionVnd),
+                NetAmountCents = (long)(order.TotalAmountVnd - order.CommissionVnd),
                 StatusChangedAt = DateTime.UtcNow,
                 OrderCreatedAt = order.CreatedAt,
                 ItemCount = itemCount,
@@ -706,14 +708,14 @@ public class OrderService : IOrderService
                 !oldStatus.Equals("COMPLETED", StringComparison.OrdinalIgnoreCase))
             {
                 var totalAmountCents = (long)(order.TotalAmountVnd);
-                var commissionCents = (long)(totalAmountCents * 0.05m);
+                var commissionCents = (long)(order.CommissionVnd);
                 
                 var completedEvent = new OrderCompletedEvent
                 {
                     OrderId = order.OrderId,
                     ShopId = order.ShopId,
                     TotalAmountCents = totalAmountCents,
-                    CommissionRate = 0.05m, // 5% default commission
+                    CommissionRate = order.CommissionRate,
                     CommissionCents = commissionCents,
                     CompletedAt = DateTime.UtcNow,
                     ItemCount = itemCount,
