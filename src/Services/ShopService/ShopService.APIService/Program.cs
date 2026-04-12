@@ -187,7 +187,11 @@ try
     var statsConsumer = app.Services.GetService<ShopReviewStatsUpdatedConsumer>();
     statsConsumer?.StartListening();
 }
-catch (Exception ex)
+catch (InvalidOperationException ex)
+{
+    Console.WriteLine($"[ShopService] Failed to start ShopReviewStatsUpdatedConsumer: {ex.Message}");
+}
+catch (IOException ex)
 {
     Console.WriteLine($"[ShopService] Failed to start ShopReviewStatsUpdatedConsumer: {ex.Message}");
 }
