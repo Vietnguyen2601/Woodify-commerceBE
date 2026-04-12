@@ -68,7 +68,6 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddDbContext<ProductDbContext>();
 
-
 var rabbitMQSettings = new RabbitMQSettings
 {
     Host = Environment.GetEnvironmentVariable("RabbitMQ_Host") ?? builder.Configuration["RabbitMQ:Host"] ?? "localhost",
@@ -93,6 +92,7 @@ for (int i = 0; i < 5; i++)
 
         // Register event consumers (require RabbitMQ)
         builder.Services.AddSingleton<ShopEventConsumer>();
+        builder.Services.AddSingleton<OrderReviewEligibilityConsumer>();
 
         rabbitMQAvailable = true;
         break;

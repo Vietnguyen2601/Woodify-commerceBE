@@ -78,4 +78,39 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
 
         return (items, total);
     }
+
+    public async Task<List<(Guid ProductId, long UnitsSold)>> GetTopSellingProductMasterAggregatesAsync(
+        int productLimit,
+        Guid? shopId,
+        CancellationToken cancellationToken = default)
+    {
+        OrderStatus[] excluded =
+        [
+            OrderStatus.CANCELLED,
+            OrderStatus.REFUNDED,
+            OrderStatus.REFUNDING
+        ];
+
+        var query =
+            from oi in _context.OrderItems
+            join o in _context.Orders on oi.OrderId equals o.OrderId
+            join c in _context.ProductVersionCaches on oi.VersionId equals c.VersionId
+            where !excluded.Contains(o.Status)
+                  && !c.IsDeleted
+                  && (!shopId.HasValue || o.ShopId == shopId.Value)
+            group oi by c.ProductId
+            into g
+            select new
+            {
+                ProductId = g.Key,
+                UnitsSold = g.Sum(x => (long)x.Quantity)
+            };
+
+        var rows = await query
+            .OrderByDescending(x => x.UnitsSold)
+            .Take(productLimit)
+            .ToListAsync(cancellationToken);
+
+        return rows.ConvertAll(x => (x.ProductId, x.UnitsSold));
+    }
 }

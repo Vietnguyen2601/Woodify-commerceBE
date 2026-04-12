@@ -128,4 +128,23 @@ public class ProductEventPublisher
             Console.WriteLine($"[ProductService] Failed to publish ImageUrlUpdated event: {ex.Message}");
         }
     }
+
+    public void PublishShopReviewStatsUpdated(ShopReviewStatsUpdatedEvent evt)
+    {
+        if (_publisher == null)
+        {
+            Console.WriteLine("[ProductService] WARNING: RabbitMQ publisher is not available. Skipping ShopReviewStatsUpdated event.");
+            return;
+        }
+
+        try
+        {
+            _publisher.Publish("shop.events", "shop.review_stats.updated", evt);
+            Console.WriteLine($"[ProductService] Published ShopReviewStatsUpdated: ShopId={evt.ShopId}, ReviewCount={evt.ReviewCount}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ProductService] Failed to publish ShopReviewStatsUpdated event: {ex.Message}");
+        }
+    }
 }

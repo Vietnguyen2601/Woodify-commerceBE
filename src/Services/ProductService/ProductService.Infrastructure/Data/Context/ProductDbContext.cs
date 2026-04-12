@@ -20,6 +20,7 @@ public class ProductDbContext : DbContext
     public DbSet<Category> Categories { get; set; }
     public DbSet<ProductReview> ProductReviews { get; set; }
     public DbSet<ImageUrl> ImageUrls { get; set; }
+    public DbSet<ReviewPurchaseEligibility> ReviewPurchaseEligibilities { get; set; }
 
     private static string GetConnectionString(string connectionStringName)
     {
@@ -113,6 +114,8 @@ public class ProductDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
             entity.Property(e => e.PublishedAt).HasColumnName("published_at");
+            entity.Property(e => e.AverageRating).HasColumnName("average_rating").HasColumnType("double precision");
+            entity.Property(e => e.ReviewCount).HasColumnName("review_count").HasDefaultValue(0);
 
             // Foreign Key to Category
             entity.HasOne(p => p.Category)
@@ -205,7 +208,9 @@ public class ProductDbContext : DbContext
 
             entity.Property(e => e.ReviewId).HasColumnName("review_id");
             entity.Property(e => e.VersionId).HasColumnName("version_id").IsRequired();
+            entity.Property(e => e.ProductId).HasColumnName("product_id").IsRequired();
             entity.Property(e => e.OrderId).HasColumnName("order_id").IsRequired();
+            entity.Property(e => e.OrderItemId).HasColumnName("order_item_id").IsRequired();
             entity.Property(e => e.AccountId).HasColumnName("account_id").IsRequired();
             entity.Property(e => e.Rating).HasColumnName("rating").IsRequired();
             entity.Property(e => e.Content).HasColumnName("content").HasMaxLength(5000);
@@ -225,11 +230,29 @@ public class ProductDbContext : DbContext
             entity.HasIndex(e => e.VersionId);
             entity.HasIndex(e => e.AccountId);
             entity.HasIndex(e => e.OrderId);
+            entity.HasIndex(e => e.ProductId);
             entity.HasIndex(e => e.IsVisible);
             entity.HasIndex(e => e.CreatedAt);
 
-            // Unique constraint: một user chỉ review một order một lần
-            entity.HasIndex(e => new { e.OrderId, e.AccountId }).IsUnique();
+            entity.HasIndex(e => new { e.OrderItemId, e.AccountId }).IsUnique();
+        });
+
+        modelBuilder.Entity<ReviewPurchaseEligibility>(entity =>
+        {
+            entity.ToTable("review_purchase_eligibility");
+            entity.HasKey(e => e.OrderItemId);
+            entity.Property(e => e.OrderItemId).HasColumnName("order_item_id");
+            entity.Property(e => e.OrderId).HasColumnName("order_id").IsRequired();
+            entity.Property(e => e.AccountId).HasColumnName("account_id").IsRequired();
+            entity.Property(e => e.VersionId).HasColumnName("version_id").IsRequired();
+            entity.Property(e => e.ProductId).HasColumnName("product_id").IsRequired();
+            entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
+            entity.Property(e => e.EligibleAt).HasColumnName("eligible_at").IsRequired();
+            entity.Property(e => e.IsConsumed).HasColumnName("is_consumed").HasDefaultValue(false);
+            entity.Property(e => e.ReviewId).HasColumnName("review_id");
+            entity.HasIndex(e => e.AccountId);
+            entity.HasIndex(e => e.OrderId);
+            entity.HasIndex(e => e.ProductId);
         });
 
         // ========================================

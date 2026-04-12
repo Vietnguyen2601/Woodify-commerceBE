@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ProductService.Infrastructure.Data.Context;
@@ -11,9 +12,11 @@ using ProductService.Infrastructure.Data.Context;
 namespace ProductService.Infrastructure.Migrations
 {
     [DbContext(typeof(ProductDbContext))]
-    partial class ProductDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260412141355_ReviewEligibilityAndRatings")]
+    partial class ReviewEligibilityAndRatings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -424,6 +427,32 @@ namespace ProductService.Infrastructure.Migrations
                     b.HasIndex("ProductId");
 
                     b.ToTable("review_purchase_eligibility", (string)null);
+                });
+
+            modelBuilder.Entity("ProductService.Domain.Entities.ShopRatingStats", b =>
+                {
+                    b.Property<Guid>("ShopId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("shop_id");
+
+                    b.Property<double?>("AverageRating")
+                        .HasColumnType("double precision")
+                        .HasColumnName("average_rating");
+
+                    b.Property<int>("ReviewCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("review_count");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("ShopId");
+
+                    b.ToTable("shop_rating_stats", (string)null);
                 });
 
             modelBuilder.Entity("ProductService.Domain.Entities.Category", b =>

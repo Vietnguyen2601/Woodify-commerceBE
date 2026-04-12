@@ -363,6 +363,27 @@ public class CustomerAccountOrderItemDto
 }
 
 /// <summary>
+/// Top-selling products (ProductMaster scope): ranks by units sold; display fields from Order DB product_version_cache + shop_info_cache.
+/// </summary>
+public class TopSellingProductAnalyticsDto
+{
+    public int Rank { get; set; }
+    public Guid ProductId { get; set; }
+    public long UnitsSold { get; set; }
+
+    public string ProductName { get; set; } = string.Empty;
+    public string? ProductStatus { get; set; }
+    public string? ThumbnailUrl { get; set; }
+
+    /// <summary>Representative version row used for display (SKU / deep link to Product service).</summary>
+    public Guid? VersionId { get; set; }
+    public string? SellerSku { get; set; }
+
+    public Guid ShopId { get; set; }
+    public string? ShopName { get; set; }
+}
+
+/// <summary>
 /// DTO d? c?p nh?t tr?ng thùi order
 /// </summary>
 public class UpdateOrderStatusDto

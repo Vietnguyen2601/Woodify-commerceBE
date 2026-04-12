@@ -6,6 +6,7 @@ namespace ProductService.Infrastructure.Repositories.IRepositories;
 public interface IImageUrlRepository : IGenericRepository<ImageUrl>
 {
     Task<List<ImageUrl>> GetByTypeAndReferenceAsync(string imageType, Guid referenceId);
+    Task<int> CountByTypeAndReferenceAsync(string imageType, Guid referenceId);
     Task<int> GetNextSortOrderAsync(string imageType, Guid referenceId);
     Task<ImageUrl?> GetPrimaryImageAsync(string imageType, Guid referenceId);
     Task<List<ImageUrl>> BulkCreateAsync(List<ImageUrl> images);
