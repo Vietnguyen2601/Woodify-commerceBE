@@ -484,7 +484,7 @@ public class OrderService : IOrderService
             {
                 ProviderServiceCode = q.ProviderServiceCode,
                 DisplayLabel = q.DisplayLabel,
-                TotalAmountVnd = q.TotalAmountVnd,
+                TotalAmountVnd = q.ShippingFeeVnd,
                 IsFreeShipping = q.IsFreeShipping
             }).ToList();
 

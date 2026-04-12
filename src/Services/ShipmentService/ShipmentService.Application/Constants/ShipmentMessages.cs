@@ -11,6 +11,12 @@ public static class ShipmentMessages
     public const string ShipmentCreateError = "Error creating shipment";
     public const string ShipmentUpdateError = "Error updating shipment";
     public const string ShipmentDeleteError = "Error deleting shipment";
+    public const string ShipmentInvalidTransition = "Invalid shipment status transition";
+    public const string ShipmentPickupNotAllowed = "Pickup is not allowed for this shipment status";
+    public const string ShipmentPatchNotAllowedTerminal = "Cannot patch shipment: status is terminal";
+    public const string ShipmentDeleteNotAllowed = "Delete is not allowed while shipment is in an active delivery state";
+    public const string FailureReasonRequired = "FailureReason is required when setting status to DELIVERY_FAILED (or set it via PATCH first)";
+    public const string CancelReasonRequired = "CancelReason is required when setting status to CANCELLED (or set it via PATCH first)";
     public const string OrderContextNotFound = "Order context not available for shipment creation";
     public const string OrderItemsMissing = "Order has no shippable items";
     public const string ProviderServiceCodeRequired = "provider_service_code is required";

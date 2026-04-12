@@ -43,6 +43,7 @@ public class ShipmentDbContext : DbContext
             entity.Property(e => e.ShipmentId).HasColumnName("shipment_id");
 
             entity.Property(e => e.OrderId).HasColumnName("order_id").IsRequired();
+            entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
             entity.Property(e => e.TrackingNumber).HasColumnName("tracking_number").HasMaxLength(50);
             entity.Property(e => e.ProviderServiceId).HasColumnName("provider_service_id");
 
@@ -68,6 +69,7 @@ public class ShipmentDbContext : DbContext
 
             // Indexes
             entity.HasIndex(e => e.OrderId).HasDatabaseName("IX_Shipments_order_id");
+            entity.HasIndex(e => e.ShopId).HasDatabaseName("IX_Shipments_shop_id");
             entity.HasIndex(e => e.TrackingNumber)
                   .IsUnique()
                   .HasFilter("tracking_number IS NOT NULL")

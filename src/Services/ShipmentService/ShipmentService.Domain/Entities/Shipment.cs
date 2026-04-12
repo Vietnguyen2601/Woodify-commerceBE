@@ -10,6 +10,9 @@ public class Shipment
 
     public Guid OrderId { get; set; }
 
+    /// <summary>Shop that owns this shipment (matches <c>CreateShipmentDto.ShopId</c>); used for seller listing.</summary>
+    public Guid ShopId { get; set; }
+
     public string? TrackingNumber { get; set; }
 
     public Guid? ProviderServiceId { get; set; }

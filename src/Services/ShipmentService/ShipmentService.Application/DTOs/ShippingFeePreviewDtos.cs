@@ -1,4 +1,4 @@
-namespace ShipmentService.Application.DTOs;
+﻿namespace ShipmentService.Application.DTOs;
 
 /// <summary>Request DTO for the shipping fee preview endpoint.</summary>
 public class ShippingFeePreviewRequest
@@ -22,10 +22,10 @@ public class ShippingFeePreviewResponse
     public string ProviderServiceCode { get; set; } = string.Empty;
     public string? ServiceName { get; set; }
 
-    /// <summary>Raw fee from the shipping provider (cents).</summary>
+    /// <summary>Raw fee from the shipping tier (VND).</summary>
     public long BaseFeeVnd { get; set; }
 
-    /// <summary>Bulky surcharge applied on top of BaseFeeVnd (cents).</summary>
+    /// <summary>Bulky surcharge on top of BaseFeeVnd (VND).</summary>
     public long SurchargeVnd { get; set; }
 
     /// <summary>Multiplier from ProviderService.MultiplierFee - platform margin.</summary>

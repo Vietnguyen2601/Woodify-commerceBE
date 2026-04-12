@@ -13,6 +13,7 @@ public static class ShipmentMapper
         {
             ShipmentId = shipment.ShipmentId,
             OrderId = shipment.OrderId,
+            ShopId = shipment.ShopId,
             TrackingNumber = shipment.TrackingNumber,
             ProviderServiceCode = shipment.ProviderService?.Code,
             ShippingProviderName = shipment.ProviderService?.ShippingProvider?.Name,
@@ -26,6 +27,8 @@ public static class ShipmentMapper
             PickedUpAt = shipment.PickedUpAt,
             DeliveryEstimatedAt = shipment.DeliveryEstimatedAt,
             Status = shipment.Status,
+            FailureReason = shipment.FailureReason,
+            CancelReason = shipment.CancelReason,
             CreatedAt = shipment.CreatedAt,
             UpdatedAt = shipment.UpdatedAt
         };
@@ -60,6 +63,8 @@ public static class ShipmentMapper
         if (dto.PickupScheduledAt.HasValue) shipment.PickupScheduledAt = dto.PickupScheduledAt;
         if (dto.PickedUpAt.HasValue) shipment.PickedUpAt = dto.PickedUpAt;
         if (dto.DeliveryEstimatedAt.HasValue) shipment.DeliveryEstimatedAt = dto.DeliveryEstimatedAt;
+        if (dto.FailureReason != null) shipment.FailureReason = dto.FailureReason;
+        if (dto.CancelReason != null) shipment.CancelReason = dto.CancelReason;
 
         shipment.UpdatedAt = DateTime.UtcNow;
     }

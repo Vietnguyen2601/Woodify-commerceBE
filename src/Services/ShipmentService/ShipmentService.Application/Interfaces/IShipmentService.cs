@@ -11,6 +11,7 @@ public interface IShipmentService
     Task<ServiceResult<IEnumerable<ShipmentDto>>> GetAllAsync();
     Task<ServiceResult<ShipmentDto>> GetByIdAsync(Guid id);
     Task<ServiceResult<IEnumerable<ShipmentDto>>> GetByOrderIdAsync(Guid orderId);
+    Task<ServiceResult<IEnumerable<ShipmentDto>>> GetByShopIdAsync(Guid shopId, string? status = null);
     Task<ServiceResult<ShipmentDto>> CreateAsync(CreateShipmentDto dto);
     Task<ServiceResult<ShipmentDto>> UpdateAsync(Guid id, UpdateShipmentDto dto);
     Task<ServiceResult<ShipmentDto>> UpdateStatusAsync(Guid id, UpdateShipmentStatusDto dto);

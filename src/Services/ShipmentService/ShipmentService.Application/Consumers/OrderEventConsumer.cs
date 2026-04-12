@@ -99,7 +99,7 @@ public class OrderEventConsumer : BackgroundService
                 });
 
             _logger.LogInformation(
-                "Published ShippingFeeCalculatedEvent Order {OrderId}: Fee = {Fee} cents",
+                "Published ShippingFeeCalculatedEvent Order {OrderId}: Fee = {Fee} VND",
                 evt.OrderId, ShippingFeeVnd);
         }
         catch (Exception ex)

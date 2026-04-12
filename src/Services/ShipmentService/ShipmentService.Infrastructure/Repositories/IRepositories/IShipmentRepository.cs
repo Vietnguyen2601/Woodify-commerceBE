@@ -9,6 +9,7 @@ namespace ShipmentService.Infrastructure.Repositories.IRepositories;
 public interface IShipmentRepository : IGenericRepository<Shipment>
 {
     Task<List<Shipment>> GetByOrderIdAsync(Guid orderId);
+    Task<List<Shipment>> GetByShopIdAsync(Guid shopId, string? status = null);
     Task<List<Shipment>> GetByStatusAsync(string status);
     Task<bool> ExistsByTrackingNumberAsync(string trackingNumber);
     Task<bool> HasNonTerminalByProviderIdAsync(Guid providerId);

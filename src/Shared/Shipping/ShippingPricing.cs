@@ -55,9 +55,6 @@ public static class ShippingPricing
         return ComputeShippingFeeVnd(providerServiceCode, weightGrams);
     }
 
-    public static double GrandTotalVnd(double orderSubtotalVnd, long finalShippingFeeVnd) =>
-        orderSubtotalVnd + finalShippingFeeVnd;
-
     /// <summary>ECO / STD / EXP quotes for checkout UI (same math as create order).</summary>
     public static IReadOnlyList<CheckoutShippingTierQuote> QuoteAllCheckoutTiers(int weightGrams, double orderSubtotalVnd)
     {
@@ -70,7 +67,7 @@ public static class ShippingPricing
             list.Add(new CheckoutShippingTierQuote(
                 canon,
                 DisplayLabelForTier(canon),
-                GrandTotalVnd(orderSubtotalVnd, fee),
+                fee,
                 free));
         }
 
@@ -78,9 +75,9 @@ public static class ShippingPricing
     }
 }
 
-/// <summary>One checkout tier row. <see cref="TotalAmountVnd"/> = subtotal + shipping (order payable total).</summary>
+/// <summary>One checkout tier row. <see cref="ShippingFeeVnd"/> = freight only (same rule as create order).</summary>
 public sealed record CheckoutShippingTierQuote(
     string ProviderServiceCode,
     string DisplayLabel,
-    double TotalAmountVnd,
+    long ShippingFeeVnd,
     bool IsFreeShipping);

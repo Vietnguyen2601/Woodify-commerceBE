@@ -249,6 +249,7 @@ public static class ShipmentDbSeeder
             if (!dbContext.Shipments.Any())
             {
                 var now = DateTime.UtcNow;
+                var demoShopId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 
                 var shipments = new List<Shipment>
                 {
@@ -256,6 +257,7 @@ public static class ShipmentDbSeeder
                     {
                         ShipmentId             = Guid.NewGuid(),
                         OrderId                = Guid.NewGuid(),
+                        ShopId                 = demoShopId,
                         TrackingNumber         = "GHN2026030001",
                         ProviderServiceId      = ghnStdId,
                         PickupAddressId        = "Kho Woodify - 123 Nguyễn Huệ, Q.1, TP.HCM",
@@ -275,6 +277,7 @@ public static class ShipmentDbSeeder
                     {
                         ShipmentId             = Guid.NewGuid(),
                         OrderId                = Guid.NewGuid(),
+                        ShopId                 = demoShopId,
                         TrackingNumber         = "GHN2026030002",
                         ProviderServiceId      = ghnExpId,
                         PickupAddressId        = "Kho Woodify - 123 Nguyễn Huệ, Q.1, TP.HCM",
@@ -294,6 +297,7 @@ public static class ShipmentDbSeeder
                     {
                         ShipmentId             = Guid.NewGuid(),
                         OrderId                = Guid.NewGuid(),
+                        ShopId                 = demoShopId,
                         TrackingNumber         = "GHTK2026030001",
                         ProviderServiceId      = ghtkEcoId,
                         PickupAddressId        = "Kho Woodify - 123 Nguyễn Huệ, Q.1, TP.HCM",
@@ -312,6 +316,7 @@ public static class ShipmentDbSeeder
                     {
                         ShipmentId             = Guid.NewGuid(),
                         OrderId                = Guid.NewGuid(),
+                        ShopId                 = demoShopId,
                         TrackingNumber         = "VTP2026030001",
                         ProviderServiceId      = vtpStdId,
                         PickupAddressId        = "Kho Woodify - 123 Nguyễn Huệ, Q.1, TP.HCM",
@@ -331,6 +336,7 @@ public static class ShipmentDbSeeder
                     {
                         ShipmentId             = Guid.NewGuid(),
                         OrderId                = Guid.NewGuid(),
+                        ShopId                 = demoShopId,
                         TrackingNumber         = "JT2026030001",
                         ProviderServiceId      = jtStdId,
                         PickupAddressId        = "Kho Woodify - 123 Nguyễn Huệ, Q.1, TP.HCM",
@@ -351,6 +357,7 @@ public static class ShipmentDbSeeder
                     {
                         ShipmentId             = Guid.NewGuid(),
                         OrderId                = Guid.NewGuid(),
+                        ShopId                 = demoShopId,
                         TrackingNumber         = "GHN2026030003",
                         ProviderServiceId      = ghnEcoId,
                         PickupAddressId        = "Kho Woodify - 123 Nguyễn Huệ, Q.1, TP.HCM",

@@ -5,6 +5,8 @@ namespace ShipmentService.Application.Validators;
 
 public class CreateShipmentValidator : AbstractValidator<CreateShipmentDto>
 {
+    private static readonly string[] AllowedBulkyTypes = { "NORMAL", "BULKY", "SUPER_BULKY" };
+
     public CreateShipmentValidator()
     {
         RuleFor(x => x.ShopId)
@@ -12,6 +14,19 @@ public class CreateShipmentValidator : AbstractValidator<CreateShipmentDto>
 
         RuleFor(x => x.OrderId)
             .NotEmpty().WithMessage("OrderId is required");
+
+        RuleFor(x => x.TotalWeightGrams)
+            .GreaterThan(0).WithMessage("TotalWeightGrams must be greater than 0")
+            .When(x => x.TotalWeightGrams.HasValue);
+
+        RuleFor(x => x.FinalShippingFeeVnd)
+            .GreaterThanOrEqualTo(0).WithMessage("FinalShippingFeeVnd must be >= 0")
+            .When(x => x.FinalShippingFeeVnd.HasValue);
+
+        RuleFor(x => x.BulkyType)
+            .Must(b => b == null || AllowedBulkyTypes.Contains(b))
+            .WithMessage($"BulkyType must be one of: {string.Join(", ", AllowedBulkyTypes)}")
+            .When(x => x.BulkyType != null);
     }
 }
 
@@ -42,14 +57,14 @@ public class UpdateShipmentStatusValidator : AbstractValidator<UpdateShipmentSta
     {
         "DRAFT", "PENDING", "PICKUP_SCHEDULED", "PICKED_UP", "IN_TRANSIT",
         "OUT_FOR_DELIVERY", "DELIVERED", "DELIVERY_FAILED",
-        "RETURNED", "CANCELLED"
+        "RETURNING", "RETURNED", "CANCELLED"
     };
 
     public UpdateShipmentStatusValidator()
     {
         RuleFor(x => x.Status)
             .NotEmpty().WithMessage("Status is required")
-            .Must(s => AllowedStatuses.Contains(s))
+            .Must(s => AllowedStatuses.Contains(s.Trim().ToUpperInvariant()))
             .WithMessage($"Status must be one of: {string.Join(", ", AllowedStatuses)}");
     }
 }
@@ -58,7 +73,6 @@ public class UpdateShipmentPickupValidator : AbstractValidator<UpdateShipmentPic
 {
     public UpdateShipmentPickupValidator()
     {
-        RuleFor(x => x.PickedUpAt)
-            .NotNull().WithMessage("PickedUpAt is required");
+        // PickedUpAt optional — defaults to UtcNow in service
     }
 }
