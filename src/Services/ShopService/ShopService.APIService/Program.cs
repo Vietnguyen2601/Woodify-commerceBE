@@ -77,7 +77,10 @@ for (int attempt = 0; attempt < 5; attempt++)
         builder.Services.AddSingleton<ShopReviewStatsUpdatedConsumer>();
         break;
     }
-    catch (Exception ex)
+    catch (Exception ex) when (
+        ex is TimeoutException
+        || ex is IOException
+        || ex is InvalidOperationException)
     {
         Console.WriteLine($"RabbitMQ connection attempt {attempt + 1} failed: {ex.Message}");
         if (attempt < 4)
