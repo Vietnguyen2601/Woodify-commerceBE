@@ -123,5 +123,29 @@ public class OrderEventPublisher
             Console.WriteLine($"[OrderService] Failed to publish OrderRefunded event: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// Publish OrderCreatedForShopEvent tới ShopService khi order mới được tạo
+    /// ShopService sẽ cập nhật order list, metrics và dashboard
+    /// Exchange: "shop.events" / Routing key: "order.created"
+    /// </summary>
+    public void PublishOrderCreatedForShop(OrderCreatedForShopEvent evt)
+    {
+        if (_publisher == null)
+        {
+            Console.WriteLine($"[OrderService] WARNING: RabbitMQ publisher is not available. Skipping OrderCreatedForShop event.");
+            return;
+        }
+
+        try
+        {
+            _publisher.Publish("shop.events", "order.created", evt);
+            Console.WriteLine($"[OrderService] Published OrderCreatedForShop event: OrderId={evt.OrderId}, ShopId={evt.ShopId}, Amount={evt.TotalAmountCents}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[OrderService] Failed to publish OrderCreatedForShop event: {ex.Message}");
+        }
+    }
 }
 

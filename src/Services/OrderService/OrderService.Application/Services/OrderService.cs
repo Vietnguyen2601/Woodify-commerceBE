@@ -196,6 +196,30 @@ public class OrderService : IOrderService
                     VoucherId = dto.VoucherId,
                     CreatedAt = order.CreatedAt
                 });
+
+                // Publish OrderCreated event to RabbitMQ for ShopService
+                var itemCount = order.OrderItems.Count;
+                var mainProduct = order.OrderItems.FirstOrDefault();
+                var totalAmountCents = (long)(order.TotalAmountVnd * 10);
+                var commissionCents = (long)(order.CommissionVnd * 10);
+
+                _orderEventPublisher.PublishOrderCreatedForShop(new OrderCreatedForShopEvent
+                {
+                    OrderId = order.OrderId,
+                    ShopId = order.ShopId,
+                    AccountId = order.AccountId,
+                    TotalAmountCents = totalAmountCents,
+                    CommissionCents = commissionCents,
+                    CommissionRate = order.CommissionRate,
+                    ItemCount = itemCount,
+                    ProductVersionId = mainProduct?.VersionId,
+                    ProductVersionName = null,
+                    CategoryId = null,
+                    CategoryName = null,
+                    DeliveryAddress = order.DeliveryAddress,
+                    ProviderServiceCode = order.ProviderServiceCode,
+                    CreatedAt = order.CreatedAt
+                });
             }
 
             // 10. DELETE ONLY SELECTED/PROCESSED ITEMS FROM CART
@@ -391,6 +415,30 @@ public class OrderService : IOrderService
                 ProviderServiceCode = order.ProviderServiceCode,
                 TotalWeightGrams = totalWeightGrams,
                 VoucherId = request.VoucherId,
+                CreatedAt = order.CreatedAt
+            });
+
+            // ===== PUBLISH EVENT FOR SHOP SERVICE =====
+            var itemCount = validItems.Count;
+            var mainProduct = order.OrderItems?.FirstOrDefault();
+            var totalAmountCents = (long)(order.TotalAmountVnd * 10);
+            var commissionCents = (long)(order.CommissionVnd * 10);
+
+            _orderEventPublisher.PublishOrderCreatedForShop(new OrderCreatedForShopEvent
+            {
+                OrderId = order.OrderId,
+                ShopId = order.ShopId,
+                AccountId = order.AccountId,
+                TotalAmountCents = totalAmountCents,
+                CommissionCents = commissionCents,
+                CommissionRate = order.CommissionRate,
+                ItemCount = itemCount,
+                ProductVersionId = mainProduct?.VersionId,
+                ProductVersionName = null, // Will be populated by ShopService via ProductService lookup
+                CategoryId = null,         // Will be populated by ShopService via ProductService lookup
+                CategoryName = null,       // Will be populated by ShopService via ProductService lookup
+                DeliveryAddress = order.DeliveryAddress,
+                ProviderServiceCode = order.ProviderServiceCode,
                 CreatedAt = order.CreatedAt
             });
 
@@ -643,7 +691,7 @@ public class OrderService : IOrderService
                 ShopId = order.ShopId,
                 PreviousStatus = oldStatus,
                 NewStatus = newStatus,
-                TotalAmountCents = (long)order.TotalAmountCents,
+                TotalAmountCents = (long)(order.TotalAmountVnd),
                 StatusChangedAt = DateTime.UtcNow,
                 OrderCreatedAt = order.CreatedAt,
                 ItemCount = itemCount,
@@ -657,7 +705,7 @@ public class OrderService : IOrderService
             if (newStatus.Equals("COMPLETED", StringComparison.OrdinalIgnoreCase) &&
                 !oldStatus.Equals("COMPLETED", StringComparison.OrdinalIgnoreCase))
             {
-                var totalAmountCents = (long)order.TotalAmountCents;
+                var totalAmountCents = (long)(order.TotalAmountVnd);
                 var commissionCents = (long)(totalAmountCents * 0.05m);
                 
                 var completedEvent = new OrderCompletedEvent
@@ -683,7 +731,7 @@ public class OrderService : IOrderService
                     OrderId = order.OrderId,
                     ShopId = order.ShopId,
                     CancelReason = "Order cancelled via dashboard",
-                    CancelledAmountCents = (long)order.TotalAmountCents,
+                    CancelledAmountCents = (long)(order.TotalAmountVnd),
                     CancelledAt = DateTime.UtcNow,
                     ItemCount = itemCount,
                     ProductVersionId = productVersionId
@@ -701,7 +749,7 @@ public class OrderService : IOrderService
                 {
                     OrderId = order.OrderId,
                     ShopId = order.ShopId,
-                    RefundAmountCents = (long)order.TotalAmountCents,
+                    RefundAmountCents = (long)(order.TotalAmountVnd),
                     RefundReason = "Order refunded via dashboard",
                     RefundedAt = DateTime.UtcNow,
                     OrderCreatedAt = order.CreatedAt,

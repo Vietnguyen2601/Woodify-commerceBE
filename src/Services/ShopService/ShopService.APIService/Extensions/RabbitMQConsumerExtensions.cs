@@ -114,7 +114,23 @@ public static class RabbitMQConsumerExtensions
                 });
 
             // ========================================
-            // 7. MetricsAggregatedEvent Consumer (Batch)
+            // 7. OrderCreatedForShopEvent Consumer
+            // ========================================
+            const string shopEventsExchange = "shop.events";
+            var orderCreatedForShopQueueName = $"{dashboardQueuePrefix}order-created-for-shop";
+            consumer.Subscribe<Shared.Events.OrderCreatedForShopEvent>(
+                orderCreatedForShopQueueName,
+                shopEventsExchange,
+                "order.created",
+                async (eventMessage) =>
+                {
+                    using var scope = serviceProvider.CreateScope();
+                    var handler = scope.ServiceProvider.GetRequiredService<OrderCreatedForShopEventConsumer>();
+                    await handler.HandleAsync(eventMessage);
+                });
+
+            // ========================================
+            // 8. MetricsAggregatedEvent Consumer (Batch)
             // ========================================
             var metricsAggregatedQueueName = $"{dashboardQueuePrefix}metrics-aggregated";
             consumer.Subscribe<Shared.Events.MetricsAggregatedEvent>(

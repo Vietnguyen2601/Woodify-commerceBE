@@ -86,6 +86,7 @@ builder.Services.AddScoped<OrderCancelledEventConsumer>();
 builder.Services.AddScoped<OrderRefundedEventConsumer>();
 builder.Services.AddScoped<OrderAwaitingPickupEventConsumer>();
 builder.Services.AddScoped<OrderReadyToShipEventConsumer>();
+builder.Services.AddScoped<OrderCreatedForShopEventConsumer>();
 builder.Services.AddScoped<MetricsAggregatedEventConsumer>();
 
 var rootPath = Directory.GetParent(Directory.GetCurrentDirectory())?.Parent?.Parent?.Parent?.FullName;

@@ -407,6 +407,59 @@ public class OrderReadyToShipEventConsumer : DashboardEventConsumerBase
 }
 
 /// <summary>
+/// Event consumer cho OrderCreatedForShopEvent
+/// Lắng nghe khi order được tạo mới từ OrderService
+/// </summary>
+public class OrderCreatedForShopEventConsumer : DashboardEventConsumerBase
+{
+    public OrderCreatedForShopEventConsumer(
+        IDashboardRepository dashboardRepository,
+        IDashboardService dashboardService,
+        IDistributedCache cache,
+        ILogger<OrderCreatedForShopEventConsumer> logger,
+        ShopDbContext context)
+        : base(dashboardRepository, dashboardService, cache, logger, context)
+    {
+    }
+
+    public async Task HandleAsync(OrderCreatedForShopEvent @event)
+    {
+        try
+        {
+            _logger.LogInformation(
+                "Processing OrderCreatedForShopEvent: OrderId={OrderId}, Shop={ShopId}, Amount={Amount} VND, ItemCount={ItemCount}",
+                @event.OrderId, @event.ShopId, @event.TotalAmountCents / 10m, @event.ItemCount);
+
+            var metrics = new OrderMetricsSnapshot
+            {
+                OrderId = @event.OrderId,
+                ShopId = @event.ShopId,
+                Status = "PENDING",  // Order mới luôn là PENDING
+                TotalAmountCents = @event.TotalAmountCents,
+                CommissionCents = @event.CommissionCents,
+                NetAmountCents = @event.TotalAmountCents - @event.CommissionCents,
+                OrderCreatedAt = @event.CreatedAt,
+                OrderYear = @event.CreatedAt.Year,
+                OrderMonth = @event.CreatedAt.Month,
+                OrderDay = @event.CreatedAt.Day,
+                ItemCount = @event.ItemCount,
+                ProductVersionId = @event.ProductVersionId,
+                ProductVersionName = @event.ProductVersionName,
+                CategoryId = @event.CategoryId,
+                CategoryName = @event.CategoryName
+            };
+
+            await SaveOrderMetricsAsync(metrics);
+            await InvalidateCacheAsync(@event.ShopId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing OrderCreatedForShopEvent for order {OrderId}", @event.OrderId);
+        }
+    }
+}
+
+/// <summary>
 /// Event consumer cho MetricsAggregatedEvent (batch event)
 /// </summary>
 public class MetricsAggregatedEventConsumer : DashboardEventConsumerBase

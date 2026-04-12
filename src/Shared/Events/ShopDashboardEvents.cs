@@ -100,6 +100,60 @@ public class OrderCompletedEvent
 }
 
 /// <summary>
+/// Event khi Order được tạo mới (cho ShopService Dashboard)
+/// OrderService publish → ShopService consume (update order list & metrics)
+/// Exchange: "shop.events" / Routing key: "order.created"
+/// Sử dụng để:
+/// - Cập nhật danh sách order realtime
+/// - Cập nhật tổng số order PENDING
+/// - Track order theo tháng/năm
+/// </summary>
+public class OrderCreatedForShopEvent
+{
+    /// <summary>ID của order</summary>
+    public Guid OrderId { get; set; }
+
+    /// <summary>ID của shop</summary>
+    public Guid ShopId { get; set; }
+
+    /// <summary>ID của account (buyer)</summary>
+    public Guid AccountId { get; set; }
+
+    /// <summary>Tổng tiền order (VND, đơn vị: cents = VND * 10)</summary>
+    public long TotalAmountCents { get; set; }
+
+    /// <summary>Tiền hoa hồng (VND, đơn vị: cents)</summary>
+    public long CommissionCents { get; set; }
+
+    /// <summary>Tỷ lệ hoa hồng áp dụng</summary>
+    public decimal CommissionRate { get; set; }
+
+    /// <summary>Số lượng items trong order</summary>
+    public int ItemCount { get; set; }
+
+    /// <summary>ID phiên bản sản phẩm chính (từ OrderItem đầu tiên)</summary>
+    public Guid? ProductVersionId { get; set; }
+
+    /// <summary>Tên phiên bản sản phẩm chính</summary>
+    public string? ProductVersionName { get; set; }
+
+    /// <summary>ID category của sản phẩm chính</summary>
+    public Guid? CategoryId { get; set; }
+
+    /// <summary>Tên category của sản phẩm chính</summary>
+    public string? CategoryName { get; set; }
+
+    /// <summary>Địa chỉ giao hàng</summary>
+    public string? DeliveryAddress { get; set; }
+
+    /// <summary>Mã dịch vụ vận chuyển</summary>
+    public string? ProviderServiceCode { get; set; }
+
+    /// <summary>Ngày tạo order</summary>
+    public DateTime CreatedAt { get; set; }
+}
+
+/// <summary>
 /// Event khi Order bị hủy
 /// OrderService publish → ShopService consume (update metrics)
 /// Exchange: "order.events" / Routing key: "order.cancelled"
