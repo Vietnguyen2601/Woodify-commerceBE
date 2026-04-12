@@ -132,8 +132,8 @@ public class DashboardService : IDashboardService
                 Year = group.Key.Year,
                 Quarter = group.Key.Quarter,
                 Period = $"Q{group.Key.Quarter}-{group.Key.Year}",
-                GrossRevenue = (long)group.Sum(o => o.TotalAmountCents),
-                CommissionRevenue = group.Sum(o => o.CommissionCents),
+                GrossRevenue = (long)group.Sum(o => o.TotalAmountVnd),
+                CommissionRevenue = group.Sum(o => o.CommissionVnd),
                 OrderCount = group.Count(),
                 CommissionRate = (decimal)(group.Sum(o => o.CommissionRate) / group.Count()),
             };
@@ -160,7 +160,7 @@ public class DashboardService : IDashboardService
 
             if (lastYearSameQuarter != null)
             {
-                var lastYearRevenue = (long)lastYearSameQuarter.Sum(o => o.TotalAmountCents);
+                var lastYearRevenue = (long)lastYearSameQuarter.Sum(o => o.TotalAmountVnd);
                 if (lastYearRevenue > 0)
                 {
                     dataPoint.YoYGrowth = (decimal)(
@@ -211,8 +211,8 @@ public class DashboardService : IDashboardService
             var dataPoint = new RevenueDataPointDto
             {
                 Year = group.Key,
-                GrossRevenue = (long)group.Sum(o => o.TotalAmountCents),
-                CommissionRevenue = group.Sum(o => o.CommissionCents),
+                GrossRevenue = (long)group.Sum(o => o.TotalAmountVnd),
+                CommissionRevenue = group.Sum(o => o.CommissionVnd),
                 OrderCount = group.Count(),
                 CommissionRate = (decimal)(group.Sum(o => o.CommissionRate) / group.Count()),
             };
@@ -352,8 +352,8 @@ public class DashboardService : IDashboardService
             var dataPoint = new RevenueDataPointDto
             {
                 Date = group.Key.ToString("yyyy-MM-dd"),
-                GrossRevenue = (long)group.Sum(o => o.TotalAmountCents),
-                CommissionRevenue = group.Sum(o => o.CommissionCents),
+                GrossRevenue = (long)group.Sum(o => o.TotalAmountVnd),
+                CommissionRevenue = group.Sum(o => o.CommissionVnd),
                 OrderCount = group.Count(),
                 CommissionRate = group.Count() > 0
                     ? (decimal)(group.Sum(o => o.CommissionRate) / group.Count())
@@ -401,8 +401,8 @@ public class DashboardService : IDashboardService
                 Year = group.Key.Year,
                 Month = group.Key.Month,
                 Period = $"{group.Key.Year:0000}-{group.Key.Month:00}",
-                GrossRevenue = (long)group.Sum(o => o.TotalAmountCents),
-                CommissionRevenue = group.Sum(o => o.CommissionCents),
+                GrossRevenue = (long)group.Sum(o => o.TotalAmountVnd),
+                CommissionRevenue = group.Sum(o => o.CommissionVnd),
                 OrderCount = group.Count(),
                 CommissionRate = group.Count() > 0
                     ? (decimal)(group.Sum(o => o.CommissionRate) / group.Count())
@@ -552,13 +552,13 @@ public class DashboardService : IDashboardService
             .ToList();
 
         // ─── Calculate today's metrics ───
-        var todayGrossRevenue = (decimal)(todayCompletedOrders.Sum(o => o.TotalAmountCents) / 100.0);
-        var todayCommissionRevenue = (decimal)(todayCompletedOrders.Sum(o => o.CommissionCents) / 100.0);
+        var todayGrossRevenue = (decimal)todayCompletedOrders.Sum(o => o.TotalAmountVnd);
+        var todayCommissionRevenue = (decimal)todayCompletedOrders.Sum(o => o.CommissionVnd);
         var todayNetRevenue = todayGrossRevenue - todayCommissionRevenue;
 
         // ─── Calculate yesterday's metrics (for growth) ───
-        var yesterdayGrossRevenue = (decimal)(yesterdayCompletedOrders.Sum(o => o.TotalAmountCents) / 100.0);
-        var yesterdayCommissionRevenue = (decimal)(yesterdayCompletedOrders.Sum(o => o.CommissionCents) / 100.0);
+        var yesterdayGrossRevenue = (decimal)yesterdayCompletedOrders.Sum(o => o.TotalAmountVnd);
+        var yesterdayCommissionRevenue = (decimal)yesterdayCompletedOrders.Sum(o => o.CommissionVnd);
 
         // ─── Calculate growth rates ───
         decimal? grossRevenueGrowth = null;

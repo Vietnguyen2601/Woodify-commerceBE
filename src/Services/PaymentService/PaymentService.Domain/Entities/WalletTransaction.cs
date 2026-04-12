@@ -14,13 +14,13 @@ public class WalletTransaction
     public WalletTransactionType TxType { get; set; }
 
     /// <summary>
-    /// Số tiền giao dịch (đơn vị: cents)
+    /// Số tiền giao dịch (VND)
     /// </summary>
-    public long AmountCents { get; set; }
+    public long AmountVnd { get; set; }
 
-    public long? BalanceBeforeCents { get; set; }
+    public long? BalanceBeforeVnd { get; set; }
 
-    public long? BalanceAfterCents { get; set; }
+    public long? BalanceAfterVnd { get; set; }
 
     /// <summary>
     /// FK to Orders service (optional)

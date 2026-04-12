@@ -101,7 +101,7 @@ public class PaymentDbContext : DbContext
                 .HasColumnName("provider_payment_id")
                 .HasMaxLength(255);
 
-            entity.Property(e => e.AmountCents)
+            entity.Property(e => e.AmountVnd)
                 .HasColumnName("amount_cents");
 
             entity.Property(e => e.Currency)
@@ -142,7 +142,7 @@ public class PaymentDbContext : DbContext
             entity.Property(e => e.AccountId)
                 .HasColumnName("account_id");
 
-            entity.Property(e => e.BalanceCents)
+            entity.Property(e => e.BalanceVnd)
                 .HasColumnName("balance_cents")
                 .HasDefaultValue(0);
 
@@ -183,13 +183,13 @@ public class PaymentDbContext : DbContext
                 .HasConversion<string>()
                 .HasMaxLength(20);
 
-            entity.Property(e => e.AmountCents)
+            entity.Property(e => e.AmountVnd)
                 .HasColumnName("amount_cents");
 
-            entity.Property(e => e.BalanceBeforeCents)
+            entity.Property(e => e.BalanceBeforeVnd)
                 .HasColumnName("balance_before_cents");
 
-            entity.Property(e => e.BalanceAfterCents)
+            entity.Property(e => e.BalanceAfterVnd)
                 .HasColumnName("balance_after_cents");
 
             entity.Property(e => e.RelatedOrderId)

@@ -6,7 +6,9 @@ public class OrderInfoCache
     public Guid ShopId { get; set; }
     public Guid AccountId { get; set; }
     public string? DeliveryAddress { get; set; }
-    public double TotalAmountCents { get; set; }
+    /// <summary>Goods only (VND) — same as OrderCreatedEvent.SubtotalVnd; used for free-ship and pricing.</summary>
+    public double SubtotalVnd { get; set; }
+    public double TotalAmountVnd { get; set; }
     /// <summary>Cân nặng tổng (g) từ OrderCreatedEvent — không cần gọi ProductService.</summary>
     public int TotalWeightGrams { get; set; }
     public string? ProviderServiceCode { get; set; }

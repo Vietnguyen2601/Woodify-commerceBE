@@ -15,9 +15,9 @@ public class Wallet
     public Guid AccountId { get; set; }
 
     /// <summary>
-    /// Số dư (đơn vị: cents)
+    /// Số dư (VND)
     /// </summary>
-    public long BalanceCents { get; set; } = 0;
+    public long BalanceVnd { get; set; } = 0;
 
     public string Currency { get; set; } = "VND";
 

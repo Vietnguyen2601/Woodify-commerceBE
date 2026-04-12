@@ -100,7 +100,7 @@ public static class PayOsRequestHelper
     public static PayOsCreatePaymentInput CreatePayOsRequest(
         Guid orderId,
         Guid shopId,
-        double totalAmountCents,
+        double TotalAmountVnd,
         string? buyerName,
         string? buyerEmail,
         string? buyerPhone,
@@ -108,7 +108,7 @@ public static class PayOsRequestHelper
         string cancelUrl)
     {
         // Convert từ cents (VND) thành đơn vị PayOS
-        int amountInVnd = (int)totalAmountCents;
+        int amountInVnd = (int)TotalAmountVnd;
 
         // Default URLs (fallback nếu không được cung cấp)
         const string defaultReturnUrl = "http://localhost:3000/payment/success";

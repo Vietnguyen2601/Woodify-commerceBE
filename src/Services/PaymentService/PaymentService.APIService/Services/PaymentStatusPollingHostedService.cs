@@ -130,7 +130,9 @@ public class PaymentStatusPollingHostedService : BackgroundService, IPaymentPoll
                             OrderCode = orderCode,
                             Status = "PAID",
                             Description = "Auto-detected from polling",
-                            Amount = (int)(payment.AmountCents / 100),
+                            Amount = payment.AmountVnd > int.MaxValue
+                                ? int.MaxValue
+                                : (int)payment.AmountVnd,
                             Reference = ""
                         },
                         Signature = "auto-polling"

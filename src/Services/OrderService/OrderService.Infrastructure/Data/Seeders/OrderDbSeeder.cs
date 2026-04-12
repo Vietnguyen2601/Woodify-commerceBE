@@ -121,10 +121,11 @@ public static class OrderDbSeeder
                     OrderId = Guid.NewGuid(),
                     AccountId = Guid.NewGuid(),
                     ShopId = shopId,
-                    SubtotalCents = 99950.00,
-                    TotalAmountCents = 102950.00,
+                    SubtotalVnd = 99950.00,
+                    TotalAmountVnd = 102950.00,
                     Status = OrderStatus.DELIVERED,
                     DeliveryAddress = "Address-001",
+                    ProviderServiceCode = "STD",
                     CreatedAt = DateTime.UtcNow.AddDays(-5),
                     UpdatedAt = DateTime.UtcNow.AddDays(-1)
                 },
@@ -133,10 +134,11 @@ public static class OrderDbSeeder
                     OrderId = Guid.NewGuid(),
                     AccountId = Guid.NewGuid(),
                     ShopId = shopId,
-                    SubtotalCents = 249500.00,
-                    TotalAmountCents = 262000.00,
+                    SubtotalVnd = 249500.00,
+                    TotalAmountVnd = 262000.00,
                     Status = OrderStatus.SHIPPED,
                     DeliveryAddress = "Address-002",
+                    ProviderServiceCode = "STD",
                     CreatedAt = DateTime.UtcNow.AddDays(-2),
                     UpdatedAt = DateTime.UtcNow.AddDays(-1)
                 },
@@ -145,11 +147,12 @@ public static class OrderDbSeeder
                     OrderId = Guid.NewGuid(),
                     AccountId = Guid.NewGuid(),
                     ShopId = shopId,
-                    SubtotalCents = 149900.00,
-                    TotalAmountCents = 154900.00,
+                    SubtotalVnd = 149900.00,
+                    TotalAmountVnd = 154900.00,
                     VoucherId = Guid.NewGuid(),
                     Status = OrderStatus.CONFIRMED,
                     DeliveryAddress = "Address-003",
+                    ProviderServiceCode = "STD",
                     CreatedAt = DateTime.UtcNow.AddHours(-3),
                     UpdatedAt = DateTime.UtcNow.AddHours(-2)
                 },
@@ -158,10 +161,11 @@ public static class OrderDbSeeder
                     OrderId = Guid.NewGuid(),
                     AccountId = Guid.NewGuid(),
                     ShopId = shopId,
-                    SubtotalCents = 74950.00,
-                    TotalAmountCents = 76450.00,
+                    SubtotalVnd = 74950.00,
+                    TotalAmountVnd = 76450.00,
                     Status = OrderStatus.PENDING,
                     DeliveryAddress = "Address-004",
+                    ProviderServiceCode = "STD",
                     CreatedAt = DateTime.UtcNow.AddMinutes(-30)
                 },
                 new Order
@@ -169,10 +173,11 @@ public static class OrderDbSeeder
                     OrderId = Guid.NewGuid(),
                     AccountId = Guid.NewGuid(),
                     ShopId = shopId,
-                    SubtotalCents = 399500.00,
-                    TotalAmountCents = 412000.00,
+                    SubtotalVnd = 399500.00,
+                    TotalAmountVnd = 412000.00,
                     Status = OrderStatus.REFUNDED,
                     DeliveryAddress = "Address-005",
+                    ProviderServiceCode = "STD",
                     CreatedAt = DateTime.UtcNow.AddDays(-10),
                     UpdatedAt = DateTime.UtcNow.AddDays(-3)
                 }
@@ -222,17 +227,17 @@ public static class OrderDbSeeder
                 var items = new List<OrderItem>();
                 for (int i = 0; i < orderIds.Count; i++)
                 {
-                    var unitPriceCents = (1000 + i * 500000) * 100L;
+                    var unitPriceVnd = 100_000L + i * 50_000L;
                     var quantity = i + 1;
-                    var lineTotalCents = (double)(unitPriceCents * quantity);
+                    var lineTotalVnd = (double)(unitPriceVnd * quantity);
                     items.Add(new OrderItem
                     {
                         OrderItemId = Guid.NewGuid(),
                         OrderId = orderIds[i],
                         VersionId = Guid.NewGuid(),
                         Quantity = quantity,
-                        UnitPriceCents = unitPriceCents,
-                        LineTotalCents = lineTotalCents,
+                        UnitPriceVnd = unitPriceVnd,
+                        LineTotalVnd = lineTotalVnd,
                         Status = FulfillmentStatus.UNFULFILLED,
                         CreatedAt = DateTime.UtcNow
                     });

@@ -13,21 +13,24 @@ public class Order
     public Guid ShopId { get; set; }
 
     // Tiền gốc - tiền sau các phí thêm và giảm giá
-    public double SubtotalCents { get; set; }
-    public double TotalAmountCents { get; set; } // = SubtotalCents + ShippingFee + Voucher
+    public double SubtotalVnd { get; set; }
+    public double TotalAmountVnd { get; set; } // = SubtotalVnd + ShippingFee + Voucher
 
     public Guid? VoucherId { get; set; }
 
     // === THÊM MỚI ===
     // Hoa hồng
     public decimal CommissionRate { get; set; } = 0.06m;  // Tỷ lệ hoa hồng của đơn này
-    public long CommissionCents { get; set; } = 0;        // Số tiền hoa hồng đã tính
+    public long CommissionVnd { get; set; } = 0;        // Số tiền hoa hồng đã tính
 
     // Trạng thái - vận chuyển
     public OrderStatus Status { get; set; } = OrderStatus.PENDING;
 
     // Địa chỉ giao hàng (string, không phải ID)
     public string? DeliveryAddress { get; set; }
+
+    /// <summary>Shipping service code at checkout (snapshot, max 20 chars).</summary>
+    public string ProviderServiceCode { get; set; } = "STD";
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }

@@ -8,7 +8,7 @@ namespace OrderService.Application.Consumers;
 
 /// <summary>
 /// Consumer để nhận ShippingFeeCalculatedEvent từ ShipmentService
-/// Cập nhật TotalAmountCents của Order khi shipping fee được tính xong
+/// Cập nhật TotalAmountVnd của Order khi shipping fee được tính xong
 /// </summary>
 public class ShippingFeeEventConsumer
 {
@@ -49,7 +49,7 @@ public class ShippingFeeEventConsumer
     {
         _logger.LogInformation(
             "Received ShippingFeeCalculatedEvent for Order {OrderId}: Fee = {Fee} cents",
-            evt.OrderId, evt.ShippingFeeCents);
+            evt.OrderId, evt.ShippingFeeVnd);
 
         try
         {
@@ -64,10 +64,10 @@ public class ShippingFeeEventConsumer
                 return;
             }
 
-            // ✨ Shipping fee is already calculated and stored in Order.TotalAmountCents during order creation
+            // ✨ Shipping fee is already calculated and stored in Order.TotalAmountVnd during order creation
             // This event is for verification/auditing purpose
-            long calculatedShippingFee = evt.ShippingFeeCents;
-            long storedShippingFee = (long)(order.TotalAmountCents - order.SubtotalCents);
+            long calculatedShippingFee = evt.ShippingFeeVnd;
+            long storedShippingFee = (long)(order.TotalAmountVnd - order.SubtotalVnd);
 
             // Verify the calculation matches
             if (calculatedShippingFee == storedShippingFee)

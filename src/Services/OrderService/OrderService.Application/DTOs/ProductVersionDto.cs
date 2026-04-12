@@ -9,7 +9,8 @@ public class ProductVersionDto
     public Guid ProductId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public long? PriceCents { get; set; }
+    /// <summary>Giá bản ghi (VND), map JSON field ProductService nếu có.</summary>
+    public long? PriceVnd { get; set; }
     public string Currency { get; set; } = "VND";
     public string? Sku { get; set; }
     public string? ProductStatus { get; set; }
