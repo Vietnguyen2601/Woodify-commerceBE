@@ -122,36 +122,16 @@ public class OrderService : IOrderService
                 var shopId = shopGroup.Key;
                 var shopItems = shopGroup.Value;
 
-                // Calculate subtotal for this shop
-                double subtotalVnd = shopItems.Sum(item => item.Price * item.Quantity);
-
-                // ✨ Calculate total weight FOR THIS SHOP (not total for all shops)
                 int totalWeightGrams = await CalculateTotalWeightAsync(shopItems);
 
-                // ✨ Calculate shipping fee immediately using ShippingServiceConstants
-                long shippingFeeVnd = ShippingPricing.FinalShippingFeeVnd(
-                    providerServiceCode,
-                    totalWeightGrams,
-                    subtotalVnd);
-
-                // Total amount = Subtotal + Shipping fee
-                double orderTotalAmountVnd = subtotalVnd + shippingFeeVnd;
-
-                // === THÊM MỚI: Tính tiền hoa hồng ===
-                // Sử dụng default commission rate (6%) vì không fetch từ shop
                 decimal commissionRate = CommissionCalculator.DEFAULT_COMMISSION_RATE;
-                long commissionVnd = CommissionCalculator.CalculateCommissionVnd(subtotalVnd, commissionRate);
 
-                // Create Order entity for this shop
                 var order = new Order
                 {
                     OrderId = Guid.NewGuid(),
                     AccountId = dto.AccountId,
                     ShopId = shopId,
-                    SubtotalVnd = subtotalVnd,
-                    TotalAmountVnd = orderTotalAmountVnd, // ✨ Includes calculated shipping fee
-                    CommissionRate = commissionRate,     // === THÊM: Commission rate (6%)
-                    CommissionVnd = commissionVnd,   // === THÊM: Tính hoa hồng
+                    CommissionRate = commissionRate,
                     VoucherId = dto.VoucherId,
                     Status = OrderStatus.PENDING,
                     DeliveryAddress = dto.DeliveryAddress,
@@ -178,6 +158,15 @@ public class OrderService : IOrderService
 
                     order.OrderItems.Add(orderItem);
                 }
+
+                double merchandiseTotalVnd = order.OrderItems.Sum(oi => oi.LineTotalVnd);
+                order.SubtotalVnd = merchandiseTotalVnd;
+                long shippingFeeSynced = ShippingPricing.FinalShippingFeeVnd(
+                    providerServiceCode,
+                    totalWeightGrams,
+                    merchandiseTotalVnd);
+                order.TotalAmountVnd = merchandiseTotalVnd + shippingFeeSynced;
+                order.CommissionVnd = CommissionCalculator.CalculateCommissionVnd(merchandiseTotalVnd, order.CommissionRate);
 
                 // Save order to database
                 await _orderRepository.CreateAsync(order);
@@ -324,48 +313,27 @@ public class OrderService : IOrderService
             if (!validItems.Any())
                 return ServiceResult<CreateOrderResponse>.BadRequest("No valid items to create order");
 
-            // ===== CALCULATE ORDER AMOUNTS =====
-            double subtotalVnd = validItems.Sum(item => item.Price * item.Quantity);
-            int totalWeightGrams = await CalculateTotalWeightAsync(validItems);
-
             var providerServiceCode = NormalizeProviderServiceCode(request.ProviderServiceCode);
 
-            long shippingFeeVnd = ShippingPricing.FinalShippingFeeVnd(
-                providerServiceCode,
-                totalWeightGrams,
-                subtotalVnd);
-
-            // Total amount = Subtotal + Shipping fee
-            double totalAmountVnd = subtotalVnd + shippingFeeVnd;
-
-            // Calculate commission (6% of subtotal)
-            decimal commissionRate = CommissionCalculator.DEFAULT_COMMISSION_RATE;
-            long commissionVnd = CommissionCalculator.CalculateCommissionVnd(subtotalVnd, commissionRate);
-
-            // ===== CREATE ORDER =====
+            var orderId = Guid.NewGuid();
             var order = new Order
             {
-                OrderId = Guid.NewGuid(),
+                OrderId = orderId,
                 AccountId = request.AccountId,
                 ShopId = request.ShopId,
-                SubtotalVnd = subtotalVnd,
-                TotalAmountVnd = totalAmountVnd,
-                CommissionRate = commissionRate,
-                CommissionVnd = commissionVnd,
                 VoucherId = request.VoucherId,
-                Status = OrderStatus.PENDING,  // ← Stay PENDING until payment succeeds
+                Status = OrderStatus.PENDING,
                 DeliveryAddress = request.DeliveryAddress,
                 ProviderServiceCode = providerServiceCode,
                 CreatedAt = DateTime.UtcNow
             };
 
-            // Create Order Items (snapshot from cart items)
             foreach (var cartItem in validItems)
             {
-                var orderItem = new OrderItem
+                order.OrderItems.Add(new OrderItem
                 {
                     OrderItemId = Guid.NewGuid(),
-                    OrderId = order.OrderId,
+                    OrderId = orderId,
                     VersionId = cartItem.VersionId,
                     UnitPriceVnd = (long)Math.Round(cartItem.Price),
                     Quantity = cartItem.Quantity,
@@ -374,10 +342,26 @@ public class OrderService : IOrderService
                     LineTotalVnd = cartItem.Price * cartItem.Quantity,
                     Status = FulfillmentStatus.UNFULFILLED,
                     CreatedAt = DateTime.UtcNow
-                };
-
-                order.OrderItems.Add(orderItem);
+                });
             }
+
+            double merchandiseTotalVnd = order.OrderItems.Sum(oi => oi.LineTotalVnd);
+            order.SubtotalVnd = merchandiseTotalVnd;
+
+            int totalWeightGrams = await CalculateTotalWeightAsync(validItems);
+
+            long shippingFeeVnd = ShippingPricing.FinalShippingFeeVnd(
+                providerServiceCode,
+                totalWeightGrams,
+                merchandiseTotalVnd);
+
+            double totalAmountVnd = merchandiseTotalVnd + shippingFeeVnd;
+            order.TotalAmountVnd = totalAmountVnd;
+
+            decimal commissionRate = CommissionCalculator.DEFAULT_COMMISSION_RATE;
+            order.CommissionRate = commissionRate;
+            long commissionVnd = CommissionCalculator.CalculateCommissionVnd(merchandiseTotalVnd, commissionRate);
+            order.CommissionVnd = commissionVnd;
 
             // Save order to database
             await _orderRepository.CreateAsync(order);
@@ -413,7 +397,7 @@ public class OrderService : IOrderService
             {
                 OrderId = order.OrderId,
                 ShopId = order.ShopId,
-                SubtotalVnd = subtotalVnd,
+                SubtotalVnd = merchandiseTotalVnd,
                 ShippingFeeVnd = shippingFeeVnd,
                 CommissionVnd = commissionVnd,
                 TotalAmountVnd = totalAmountVnd,
