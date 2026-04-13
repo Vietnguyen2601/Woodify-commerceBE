@@ -124,6 +124,9 @@ public class PaymentDbContext : DbContext
             entity.Property(e => e.ProviderResponse)
                 .HasColumnName("provider_response");
 
+            entity.Property(e => e.RelatedOrderIdsJson)
+                .HasColumnName("related_order_ids_json");
+
             // Indexes
             entity.HasIndex(e => e.ProviderPaymentId);
             entity.HasIndex(e => e.OrderId);

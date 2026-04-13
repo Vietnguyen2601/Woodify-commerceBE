@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -8,6 +7,7 @@ using PaymentService.Application.DTOs;
 using PaymentService.Application.Interfaces;
 using PaymentService.Domain.Entities;
 using PaymentService.Domain.Enums;
+using Shared.Events;
 
 namespace PaymentService.Application.Services;
 
@@ -18,23 +18,26 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 {
     private readonly IPaymentRepository _paymentRepository;
     private readonly IWalletRepository _walletRepository;
+    private readonly IPaymentEventsPublisher _paymentEventsPublisher;
     private readonly PayOsOptions _payOsOptions;
     private readonly ILogger<PayOsWebhookHandler> _logger;
 
     public PayOsWebhookHandler(
         IPaymentRepository paymentRepository,
         IWalletRepository walletRepository,
+        IPaymentEventsPublisher paymentEventsPublisher,
         IOptions<PayOsOptions> payOsOptions,
         ILogger<PayOsWebhookHandler> logger)
     {
         _paymentRepository = paymentRepository;
         _walletRepository = walletRepository;
+        _paymentEventsPublisher = paymentEventsPublisher;
         _payOsOptions = payOsOptions.Value;
         _logger = logger;
     }
 
     /// <summary>
-    /// Xử lý webhook từ PayOS
+    /// Xử lý webhook PayOS
     /// </summary>
     public async Task<PayOsWebhookResponse> HandleWebhookAsync(PayOsWebhookData webhook)
     {
@@ -43,14 +46,12 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
             _logger.LogInformation("PayOS webhook received. OrderCode: {OrderCode}, Status: {Status}",
                 webhook.Data?.OrderCode, webhook.Data?.Status);
 
-            // Validate webhook
             if (webhook?.Data == null)
             {
                 _logger.LogWarning("Invalid webhook data");
                 return new PayOsWebhookResponse { Code = "01", Desc = "Invalid data" };
             }
 
-            // Verify signature (skip nếu là manual confirm hoặc auto-polling)
             if (webhook.Signature?.Equals("manual-confirm", StringComparison.Ordinal) != true &&
                 webhook.Signature?.Equals("auto-polling", StringComparison.Ordinal) != true)
             {
@@ -69,7 +70,6 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
                     webhook.Data.OrderCode);
             }
 
-            // Find payment
             var payment = await _paymentRepository.GetByProviderPaymentIdAsync(webhook.Data.OrderCode.ToString());
             if (payment == null)
             {
@@ -79,9 +79,14 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 
             _logger.LogInformation("Payment found: {PaymentId}, Status: {Status}", payment.PaymentId, payment.Status);
 
-            // Handle based on webhook status
             if (webhook.Data.Status?.ToUpper() == "PAID")
             {
+                if (payment.Status == PaymentStatus.Succeeded)
+                {
+                    _logger.LogInformation("Payment already Succeeded, skip: {PaymentId}", payment.PaymentId);
+                    return new PayOsWebhookResponse { Code = "00", Desc = "success" };
+                }
+
                 await HandleSuccessfulPaymentAsync(payment, webhook.Data);
             }
             else if (webhook.Data.Status?.ToUpper() == "CANCELLED")
@@ -103,15 +108,44 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 
     #region Private Methods
 
-    /// <summary>
-    /// Xử lý payment thành công
-    /// </summary>
     private async Task HandleSuccessfulPaymentAsync(Payment payment, PayOsWebhookPaymentData data)
     {
         _logger.LogInformation("Processing successful payment: {PaymentId}, Amount: {Amount}",
             payment.PaymentId, data.Amount);
 
-        // Tìm wallet by account_id
+        var linkedOrderIds = ResolveLinkedOrderIds(payment);
+        if (linkedOrderIds.Count > 0)
+        {
+            if (!payment.AccountId.HasValue)
+            {
+                _logger.LogWarning("Payment {PaymentId} linked to orders but AccountId is missing", payment.PaymentId);
+                payment.Status = PaymentStatus.Failed;
+                payment.UpdatedAt = DateTime.UtcNow;
+                await _paymentRepository.UpdateAsync(payment);
+                return;
+            }
+
+            long providerCode = 0;
+            long.TryParse(payment.ProviderPaymentId, out providerCode);
+
+            _paymentEventsPublisher.PublishPaymentOrdersPaid(new PaymentOrdersPaidEvent
+            {
+                PaymentId = payment.PaymentId,
+                AccountId = payment.AccountId,
+                OrderIds = linkedOrderIds,
+                Provider = payment.Provider ?? "PAYOS",
+                ProviderOrderCode = providerCode,
+                AmountVnd = payment.AmountVnd,
+                PaidAt = DateTime.UtcNow
+            });
+
+            payment.Status = PaymentStatus.Succeeded;
+            payment.UpdatedAt = DateTime.UtcNow;
+            await _paymentRepository.UpdateAsync(payment);
+            return;
+        }
+
+        // Wallet top-up (no shop orders on this payment)
         var wallet = await _walletRepository.GetByAccountIdAsync(payment.AccountId!.Value);
         if (wallet == null)
         {
@@ -122,15 +156,12 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
             return;
         }
 
-        // Lưu balance trước
         var balanceBefore = wallet.BalanceVnd;
 
-        // Cộng tiền vào ví
         wallet.BalanceVnd += payment.AmountVnd;
         wallet.UpdatedAt = DateTime.UtcNow;
         await _walletRepository.UpdateAsync(wallet);
 
-        // Tạo WalletTransaction
         var transaction = new WalletTransaction
         {
             WalletTxId = Guid.NewGuid(),
@@ -148,7 +179,6 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 
         await _walletRepository.AddTransactionAsync(transaction);
 
-        // Update payment status
         payment.Status = PaymentStatus.Succeeded;
         payment.UpdatedAt = DateTime.UtcNow;
         await _paymentRepository.UpdateAsync(payment);
@@ -158,9 +188,28 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
             wallet.WalletId, transaction.WalletTxId, wallet.BalanceVnd);
     }
 
-    /// <summary>
-    /// Verify PayOS webhook signature
-    /// </summary>
+    private static List<Guid> ResolveLinkedOrderIds(Payment payment)
+    {
+        if (!string.IsNullOrWhiteSpace(payment.RelatedOrderIdsJson))
+        {
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<List<Guid>>(payment.RelatedOrderIdsJson);
+                if (parsed is { Count: > 0 })
+                    return parsed.Distinct().ToList();
+            }
+            catch
+            {
+                /* ignore invalid json */
+            }
+        }
+
+        if (payment.OrderId.HasValue)
+            return new List<Guid> { payment.OrderId.Value };
+
+        return new List<Guid>();
+    }
+
     private bool VerifySignature(PayOsWebhookData webhook)
     {
         try
@@ -171,7 +220,6 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
                 return false;
             }
 
-            // Build data to verify (same order as PayOS docs)
             var dataToVerify = webhook.Data.OrderCode
                 + webhook.Data.Amount
                 + webhook.Data.Description
@@ -181,7 +229,6 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
             _logger.LogDebug("Webhook signature verification - Data: {Data}, Signature: {Signature}",
                 dataToVerify, webhook.Signature);
 
-            // Verify HMAC
             var checksumKeyBytes = Convert.FromHexString(_payOsOptions.ChecksumKey);
             using var hmac = new HMACSHA256(checksumKeyBytes);
             var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(dataToVerify));

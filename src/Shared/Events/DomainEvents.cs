@@ -117,6 +117,22 @@ public class OrderReviewEligibleEvent
 }
 
 /// <summary>
+/// PaymentService publishes after gateway payment succeeds for one or more shop orders (e.g. PayOS PAID).
+/// OrderService sets orders to CONFIRMED.
+/// Exchange: payment.events / Routing key: payment.orders.paid
+/// </summary>
+public class PaymentOrdersPaidEvent
+{
+    public Guid PaymentId { get; set; }
+    public Guid? AccountId { get; set; }
+    public List<Guid> OrderIds { get; set; } = new();
+    public string Provider { get; set; } = "PAYOS";
+    public long ProviderOrderCode { get; set; }
+    public long AmountVnd { get; set; }
+    public DateTime PaidAt { get; set; }
+}
+
+/// <summary>
 /// ProductService publishes after recomputing shop-level review aggregates from product reviews.
 /// ShopService updates <c>shops.rating</c> and <c>shops.review_count</c> (no HTTP).
 /// Exchange: shop.events / Routing key: shop.review_stats.updated
