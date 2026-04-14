@@ -93,6 +93,7 @@ for (int i = 0; i < 5; i++)
         // Register event consumers (require RabbitMQ)
         builder.Services.AddSingleton<ShopEventConsumer>();
         builder.Services.AddSingleton<OrderReviewEligibilityConsumer>();
+        builder.Services.AddSingleton<OrderDeliveredStockConsumer>();
 
         rabbitMQAvailable = true;
         break;

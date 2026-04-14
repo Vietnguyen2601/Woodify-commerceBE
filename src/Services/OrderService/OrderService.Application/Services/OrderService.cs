@@ -1,6 +1,7 @@
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Helpers;
+using OrderService.Application.Shipping;
 using OrderService.Domain.Entities;
 using OrderService.Infrastructure.Repositories.IRepositories;
 using Shared.Results;
@@ -18,6 +19,7 @@ public class OrderService : IOrderService
     private readonly IProductVersionCacheRepository _productCacheRepository;
     private readonly IShopInfoCacheRepository _shopInfoCacheRepository;
     private readonly OrderEventPublisher _orderEventPublisher;
+    private readonly IOrderRealtimeNotifier? _realtimeNotifier;
 
     public OrderService(
         IOrderRepository orderRepository,
@@ -25,7 +27,8 @@ public class OrderService : IOrderService
         ICartItemRepository cartItemRepository,
         IProductVersionCacheRepository productCacheRepository,
         IShopInfoCacheRepository shopInfoCacheRepository,
-        OrderEventPublisher orderEventPublisher)
+        OrderEventPublisher orderEventPublisher,
+        IOrderRealtimeNotifier? realtimeNotifier = null)
     {
         _orderRepository = orderRepository;
         _cartRepository = cartRepository;
@@ -33,6 +36,7 @@ public class OrderService : IOrderService
         _productCacheRepository = productCacheRepository;
         _shopInfoCacheRepository = shopInfoCacheRepository;
         _orderEventPublisher = orderEventPublisher;
+        _realtimeNotifier = realtimeNotifier;
     }
 
     public async Task<ServiceResult<CreateOrdersFromCartResultDto>> CreateOrderFromCartAsync(CreateOrderFromCartDto dto)
@@ -664,7 +668,32 @@ public class OrderService : IOrderService
                 });
             }
 
-            // 8. Return updated order
+            // 8. Decrement catalog stock only when order is actually delivered (not on payment-only COMPLETED)
+            if (newStatus == OrderStatus.DELIVERED &&
+                !string.Equals(oldStatus, "DELIVERED", StringComparison.OrdinalIgnoreCase))
+            {
+                PublishOrderDeliveredStock(order);
+            }
+
+            // 9. SignalR realtime (order list by account/shop/order detail)
+            if (_realtimeNotifier != null)
+            {
+                await _realtimeNotifier.NotifyOrderShipmentStatusAsync(new OrderShipmentRealtimePayload
+                {
+                    ShipmentId = Guid.Empty,
+                    OrderId = order.OrderId,
+                    ShopId = order.ShopId,
+                    AccountId = order.AccountId,
+                    ShipmentPreviousStatus = string.Empty,
+                    ShipmentNewStatus = string.Empty,
+                    OrderPreviousStatus = oldStatus,
+                    OrderNewStatus = newStatus.ToString(),
+                    OrderRowUpdated = true,
+                    OccurredAt = DateTime.UtcNow
+                });
+            }
+
+            // 10. Return updated order
             var orderDto = MapToOrderDto(order);
             return ServiceResult<OrderDto>.Success(orderDto, "Order status updated successfully");
         }
@@ -672,6 +701,112 @@ public class OrderService : IOrderService
         {
             return ServiceResult<OrderDto>.InternalServerError($"Error updating order status: {ex.Message}");
         }
+    }
+
+    /// <inheritdoc />
+    public async Task<ServiceResult<OrderShipmentRealtimePayload>> ApplyShipmentStatusChangedEventAsync(
+        ShipmentStatusChangedEvent evt)
+    {
+        try
+        {
+            var order = await _orderRepository.GetOrderWithItemsAsync(evt.OrderId);
+            if (order == null)
+                return ServiceResult<OrderShipmentRealtimePayload>.NotFound("Order not found");
+
+            var orderPrev = order.Status.ToString();
+            var mapped = ShipmentToOrderStatusMapper.MapOrderStatus(evt.NewStatus);
+
+            var payload = new OrderShipmentRealtimePayload
+            {
+                ShipmentId = evt.ShipmentId,
+                OrderId = order.OrderId,
+                ShopId = order.ShopId,
+                AccountId = evt.AccountId ?? order.AccountId,
+                ShipmentPreviousStatus = evt.PreviousStatus,
+                ShipmentNewStatus = evt.NewStatus,
+                OrderPreviousStatus = orderPrev,
+                OrderNewStatus = orderPrev,
+                OrderRowUpdated = false,
+                OccurredAt = evt.ChangedAt == default ? DateTime.UtcNow : evt.ChangedAt
+            };
+
+            if (order.Status is OrderStatus.CANCELLED or OrderStatus.REFUNDED)
+            {
+                payload.OrderNewStatus = order.Status.ToString();
+                return ServiceResult<OrderShipmentRealtimePayload>.Success(payload);
+            }
+
+            // Pay flow sets COMPLETED; do not regress to pre-shipping states when shipment is still preparing.
+            if (order.Status == OrderStatus.COMPLETED && mapped.HasValue &&
+                mapped.Value is OrderStatus.CONFIRMED or OrderStatus.PROCESSING or OrderStatus.READY_TO_SHIP)
+            {
+                payload.OrderNewStatus = order.Status.ToString();
+                return ServiceResult<OrderShipmentRealtimePayload>.Success(payload);
+            }
+
+            if (mapped == null || order.Status == mapped)
+            {
+                payload.OrderNewStatus = order.Status.ToString();
+                return ServiceResult<OrderShipmentRealtimePayload>.Success(payload);
+            }
+
+            var oldStatus = order.Status.ToString();
+            order.Status = mapped.Value;
+            order.UpdatedAt = DateTime.UtcNow;
+            await _orderRepository.UpdateAsync(order);
+
+            PublishDashboardEvents(order, oldStatus, mapped.Value.ToString());
+
+            if (mapped is OrderStatus.DELIVERED or OrderStatus.COMPLETED)
+            {
+                _orderEventPublisher.PublishOrderReviewEligible(new OrderReviewEligibleEvent
+                {
+                    OrderId = order.OrderId,
+                    ShopId = order.ShopId,
+                    AccountId = order.AccountId,
+                    EligibleAt = DateTime.UtcNow,
+                    Lines = order.OrderItems.Select(oi => new OrderReviewEligibleLineItem
+                    {
+                        OrderItemId = oi.OrderItemId,
+                        VersionId = oi.VersionId
+                    }).ToList()
+                });
+            }
+
+            if (mapped == OrderStatus.DELIVERED &&
+                !string.Equals(oldStatus, "DELIVERED", StringComparison.OrdinalIgnoreCase))
+            {
+                PublishOrderDeliveredStock(order);
+            }
+
+            payload.OrderPreviousStatus = oldStatus;
+            payload.OrderNewStatus = mapped.Value.ToString();
+            payload.OrderRowUpdated = true;
+            return ServiceResult<OrderShipmentRealtimePayload>.Success(payload);
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<OrderShipmentRealtimePayload>.InternalServerError(
+                $"Shipment sync error: {ex.Message}");
+        }
+    }
+
+    private void PublishOrderDeliveredStock(Order order)
+    {
+        if (order.OrderItems == null || !order.OrderItems.Any())
+            return;
+
+        _orderEventPublisher.PublishOrderDeliveredStock(new OrderDeliveredStockEvent
+        {
+            OrderId = order.OrderId,
+            ShopId = order.ShopId,
+            DeliveredAt = DateTime.UtcNow,
+            Lines = order.OrderItems.Select(oi => new OrderDeliveredStockLineItem
+            {
+                VersionId = oi.VersionId,
+                Quantity = oi.Quantity
+            }).ToList()
+        });
     }
 
     /// <summary>
@@ -1142,7 +1277,8 @@ public class OrderService : IOrderService
         int limit = 5,
         Guid? shopId = null)
     {
-        limit = Math.Clamp(limit, 1, 100);
+        const int maxTopSelling = 20;
+        limit = Math.Clamp(limit, 1, maxTopSelling);
         var rows = await _orderRepository.GetTopSellingProductMasterAggregatesAsync(limit, shopId);
         if (rows.Count == 0)
             return ServiceResult<List<TopSellingProductAnalyticsDto>>.Success(new List<TopSellingProductAnalyticsDto>(), "No sales data yet");

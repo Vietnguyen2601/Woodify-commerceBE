@@ -94,6 +94,25 @@ public class ShippingFeeCalculatedEvent
 }
 
 /// <summary>
+/// ShipmentService publishes when shipment lifecycle status changes.
+/// OrderService consumes to sync <c>orders.status</c> and push SignalR (no cross-service HTTP).
+/// Exchange: "shipment.events" / Routing key: "shipment.status.changed"
+/// </summary>
+public class ShipmentStatusChangedEvent
+{
+    public Guid ShipmentId { get; set; }
+    public Guid OrderId { get; set; }
+    public Guid ShopId { get; set; }
+
+    /// <summary>Buyer — from order cache in ShipmentService when available.</summary>
+    public Guid? AccountId { get; set; }
+
+    public string PreviousStatus { get; set; } = string.Empty;
+    public string NewStatus { get; set; } = string.Empty;
+    public DateTime ChangedAt { get; set; }
+}
+
+/// <summary>
 /// One line in an order that may receive a product review after delivery.
 /// </summary>
 public class OrderReviewEligibleLineItem
@@ -114,6 +133,28 @@ public class OrderReviewEligibleEvent
     public Guid AccountId { get; set; }
     public List<OrderReviewEligibleLineItem> Lines { get; set; } = new();
     public DateTime EligibleAt { get; set; }
+}
+
+/// <summary>
+/// Line for stock deduction when order is delivered (quantity sold from this version).
+/// </summary>
+public class OrderDeliveredStockLineItem
+{
+    public Guid VersionId { get; set; }
+    public int Quantity { get; set; }
+}
+
+/// <summary>
+/// OrderService publishes when order becomes <b>DELIVERED</b> — ProductService decrements <c>product_versions.stock_quantity</c> (idempotent per OrderId).
+/// Not published for COMPLETED-from-payment alone.
+/// Exchange: order.events / Routing key: order.delivered.stock
+/// </summary>
+public class OrderDeliveredStockEvent
+{
+    public Guid OrderId { get; set; }
+    public Guid ShopId { get; set; }
+    public List<OrderDeliveredStockLineItem> Lines { get; set; } = new();
+    public DateTime DeliveredAt { get; set; }
 }
 
 /// <summary>

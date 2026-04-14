@@ -1,4 +1,6 @@
 using OrderService.Application.DTOs;
+using OrderService.Domain.Entities;
+using Shared.Events;
 using Shared.Results;
 
 namespace OrderService.Application.Interfaces;
@@ -37,8 +39,17 @@ public interface IOrderService
 
     Task<ServiceResult<List<OrderWithProductDetailsDto>>> GetOrdersByShopIdAsync(Guid shopId);
     Task<ServiceResult<OrderDto>> UpdateOrderStatusAsync(UpdateOrderStatusDto dto);
+
+    /// <summary>
+    /// Sync order aggregate status from <see cref="ShipmentStatusChangedEvent"/> (RabbitMQ consumer).
+    /// </summary>
+    Task<ServiceResult<OrderShipmentRealtimePayload>> ApplyShipmentStatusChangedEventAsync(ShipmentStatusChangedEvent evt);
+
     Task<ServiceResult<OrderListResultDto>> GetAllOrdersAsync(GetAllOrdersQueryDto query);
 
-    /// <summary>Top product masters by units sold; enriched from product_version_cache and shop_info_cache (no cross-service HTTP).</summary>
+    /// <summary>
+    /// Top product masters by units sold on <b>delivered</b> orders only (<see cref="OrderStatus.DELIVERED"/>).
+    /// Enriched from product_version_cache and shop_info_cache. <paramref name="limit"/> is clamped 1–20.
+    /// </summary>
     Task<ServiceResult<List<TopSellingProductAnalyticsDto>>> GetTopSellingProductsAsync(int limit = 5, Guid? shopId = null);
 }

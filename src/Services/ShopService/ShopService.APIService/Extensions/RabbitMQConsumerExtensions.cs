@@ -130,6 +130,51 @@ public static class RabbitMQConsumerExtensions
                 });
 
             // ========================================
+            // 9. Shop counters: total_orders (idempotent)
+            // ========================================
+            var shopTotalOrdersQueueName = "shop.counters.total-orders";
+            consumer.Subscribe<Shared.Events.OrderCreatedForShopEvent>(
+                shopTotalOrdersQueueName,
+                shopEventsExchange,
+                "order.created",
+                async (eventMessage) =>
+                {
+                    using var scope = serviceProvider.CreateScope();
+                    var handler = scope.ServiceProvider.GetRequiredService<ShopTotalOrdersConsumer>();
+                    await handler.HandleAsync(eventMessage);
+                });
+
+            // ========================================
+            // 10. Shop counters: total_products (idempotent)
+            // ProductService events: product.events
+            // ========================================
+            const string productEventsExchange = "product.events";
+
+            var shopTotalProductsCreatedQueueName = "shop.counters.total-products.created";
+            consumer.Subscribe<Shared.Events.ProductVersionUpdatedEvent>(
+                shopTotalProductsCreatedQueueName,
+                productEventsExchange,
+                "product.version.updated",
+                async (eventMessage) =>
+                {
+                    using var scope = serviceProvider.CreateScope();
+                    var handler = scope.ServiceProvider.GetRequiredService<ShopTotalProductsConsumer>();
+                    await handler.HandleVersionUpdatedAsync(eventMessage);
+                });
+
+            var shopTotalProductsDeletedQueueName = "shop.counters.total-products.deleted";
+            consumer.Subscribe<Shared.Events.ProductDeletedEvent>(
+                shopTotalProductsDeletedQueueName,
+                productEventsExchange,
+                "product.deleted",
+                async (eventMessage) =>
+                {
+                    using var scope = serviceProvider.CreateScope();
+                    var handler = scope.ServiceProvider.GetRequiredService<ShopTotalProductsConsumer>();
+                    await handler.HandleProductDeletedAsync(eventMessage);
+                });
+
+            // ========================================
             // 8. MetricsAggregatedEvent Consumer (Batch)
             // ========================================
             var metricsAggregatedQueueName = $"{dashboardQueuePrefix}metrics-aggregated";

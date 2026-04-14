@@ -100,6 +100,7 @@ for (int attempt = 1; attempt <= 5; attempt++)
 
         builder.Services.AddSingleton(consumer);
         builder.Services.AddSingleton(publisher);
+        builder.Services.AddSingleton<ShipmentService.Application.Services.ShipmentEventPublisher>();
         builder.Services.AddHostedService<OrderEventConsumer>();
         builder.Services.AddHostedService<ShopEventConsumer>();
         break;

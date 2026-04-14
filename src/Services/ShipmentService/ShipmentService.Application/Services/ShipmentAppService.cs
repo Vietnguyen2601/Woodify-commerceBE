@@ -8,6 +8,7 @@ using ShipmentService.Domain.Entities;
 using ShipmentService.Infrastructure.Cache;
 using ShipmentService.Infrastructure.Repositories.IRepositories;
 using Shared.Constants;
+using Shared.Events;
 using Shared.Results;
 using Shared.Shipping;
 
@@ -25,19 +26,22 @@ public class ShipmentAppService : IShipmentService
     private readonly IShippingProviderRepository _providerRepository;
     private readonly IOrderInfoCacheRepository _orderInfoCache;
     private readonly IShopInfoCacheRepository _shopInfoCache;
+    private readonly ShipmentEventPublisher _shipmentEventPublisher;
 
     public ShipmentAppService(
         IShipmentRepository shipmentRepository,
         IProviderServiceRepository providerServiceRepository,
         IShippingProviderRepository providerRepository,
         IOrderInfoCacheRepository orderInfoCache,
-        IShopInfoCacheRepository shopInfoCache)
+        IShopInfoCacheRepository shopInfoCache,
+        ShipmentEventPublisher shipmentEventPublisher)
     {
         _shipmentRepository = shipmentRepository;
         _providerServiceRepository = providerServiceRepository;
         _providerRepository = providerRepository;
         _orderInfoCache = orderInfoCache;
         _shopInfoCache = shopInfoCache;
+        _shipmentEventPublisher = shipmentEventPublisher;
     }
 
     public async Task<ServiceResult<IEnumerable<ShipmentDto>>> GetAllAsync()
@@ -194,6 +198,8 @@ public class ShipmentAppService : IShipmentService
             await _shipmentRepository.CreateAsync(shipment);
 
             var created = await _shipmentRepository.GetByIdAsync(shipment.ShipmentId);
+            await PublishShipmentStatusChangedAsync(created!, string.Empty);
+
             return ServiceResult<ShipmentDto>.Created(
                 created!.ToDto(),
                 ShipmentMessages.ShipmentCreated);
@@ -269,6 +275,7 @@ public class ShipmentAppService : IShipmentService
                 shipment.UpdatedAt = DateTime.UtcNow;
                 await _shipmentRepository.UpdateAsync(shipment);
                 var same = await _shipmentRepository.GetByIdAsync(id);
+                await PublishShipmentStatusChangedAsync(same!, currentNorm);
                 return ServiceResult<ShipmentDto>.Success(
                     same!.ToDto(),
                     ShipmentMessages.ShipmentStatusUpdated);
@@ -301,6 +308,7 @@ public class ShipmentAppService : IShipmentService
             await _shipmentRepository.UpdateAsync(shipment);
 
             var updated = await _shipmentRepository.GetByIdAsync(id);
+            await PublishShipmentStatusChangedAsync(updated!, currentNorm);
             return ServiceResult<ShipmentDto>.Success(
                 updated!.ToDto(),
                 ShipmentMessages.ShipmentStatusUpdated);
@@ -335,6 +343,7 @@ public class ShipmentAppService : IShipmentService
                 return ServiceResult<ShipmentDto>.BadRequest(
                     $"{ShipmentMessages.ShipmentPickupNotAllowed}. Current status: {shipment.Status}.");
 
+            var previousStatus = st;
             var pickedUpAt = dto.PickedUpAt ?? DateTime.UtcNow;
             shipment.PickedUpAt = pickedUpAt;
             shipment.Status = "PICKED_UP";
@@ -343,6 +352,7 @@ public class ShipmentAppService : IShipmentService
             await _shipmentRepository.UpdateAsync(shipment);
 
             var updated = await _shipmentRepository.GetByIdAsync(id);
+            await PublishShipmentStatusChangedAsync(updated!, previousStatus);
             return ServiceResult<ShipmentDto>.Success(
                 updated!.ToDto(),
                 ShipmentMessages.ShipmentUpdated);
@@ -397,5 +407,25 @@ public class ShipmentAppService : IShipmentService
     private static string GenerateTrackingNumber()
     {
         return $"TRK-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString()[..8]}";
+    }
+
+    private async Task PublishShipmentStatusChangedAsync(Shipment shipment, string previousStatus)
+    {
+        var info = await _orderInfoCache.GetOrderInfoAsync(shipment.OrderId);
+        var prev = string.IsNullOrWhiteSpace(previousStatus)
+            ? string.Empty
+            : ShipmentStatusTransitions.Normalize(previousStatus);
+        var next = ShipmentStatusTransitions.Normalize(shipment.Status);
+
+        _shipmentEventPublisher.PublishShipmentStatusChanged(new ShipmentStatusChangedEvent
+        {
+            ShipmentId = shipment.ShipmentId,
+            OrderId = shipment.OrderId,
+            ShopId = shipment.ShopId,
+            AccountId = info?.AccountId,
+            PreviousStatus = prev,
+            NewStatus = next,
+            ChangedAt = DateTime.UtcNow
+        });
     }
 }
