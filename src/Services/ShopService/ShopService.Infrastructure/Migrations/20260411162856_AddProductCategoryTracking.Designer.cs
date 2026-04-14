@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ShopService.Infrastructure.Data.Context;
@@ -11,9 +12,11 @@ using ShopService.Infrastructure.Data.Context;
 namespace ShopService.Infrastructure.Migrations
 {
     [DbContext(typeof(ShopDbContext))]
-    partial class ShopDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260411162856_AddProductCategoryTracking")]
+    partial class AddProductCategoryTracking
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -73,10 +76,10 @@ namespace ShopService.Infrastructure.Migrations
                     b.Property<int>("OrderYear")
                         .HasColumnType("integer");
 
-                    b.Property<Guid?>("ProductVersionId")
+                    b.Property<Guid?>("ProductId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("ProductVersionName")
+                    b.Property<string>("ProductName")
                         .HasColumnType("text");
 
                     b.Property<long?>("RefundAmountCents")
