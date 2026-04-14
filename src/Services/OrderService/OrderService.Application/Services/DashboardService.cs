@@ -62,10 +62,10 @@ public class DashboardService : IDashboardService
                     "Invalid date format. Use yyyy-MM-dd");
             }
 
-            if (parsedStartDate >= parsedEndDate)
+            if (parsedStartDate.Date > parsedEndDate.Date)
             {
                 return ServiceResult<RevenueAnalyticsResultDto>.BadRequest(
-                    "Start date must be before end date");
+                    "Start date must be on or before end date");
             }
 
             // Auto-determine granularity if not specified
@@ -263,15 +263,20 @@ public class DashboardService : IDashboardService
 
     private async Task<RevenueAnalyticsResultDto> GetCustomDailyDataAsync(DateTime startDate, DateTime endDate)
     {
+        var rangeStart = UtcStartOfCalendarDay(startDate);
+        var rangeEndExclusive = UtcStartOfCalendarDay(endDate).AddDays(1);
+
         var orders = await _orderRepository.GetAllAsync();
 
         var filteredOrders = orders
-            .Where(o => o.Status == OrderStatus.COMPLETED && o.CreatedAt >= startDate && o.CreatedAt <= endDate)
+            .Where(o => o.Status == OrderStatus.COMPLETED &&
+                        o.CreatedAt >= rangeStart &&
+                        o.CreatedAt < rangeEndExclusive)
             .ToList();
 
         var chartData = GetDailyData(filteredOrders, startDate, endDate);
         var summary = CalculateSummary(chartData, "DAILY");
-        var daysDifference = (endDate - startDate).Days;
+        var daysDifference = (endDate.Date - startDate.Date).Days;
 
         var result = new RevenueAnalyticsResultDto
         {
@@ -285,8 +290,8 @@ public class DashboardService : IDashboardService
                 CacheTTL = null,
                 CustomRange = new CustomRangeDto
                 {
-                    StartDate = startDate.ToString("yyyy-MM-dd"),
-                    EndDate = endDate.ToString("yyyy-MM-dd"),
+                    StartDate = startDate.Date.ToString("yyyy-MM-dd"),
+                    EndDate = endDate.Date.ToString("yyyy-MM-dd"),
                     Days = daysDifference
                 },
                 Summary = summary,
@@ -299,15 +304,20 @@ public class DashboardService : IDashboardService
 
     private async Task<RevenueAnalyticsResultDto> GetCustomMonthlyDataAsync(DateTime startDate, DateTime endDate)
     {
+        var rangeStart = UtcStartOfCalendarDay(startDate);
+        var rangeEndExclusive = UtcStartOfCalendarDay(endDate).AddDays(1);
+
         var orders = await _orderRepository.GetAllAsync();
 
         var filteredOrders = orders
-            .Where(o => o.Status == OrderStatus.COMPLETED && o.CreatedAt >= startDate && o.CreatedAt <= endDate)
+            .Where(o => o.Status == OrderStatus.COMPLETED &&
+                        o.CreatedAt >= rangeStart &&
+                        o.CreatedAt < rangeEndExclusive)
             .ToList();
 
         var chartData = GetMonthlyData(filteredOrders, startDate, endDate);
         var summary = CalculateSummary(chartData, "MONTHLY");
-        var daysDifference = (endDate - startDate).Days;
+        var daysDifference = (endDate.Date - startDate.Date).Days;
 
         var result = new RevenueAnalyticsResultDto
         {
@@ -321,8 +331,8 @@ public class DashboardService : IDashboardService
                 CacheTTL = null,
                 CustomRange = new CustomRangeDto
                 {
-                    StartDate = startDate.ToString("yyyy-MM-dd"),
-                    EndDate = endDate.ToString("yyyy-MM-dd"),
+                    StartDate = startDate.Date.ToString("yyyy-MM-dd"),
+                    EndDate = endDate.Date.ToString("yyyy-MM-dd"),
                     Days = daysDifference
                 },
                 Summary = summary,
@@ -333,6 +343,13 @@ public class DashboardService : IDashboardService
         return result;
     }
 
+    /// <summary>
+    /// Calendar yyyy-MM-dd interpreted as UTC midnight so custom range matches
+    /// <see cref="GetTodayMetricsAsync"/> (full UTC days, end exclusive).
+    /// </summary>
+    private static DateTime UtcStartOfCalendarDay(DateTime d) =>
+        new DateTime(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc);
+
     private List<RevenueDataPointDto> GetDailyData(
         List<Order> orders,
         DateTime startDate,
@@ -342,7 +359,7 @@ public class DashboardService : IDashboardService
 
         var groupedByDay = orders
             .GroupBy(o => o.CreatedAt.Date)
-            .OrderByDescending(g => g.Key)
+            .OrderBy(g => g.Key)
             .ToList();
 
         RevenueDataPointDto? previousDay = null;
