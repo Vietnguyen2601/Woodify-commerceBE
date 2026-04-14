@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using PaymentService.Application.DTOs;
 using PaymentService.Application.Interfaces;
@@ -18,6 +19,7 @@ public class PaymentAppService : IPaymentAppService
     private readonly IWalletRepository _walletRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPaymentPollingTrigger _pollingTrigger;
+    private readonly IPayOsWebhookHandler _payOsWebhookHandler;
     private readonly ILogger<PaymentAppService> _logger;
 
     private const string PROVIDER_PAYOS = "PAYOS";
@@ -28,6 +30,7 @@ public class PaymentAppService : IPaymentAppService
         IWalletRepository walletRepository,
         IUnitOfWork unitOfWork,
         IPaymentPollingTrigger pollingTrigger,
+        IPayOsWebhookHandler payOsWebhookHandler,
         ILogger<PaymentAppService> logger)
     {
         _payOsService = payOsService;
@@ -35,6 +38,7 @@ public class PaymentAppService : IPaymentAppService
         _walletRepository = walletRepository;
         _unitOfWork = unitOfWork;
         _pollingTrigger = pollingTrigger;
+        _payOsWebhookHandler = payOsWebhookHandler;
         _logger = logger;
     }
 
@@ -106,7 +110,10 @@ public class PaymentAppService : IPaymentAppService
                 AmountVnd = request.Amount, // PayOS dùng VND, không phải cents
                 Currency = "VND",
                 Status = PaymentStatus.Created,
-                ProviderResponse = payOsResponse.RawResponse
+                ProviderResponse = payOsResponse.RawResponse,
+                RelatedOrderIdsJson = request.OrderId.HasValue
+                    ? JsonSerializer.Serialize(new List<Guid> { request.OrderId.Value })
+                    : null
             };
 
             await _paymentRepository.CreateAsync(payment);
@@ -158,11 +165,51 @@ public class PaymentAppService : IPaymentAppService
             if (payOsInfo?.IsSuccess == true)
             {
                 // Cập nhật status nếu có thay đổi
-                var latestStatus = MapPayOsStatusToPaymentStatus(payOsInfo.Status);
-                if (payment.Status != latestStatus)
+                var st = payOsInfo.Status?.ToUpperInvariant();
+                if (st == "PAID" && payment.Status != PaymentStatus.Succeeded)
                 {
-                    payment.Status = latestStatus;
-                    await _paymentRepository.UpdateAsync(payment);
+                    var amountForWebhook = payOsInfo.Amount > 0
+                        ? payOsInfo.Amount
+                        : (payment.AmountVnd > int.MaxValue ? int.MaxValue : (int)payment.AmountVnd);
+                    await _payOsWebhookHandler.HandleWebhookAsync(new PayOsWebhookData
+                    {
+                        Data = new PayOsWebhookPaymentData
+                        {
+                            OrderCode = orderCode,
+                            Status = "PAID",
+                            Description = "Synced from GetPaymentByOrderCode",
+                            Amount = amountForWebhook,
+                            Reference = ""
+                        },
+                        Signature = "auto-polling"
+                    });
+                    payment = await _paymentRepository.GetByProviderPaymentIdAsync(orderCode.ToString()) ?? payment;
+                }
+                else if (st == "CANCELLED" && payment.Status != PaymentStatus.Failed &&
+                         payment.Status != PaymentStatus.Succeeded)
+                {
+                    await _payOsWebhookHandler.HandleWebhookAsync(new PayOsWebhookData
+                    {
+                        Data = new PayOsWebhookPaymentData
+                        {
+                            OrderCode = orderCode,
+                            Status = "CANCELLED",
+                            Description = "Synced from GetPaymentByOrderCode",
+                            Amount = 0,
+                            Reference = ""
+                        },
+                        Signature = "auto-polling"
+                    });
+                    payment = await _paymentRepository.GetByProviderPaymentIdAsync(orderCode.ToString()) ?? payment;
+                }
+                else
+                {
+                    var latestStatus = MapPayOsStatusToPaymentStatus(payOsInfo.Status);
+                    if (payment.Status != latestStatus)
+                    {
+                        payment.Status = latestStatus;
+                        await _paymentRepository.UpdateAsync(payment);
+                    }
                 }
 
                 return ServiceResult<PaymentInfoResponse>.Success(new PaymentInfoResponse
@@ -490,8 +537,9 @@ public class PaymentAppService : IPaymentAppService
                 Provider = PROVIDER_PAYOS,
                 ProviderPaymentId = orderCode.ToString(),
                 AmountVnd = request.TotalAmountVnd,
-                Status = PaymentStatus.Created, // Chờ webhook confirm
+                Status = PaymentStatus.Processing,
                 ProviderResponse = payOsResponse.RawResponse,
+                RelatedOrderIdsJson = JsonSerializer.Serialize(request.OrderIds),
                 CreatedAt = DateTime.UtcNow
             };
 

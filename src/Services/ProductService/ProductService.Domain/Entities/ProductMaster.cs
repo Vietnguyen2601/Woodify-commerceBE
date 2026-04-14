@@ -25,6 +25,12 @@ public class ProductMaster
     public DateTime? UpdatedAt { get; set; }
     public DateTime? PublishedAt { get; set; }
 
+    /// <summary>1–5 average from visible reviews; null if none.</summary>
+    public double? AverageRating { get; set; }
+
+    /// <summary>Visible review count for this product master.</summary>
+    public int ReviewCount { get; set; }
+
     // Navigation properties
     public virtual Category? Category { get; set; }
     public virtual ICollection<ProductVersion> Versions { get; set; } = new List<ProductVersion>();

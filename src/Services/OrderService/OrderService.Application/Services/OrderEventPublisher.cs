@@ -58,6 +58,26 @@ public class OrderEventPublisher
         }
     }
 
+    /// <summary>ProductService consumes to grant review eligibility (no HTTP).</summary>
+    public void PublishOrderReviewEligible(OrderReviewEligibleEvent evt)
+    {
+        if (_publisher == null)
+        {
+            Console.WriteLine("[OrderService] WARNING: RabbitMQ publisher is not available. Skipping OrderReviewEligible event.");
+            return;
+        }
+
+        try
+        {
+            _publisher.Publish("order.events", "order.review_eligible", evt);
+            Console.WriteLine($"[OrderService] Published OrderReviewEligible: OrderId={evt.OrderId}, Lines={evt.Lines.Count}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[OrderService] Failed to publish OrderReviewEligible event: {ex.Message}");
+        }
+    }
+
     /// <summary>
     /// Publish OrderCompletedEvent cho ShopService Dashboard
     /// </summary>
@@ -147,5 +167,6 @@ public class OrderEventPublisher
             Console.WriteLine($"[OrderService] Failed to publish OrderCreatedForShop event: {ex.Message}");
         }
     }
+}
 }
 

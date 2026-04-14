@@ -234,4 +234,17 @@ public class OrdersController : ControllerBase
         var result = await _orderService.GetAllOrdersAsync(query);
         return Ok(result);
     }
+
+    /// <summary>
+    /// Top product masters by units sold (aggregated by product_id). Display data from product_version_cache + shop_info_cache. Excludes cancelled/refunded orders.
+    /// </summary>
+    [HttpGet("analytics/top-selling-products")]
+    [ProducesResponseType(typeof(ServiceResult<List<TopSellingProductAnalyticsDto>>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ServiceResult<List<TopSellingProductAnalyticsDto>>>> GetTopSellingProducts(
+        [FromQuery] int limit = 5,
+        [FromQuery] Guid? shopId = null)
+    {
+        var result = await _orderService.GetTopSellingProductsAsync(limit, shopId);
+        return Ok(result);
+    }
 }

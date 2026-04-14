@@ -21,11 +21,9 @@ public class ProductReviewRepository : GenericRepository<ProductReview>, IProduc
 
     public async Task<List<ProductReview>> GetByProductIdAsync(Guid productId)
     {
-        // Get reviews by querying through Version -> Product relationship
         return await _dbSet
             .Include(r => r.Version)
-                .ThenInclude(v => v.Product)
-            .Where(r => r.Version.ProductId == productId)
+            .Where(r => r.ProductId == productId)
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync();
     }
@@ -51,8 +49,7 @@ public class ProductReviewRepository : GenericRepository<ProductReview>, IProduc
     {
         return await _dbSet
             .Include(r => r.Version)
-                .ThenInclude(v => v.Product)
-            .Where(r => r.Version.ProductId == productId && r.IsVisible)
+            .Where(r => r.ProductId == productId && r.IsVisible)
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync();
     }
@@ -66,11 +63,49 @@ public class ProductReviewRepository : GenericRepository<ProductReview>, IProduc
             .ToListAsync();
     }
 
-    public async Task<ProductReview?> GetByOrderAndAccountAsync(Guid orderId, Guid accountId)
+    public async Task<ProductReview?> GetByOrderItemAndAccountAsync(Guid orderItemId, Guid accountId)
     {
         return await _dbSet
             .Include(r => r.Version)
-            .FirstOrDefaultAsync(r => r.OrderId == orderId && r.AccountId == accountId);
+            .FirstOrDefaultAsync(r => r.OrderItemId == orderItemId && r.AccountId == accountId);
+    }
+
+    public async Task<(Guid ShopId, double? ShopAverageRating, int ShopReviewCount)?> RecomputeRatingAggregatesAsync(
+        Guid productId,
+        CancellationToken cancellationToken = default)
+    {
+        var master = await _context.ProductMasters.AsTracking()
+            .FirstOrDefaultAsync(p => p.ProductId == productId, cancellationToken);
+        if (master == null)
+            return null;
+
+        var visibleForProduct = await _context.ProductReviews.AsNoTracking()
+            .Where(r => r.ProductId == productId && r.IsVisible)
+            .Select(r => r.Rating)
+            .ToListAsync(cancellationToken);
+
+        var pCount = visibleForProduct.Count;
+        master.AverageRating = pCount == 0 ? null : visibleForProduct.Average(x => (double)x);
+        master.ReviewCount = pCount;
+        master.UpdatedAt = DateTime.UtcNow;
+
+        var shopId = master.ShopId;
+        var shopProductIds = await _context.ProductMasters.AsNoTracking()
+            .Where(p => p.ShopId == shopId)
+            .Select(p => p.ProductId)
+            .ToListAsync(cancellationToken);
+
+        var shopRatings = await _context.ProductReviews.AsNoTracking()
+            .Where(r => r.IsVisible && shopProductIds.Contains(r.ProductId))
+            .Select(r => r.Rating)
+            .ToListAsync(cancellationToken);
+
+        var sCount = shopRatings.Count;
+        double? sAvg = sCount == 0 ? null : shopRatings.Average(x => (double)x);
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return (shopId, sAvg, sCount);
     }
 
     public override async Task<List<ProductReview>> GetAllAsync()

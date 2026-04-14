@@ -245,9 +245,6 @@ public class ProductMastersController : ControllerBase
     }
 
     /// <summary>
-    /// Get best-selling products (platform-wide across all shops)
-    /// Ranked by total units sold in descending order
-    /// <summary>
     /// Cancel product submission (revert from PENDING_APPROVAL to DRAFT)
     /// Only works when product status is PENDING_APPROVAL
     /// </summary>

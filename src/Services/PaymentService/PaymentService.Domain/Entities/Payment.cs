@@ -3,7 +3,7 @@ using PaymentService.Domain.Enums;
 namespace PaymentService.Domain.Entities;
 
 /// <summary>
-/// Entity Payment - lưu thông tin thanh toán từ các provider (PayOS, MoMo, VNPay)
+/// Entity Payment - gateway payment records (PayOS, MoMo, VNPay).
 /// </summary>
 public class Payment
 {
@@ -18,7 +18,12 @@ public class Payment
     public Guid? OrderId { get; set; }
 
     /// <summary>
-    /// ID tài khoản người dùng (FK to Accounts service)
+    /// JSON array of order GUIDs for multi-order checkout (same as create-payment OrderIds).
+    /// </summary>
+    public string? RelatedOrderIdsJson { get; set; }
+
+    /// <summary>
+    /// Customer account id.
     /// </summary>
     public Guid? AccountId { get; set; }
 
@@ -28,17 +33,17 @@ public class Payment
     public string? Provider { get; set; }
 
     /// <summary>
-    /// ID thanh toán từ provider (orderCode của PayOS)
+    /// Provider payment id (e.g. PayOS orderCode).
     /// </summary>
     public string? ProviderPaymentId { get; set; }
 
     /// <summary>
-    /// Số tiền thanh toán (đơn vị: đồng)
+    /// Amount in VND.
     /// </summary>
     public long AmountVnd { get; set; }
 
     /// <summary>
-    /// Đơn vị tiền tệ
+    /// Currency code.
     /// </summary>
     public string Currency { get; set; } = "VND";
 
@@ -48,17 +53,17 @@ public class Payment
     public PaymentStatus Status { get; set; } = PaymentStatus.Created;
 
     /// <summary>
-    /// Thời gian tạo
+    /// Created at (UTC).
     /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// Thời gian cập nhật
+    /// Updated at (UTC).
     /// </summary>
     public DateTime? UpdatedAt { get; set; }
 
     /// <summary>
-    /// Response JSON từ provider (dùng để debug/audit)
+    /// Raw provider JSON for audit.
     /// </summary>
     public string? ProviderResponse { get; set; }
 }

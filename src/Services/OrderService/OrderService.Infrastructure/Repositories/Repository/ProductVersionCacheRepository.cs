@@ -22,6 +22,18 @@ public class ProductVersionCacheRepository : GenericRepository<ProductVersionCac
         return await _dbSet.Where(p => p.ProductId == productId).ToListAsync();
     }
 
+    public async Task<List<ProductVersionCache>> GetActiveByProductIdsAsync(
+        IReadOnlyList<Guid> productIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (productIds == null || productIds.Count == 0)
+            return new List<ProductVersionCache>();
+
+        return await _dbSet
+            .Where(p => productIds.Contains(p.ProductId) && !p.IsDeleted)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task UpsertAsync(ProductVersionCache cache)
     {
         var existing = await GetByVersionIdAsync(cache.VersionId);

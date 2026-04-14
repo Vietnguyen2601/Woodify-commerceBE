@@ -48,6 +48,9 @@ namespace OrderService.APIService.Extensions
 
             var shopConsumer = serviceProvider.GetService<ShopEventConsumer>();
             shopConsumer?.StartListening();
+
+            var paymentPaidConsumer = serviceProvider.GetService<PaymentOrdersPaidConsumer>();
+            paymentPaidConsumer?.StartListening();
         }
     }
 }

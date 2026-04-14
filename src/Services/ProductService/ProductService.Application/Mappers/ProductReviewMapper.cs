@@ -5,7 +5,7 @@ namespace ProductService.Application.Mappers;
 
 public static class ProductReviewMapper
 {
-    public static ProductReviewDto ToDto(this ProductReview review)
+    public static ProductReviewDto ToDto(this ProductReview review, IReadOnlyList<string>? imageUrls = null)
     {
         if (review == null) throw new ArgumentNullException(nameof(review), "ProductReview cannot be null");
         
@@ -13,7 +13,9 @@ public static class ProductReviewMapper
         {
             ReviewId = review.ReviewId,
             VersionId = review.VersionId,
+            ProductId = review.ProductId,
             OrderId = review.OrderId,
+            OrderItemId = review.OrderItemId,
             AccountId = review.AccountId,
             Rating = review.Rating,
             Content = review.Content,
@@ -21,7 +23,8 @@ public static class ProductReviewMapper
             ShopResponse = review.ShopResponse,
             ShopResponseAt = review.ShopResponseAt,
             CreatedAt = review.CreatedAt,
-            UpdatedAt = review.UpdatedAt
+            UpdatedAt = review.UpdatedAt,
+            ImageUrls = imageUrls != null ? imageUrls.ToList() : new List<string>()
         };
     }
 
@@ -36,6 +39,7 @@ public static class ProductReviewMapper
         {
             VersionId = dto.VersionId,
             OrderId = dto.OrderId,
+            OrderItemId = dto.OrderItemId,
             AccountId = dto.AccountId,
             Rating = dto.Rating,
             Content = dto.Content,

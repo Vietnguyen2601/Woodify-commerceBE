@@ -16,6 +16,7 @@ public class OrderService : IOrderService
     private readonly ICartRepository _cartRepository;
     private readonly ICartItemRepository _cartItemRepository;
     private readonly IProductVersionCacheRepository _productCacheRepository;
+    private readonly IShopInfoCacheRepository _shopInfoCacheRepository;
     private readonly OrderEventPublisher _orderEventPublisher;
 
     public OrderService(
@@ -23,12 +24,14 @@ public class OrderService : IOrderService
         ICartRepository cartRepository,
         ICartItemRepository cartItemRepository,
         IProductVersionCacheRepository productCacheRepository,
+        IShopInfoCacheRepository shopInfoCacheRepository,
         OrderEventPublisher orderEventPublisher)
     {
         _orderRepository = orderRepository;
         _cartRepository = cartRepository;
         _cartItemRepository = cartItemRepository;
         _productCacheRepository = productCacheRepository;
+        _shopInfoCacheRepository = shopInfoCacheRepository;
         _orderEventPublisher = orderEventPublisher;
     }
 
@@ -119,36 +122,16 @@ public class OrderService : IOrderService
                 var shopId = shopGroup.Key;
                 var shopItems = shopGroup.Value;
 
-                // Calculate subtotal for this shop
-                double subtotalVnd = shopItems.Sum(item => item.Price * item.Quantity);
-
-                // ✨ Calculate total weight FOR THIS SHOP (not total for all shops)
                 int totalWeightGrams = await CalculateTotalWeightAsync(shopItems);
 
-                // ✨ Calculate shipping fee immediately using ShippingServiceConstants
-                long shippingFeeVnd = ShippingPricing.FinalShippingFeeVnd(
-                    providerServiceCode,
-                    totalWeightGrams,
-                    subtotalVnd);
-
-                // Total amount = Subtotal + Shipping fee
-                double orderTotalAmountVnd = subtotalVnd + shippingFeeVnd;
-
-                // === THÊM MỚI: Tính tiền hoa hồng ===
-                // Sử dụng default commission rate (6%) vì không fetch từ shop
                 decimal commissionRate = CommissionCalculator.DEFAULT_COMMISSION_RATE;
-                long commissionVnd = CommissionCalculator.CalculateCommissionVnd(subtotalVnd, commissionRate);
 
-                // Create Order entity for this shop
                 var order = new Order
                 {
                     OrderId = Guid.NewGuid(),
                     AccountId = dto.AccountId,
                     ShopId = shopId,
-                    SubtotalVnd = subtotalVnd,
-                    TotalAmountVnd = orderTotalAmountVnd, // ✨ Includes calculated shipping fee
-                    CommissionRate = commissionRate,     // === THÊM: Commission rate (6%)
-                    CommissionVnd = commissionVnd,   // === THÊM: Tính hoa hồng
+                    CommissionRate = commissionRate,
                     VoucherId = dto.VoucherId,
                     Status = OrderStatus.PENDING,
                     DeliveryAddress = dto.DeliveryAddress,
@@ -175,6 +158,15 @@ public class OrderService : IOrderService
 
                     order.OrderItems.Add(orderItem);
                 }
+
+                double merchandiseTotalVnd = order.OrderItems.Sum(oi => oi.LineTotalVnd);
+                order.SubtotalVnd = merchandiseTotalVnd;
+                long shippingFeeSynced = ShippingPricing.FinalShippingFeeVnd(
+                    providerServiceCode,
+                    totalWeightGrams,
+                    merchandiseTotalVnd);
+                order.TotalAmountVnd = merchandiseTotalVnd + shippingFeeSynced;
+                order.CommissionVnd = CommissionCalculator.CalculateCommissionVnd(merchandiseTotalVnd, order.CommissionRate);
 
                 // Save order to database
                 await _orderRepository.CreateAsync(order);
@@ -345,48 +337,27 @@ public class OrderService : IOrderService
             if (!validItems.Any())
                 return ServiceResult<CreateOrderResponse>.BadRequest("No valid items to create order");
 
-            // ===== CALCULATE ORDER AMOUNTS =====
-            double subtotalVnd = validItems.Sum(item => item.Price * item.Quantity);
-            int totalWeightGrams = await CalculateTotalWeightAsync(validItems);
-
             var providerServiceCode = NormalizeProviderServiceCode(request.ProviderServiceCode);
 
-            long shippingFeeVnd = ShippingPricing.FinalShippingFeeVnd(
-                providerServiceCode,
-                totalWeightGrams,
-                subtotalVnd);
-
-            // Total amount = Subtotal + Shipping fee
-            double totalAmountVnd = subtotalVnd + shippingFeeVnd;
-
-            // Calculate commission (6% of subtotal)
-            decimal commissionRate = CommissionCalculator.DEFAULT_COMMISSION_RATE;
-            long commissionVnd = CommissionCalculator.CalculateCommissionVnd(subtotalVnd, commissionRate);
-
-            // ===== CREATE ORDER =====
+            var orderId = Guid.NewGuid();
             var order = new Order
             {
-                OrderId = Guid.NewGuid(),
+                OrderId = orderId,
                 AccountId = request.AccountId,
                 ShopId = request.ShopId,
-                SubtotalVnd = subtotalVnd,
-                TotalAmountVnd = totalAmountVnd,
-                CommissionRate = commissionRate,
-                CommissionVnd = commissionVnd,
                 VoucherId = request.VoucherId,
-                Status = OrderStatus.PENDING,  // ← Stay PENDING until payment succeeds
+                Status = OrderStatus.PENDING,
                 DeliveryAddress = request.DeliveryAddress,
                 ProviderServiceCode = providerServiceCode,
                 CreatedAt = DateTime.UtcNow
             };
 
-            // Create Order Items (snapshot from cart items)
             foreach (var cartItem in validItems)
             {
-                var orderItem = new OrderItem
+                order.OrderItems.Add(new OrderItem
                 {
                     OrderItemId = Guid.NewGuid(),
-                    OrderId = order.OrderId,
+                    OrderId = orderId,
                     VersionId = cartItem.VersionId,
                     UnitPriceVnd = (long)Math.Round(cartItem.Price),
                     Quantity = cartItem.Quantity,
@@ -395,10 +366,26 @@ public class OrderService : IOrderService
                     LineTotalVnd = cartItem.Price * cartItem.Quantity,
                     Status = FulfillmentStatus.UNFULFILLED,
                     CreatedAt = DateTime.UtcNow
-                };
-
-                order.OrderItems.Add(orderItem);
+                });
             }
+
+            double merchandiseTotalVnd = order.OrderItems.Sum(oi => oi.LineTotalVnd);
+            order.SubtotalVnd = merchandiseTotalVnd;
+
+            int totalWeightGrams = await CalculateTotalWeightAsync(validItems);
+
+            long shippingFeeVnd = ShippingPricing.FinalShippingFeeVnd(
+                providerServiceCode,
+                totalWeightGrams,
+                merchandiseTotalVnd);
+
+            double totalAmountVnd = merchandiseTotalVnd + shippingFeeVnd;
+            order.TotalAmountVnd = totalAmountVnd;
+
+            decimal commissionRate = CommissionCalculator.DEFAULT_COMMISSION_RATE;
+            order.CommissionRate = commissionRate;
+            long commissionVnd = CommissionCalculator.CalculateCommissionVnd(merchandiseTotalVnd, commissionRate);
+            order.CommissionVnd = commissionVnd;
 
             // Save order to database
             await _orderRepository.CreateAsync(order);
@@ -458,7 +445,7 @@ public class OrderService : IOrderService
             {
                 OrderId = order.OrderId,
                 ShopId = order.ShopId,
-                SubtotalVnd = subtotalVnd,
+                SubtotalVnd = merchandiseTotalVnd,
                 ShippingFeeVnd = shippingFeeVnd,
                 CommissionVnd = commissionVnd,
                 TotalAmountVnd = totalAmountVnd,
@@ -660,7 +647,24 @@ public class OrderService : IOrderService
             // 6. Publish events for dashboard metrics
             PublishDashboardEvents(order, oldStatus, newStatus.ToString());
 
-            // 7. Return updated order
+            // 7. Notify ProductService: lines eligible for review (event-driven, no HTTP)
+            if (newStatus is OrderStatus.DELIVERED or OrderStatus.COMPLETED)
+            {
+                _orderEventPublisher.PublishOrderReviewEligible(new OrderReviewEligibleEvent
+                {
+                    OrderId = order.OrderId,
+                    ShopId = order.ShopId,
+                    AccountId = order.AccountId,
+                    EligibleAt = DateTime.UtcNow,
+                    Lines = order.OrderItems.Select(oi => new OrderReviewEligibleLineItem
+                    {
+                        OrderItemId = oi.OrderItemId,
+                        VersionId = oi.VersionId
+                    }).ToList()
+                });
+            }
+
+            // 8. Return updated order
             var orderDto = MapToOrderDto(order);
             return ServiceResult<OrderDto>.Success(orderDto, "Order status updated successfully");
         }
@@ -1134,7 +1138,53 @@ public class OrderService : IOrderService
         return dto;
     }
 
-    /// <summary>
-    /// Create PayOS payment link và add vào OrderDto
-    /// </summary>
+    public async Task<ServiceResult<List<TopSellingProductAnalyticsDto>>> GetTopSellingProductsAsync(
+        int limit = 5,
+        Guid? shopId = null)
+    {
+        limit = Math.Clamp(limit, 1, 100);
+        var rows = await _orderRepository.GetTopSellingProductMasterAggregatesAsync(limit, shopId);
+        if (rows.Count == 0)
+            return ServiceResult<List<TopSellingProductAnalyticsDto>>.Success(new List<TopSellingProductAnalyticsDto>(), "No sales data yet");
+
+        var productIds = rows.ConvertAll(r => r.ProductId);
+        var caches = await _productCacheRepository.GetActiveByProductIdsAsync(productIds);
+        var representativeByProduct = caches
+            .GroupBy(c => c.ProductId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(c => c.LastUpdated).First());
+
+        var shopIds = representativeByProduct.Values.Select(c => c.ShopId).Distinct().ToList();
+        var shopNames = new Dictionary<Guid, string>();
+        foreach (var sid in shopIds)
+        {
+            var shop = await _shopInfoCacheRepository.GetByShopIdAsync(sid);
+            if (shop != null)
+                shopNames[sid] = shop.Name;
+        }
+
+        var list = new List<TopSellingProductAnalyticsDto>();
+        var rank = 1;
+        foreach (var row in rows)
+        {
+            representativeByProduct.TryGetValue(row.ProductId, out var cache);
+            var shopIdRow = cache?.ShopId ?? Guid.Empty;
+            list.Add(new TopSellingProductAnalyticsDto
+            {
+                Rank = rank++,
+                ProductId = row.ProductId,
+                UnitsSold = row.UnitsSold,
+                ProductName = cache?.ProductName ?? string.Empty,
+                ProductStatus = cache?.ProductStatus,
+                ThumbnailUrl = cache?.ThumbnailUrl,
+                VersionId = cache?.VersionId,
+                SellerSku = cache?.SellerSku,
+                ShopId = shopIdRow,
+                ShopName = shopIdRow != Guid.Empty ? shopNames.GetValueOrDefault(shopIdRow) : null
+            });
+        }
+
+        return ServiceResult<List<TopSellingProductAnalyticsDto>>.Success(list);
+    }
 }

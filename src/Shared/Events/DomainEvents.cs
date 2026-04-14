@@ -92,3 +92,55 @@ public class ShippingFeeCalculatedEvent
     public bool IsFreeShipping { get; set; }
     public DateTime CalculatedAt { get; set; }
 }
+
+/// <summary>
+/// One line in an order that may receive a product review after delivery.
+/// </summary>
+public class OrderReviewEligibleLineItem
+{
+    public Guid OrderItemId { get; set; }
+    public Guid VersionId { get; set; }
+}
+
+/// <summary>
+/// OrderService publishes when status becomes DELIVERED or COMPLETED so ProductService
+/// can record purchase eligibility without HTTP calls (microservice-friendly).
+/// Exchange: order.events / Routing key: order.review_eligible
+/// </summary>
+public class OrderReviewEligibleEvent
+{
+    public Guid OrderId { get; set; }
+    public Guid ShopId { get; set; }
+    public Guid AccountId { get; set; }
+    public List<OrderReviewEligibleLineItem> Lines { get; set; } = new();
+    public DateTime EligibleAt { get; set; }
+}
+
+/// <summary>
+/// PaymentService publishes after gateway payment succeeds for one or more shop orders (e.g. PayOS PAID).
+/// OrderService sets orders to CONFIRMED.
+/// Exchange: payment.events / Routing key: payment.orders.paid
+/// </summary>
+public class PaymentOrdersPaidEvent
+{
+    public Guid PaymentId { get; set; }
+    public Guid? AccountId { get; set; }
+    public List<Guid> OrderIds { get; set; } = new();
+    public string Provider { get; set; } = "PAYOS";
+    public long ProviderOrderCode { get; set; }
+    public long AmountVnd { get; set; }
+    public DateTime PaidAt { get; set; }
+}
+
+/// <summary>
+/// ProductService publishes after recomputing shop-level review aggregates from product reviews.
+/// ShopService updates <c>shops.rating</c> and <c>shops.review_count</c> (no HTTP).
+/// Exchange: shop.events / Routing key: shop.review_stats.updated
+/// </summary>
+public class ShopReviewStatsUpdatedEvent
+{
+    public Guid ShopId { get; set; }
+    public double? AverageRating { get; set; }
+    public int ReviewCount { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}

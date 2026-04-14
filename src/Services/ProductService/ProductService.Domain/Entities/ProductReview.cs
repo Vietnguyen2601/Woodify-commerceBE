@@ -8,7 +8,15 @@ public class ProductReview
 {
     public Guid ReviewId { get; set; } = Guid.NewGuid();
     public Guid VersionId { get; set; }
+
+    /// <summary>Denormalized for filters and aggregates.</summary>
+    public Guid ProductId { get; set; }
+
     public Guid OrderId { get; set; }
+
+    /// <summary>Matches OrderService order_items.order_item_id.</summary>
+    public Guid OrderItemId { get; set; }
+
     public Guid AccountId { get; set; }
 
     public int Rating { get; set; } // 1-5

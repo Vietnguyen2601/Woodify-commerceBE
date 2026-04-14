@@ -610,6 +610,8 @@ public class ProductMasterService : IProductMasterService
                 CreatedAt = product.CreatedAt,
                 UpdatedAt = product.UpdatedAt,
                 PublishedAt = product.PublishedAt,
+                AverageRating = product.AverageRating,
+                ReviewCount = product.ReviewCount,
                 Images = productImages.Select(i => i.ToDto()).ToList(),
                 Versions = filteredVersions.Select(v => new ProductVersionDetailDto
                 {
@@ -737,6 +739,8 @@ public class ProductMasterService : IProductMasterService
                     CreatedAt = product.CreatedAt,
                     UpdatedAt = product.UpdatedAt,
                     PublishedAt = product.PublishedAt,
+                    AverageRating = product.AverageRating,
+                    ReviewCount = product.ReviewCount,
                     Images = productImages.Select(i => i.ToDto()).ToList(),
                     Versions = filteredVersions.Select(v => new ProductVersionDetailDto
                     {

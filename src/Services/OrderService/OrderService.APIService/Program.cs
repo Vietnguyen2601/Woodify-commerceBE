@@ -90,6 +90,7 @@ for (int i = 0; i < 5; i++)
         builder.Services.AddSingleton<ProductEventConsumer>();
         builder.Services.AddSingleton<ShippingFeeEventConsumer>();
         builder.Services.AddSingleton<ShopEventConsumer>();
+        builder.Services.AddSingleton<PaymentOrdersPaidConsumer>();
 
         Console.WriteLine("RabbitMQ Publisher and Consumer connected successfully");
         rabbitMQAvailable = true;

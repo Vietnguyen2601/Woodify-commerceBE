@@ -166,6 +166,8 @@ for (int attempt = 1; attempt <= 5; attempt++)
     {
         rabbitMQConsumer = new RabbitMQConsumer(rabbitMQSettings);
         builder.Services.AddSingleton(rabbitMQConsumer);
+        var rabbitMQPublisher = new RabbitMQPublisher(rabbitMQSettings);
+        builder.Services.AddSingleton(rabbitMQPublisher);
         builder.Services.AddHostedService<AccountCreatedConsumer>();
         break;
     }
@@ -194,6 +196,11 @@ for (int attempt = 1; attempt <= 5; attempt++)
         }
     }
 }
+
+builder.Services.AddSingleton<IPaymentEventsPublisher>(sp =>
+    new PaymentEventsPublisher(
+        sp.GetService<RabbitMQPublisher>(),
+        sp.GetRequiredService<ILogger<PaymentEventsPublisher>>()));
 
 // ==========================================
 // 8. Build App

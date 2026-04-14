@@ -149,9 +149,8 @@ public class PaymentStatusPollingHostedService : BackgroundService, IPaymentPoll
                 }
                 else
                 {
-                    // PENDING hoặc status khác → chỉ count nếu payment thuộc session này
-                    if (payment.CreatedAt >= sessionStartTime - TimeSpan.FromSeconds(30))
-                        stillPendingCount++;
+                    // PayOS v��n PENDING (hoặc status khác) — tiếp tục poll
+                    stillPendingCount++;
                 }
             }
             catch (Exception ex)
