@@ -8,7 +8,7 @@ using Shared.Messaging;
 namespace OrderService.Application.Consumers;
 
 /// <summary>
-/// Consumes PaymentOrdersPaidEvent — confirms orders after PayOS payment.
+/// Consumes PaymentOrdersPaidEvent — marks orders COMPLETED after PayOS or wallet payment.
 /// </summary>
 public class PaymentOrdersPaidConsumer
 {
@@ -76,13 +76,13 @@ public class PaymentOrdersPaidConsumer
                     continue;
                 }
 
-                order.Status = OrderStatus.CONFIRMED;
+                order.Status = OrderStatus.COMPLETED;
                 order.UpdatedAt = DateTime.UtcNow;
                 await orderRepository.UpdateAsync(order);
 
                 _logger.LogInformation(
-                    "Order {OrderId} confirmed after payment {PaymentId}",
-                    order.OrderId, evt.PaymentId);
+                    "Order {OrderId} completed after payment {PaymentId} ({Provider})",
+                    order.OrderId, evt.PaymentId, evt.Provider);
             }
         }
         catch (Exception ex)

@@ -118,7 +118,7 @@ public class OrderReviewEligibleEvent
 
 /// <summary>
 /// PaymentService publishes after gateway payment succeeds for one or more shop orders (e.g. PayOS PAID).
-/// OrderService sets orders to CONFIRMED.
+/// OrderService sets orders to COMPLETED (PayOS, wallet, etc.).
 /// Exchange: payment.events / Routing key: payment.orders.paid
 /// </summary>
 public class PaymentOrdersPaidEvent

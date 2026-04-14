@@ -5,6 +5,7 @@ using PaymentService.Application.Interfaces;
 using PaymentService.Application.Helpers;
 using PaymentService.Domain.Entities;
 using PaymentService.Domain.Enums;
+using Shared.Events;
 using Shared.Results;
 
 namespace PaymentService.Application.Services;
@@ -20,9 +21,11 @@ public class PaymentAppService : IPaymentAppService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPaymentPollingTrigger _pollingTrigger;
     private readonly IPayOsWebhookHandler _payOsWebhookHandler;
+    private readonly IPaymentEventsPublisher _paymentEventsPublisher;
     private readonly ILogger<PaymentAppService> _logger;
 
     private const string PROVIDER_PAYOS = "PAYOS";
+    private const string PROVIDER_WALLET = "WALLET";
 
     public PaymentAppService(
         IPayOsService payOsService,
@@ -31,6 +34,7 @@ public class PaymentAppService : IPaymentAppService
         IUnitOfWork unitOfWork,
         IPaymentPollingTrigger pollingTrigger,
         IPayOsWebhookHandler payOsWebhookHandler,
+        IPaymentEventsPublisher paymentEventsPublisher,
         ILogger<PaymentAppService> logger)
     {
         _payOsService = payOsService;
@@ -39,6 +43,7 @@ public class PaymentAppService : IPaymentAppService
         _unitOfWork = unitOfWork;
         _pollingTrigger = pollingTrigger;
         _payOsWebhookHandler = payOsWebhookHandler;
+        _paymentEventsPublisher = paymentEventsPublisher;
         _logger = logger;
     }
 
@@ -393,7 +398,7 @@ public class PaymentAppService : IPaymentAppService
     /// - Deduct amount từ wallet
     /// - Tạo WalletTransaction (DEBIT)
     /// - Return payment với remaining balance
-    /// - Orders sẽ được update bởi OrderService (publish event hoặc HTTP call)
+    /// - OrderService: PaymentOrdersPaidEvent (RabbitMQ) → đơn chuyển COMPLETED
     /// </summary>
     private async Task<ServiceResult<CreatePaymentResponse>> CreateWalletPaymentAsync(CreatePaymentRequest request)
     {
@@ -438,10 +443,11 @@ public class PaymentAppService : IPaymentAppService
             var payment = new Payment
             {
                 OrderId = request.OrderIds.FirstOrDefault(),
+                RelatedOrderIdsJson = JsonSerializer.Serialize(request.OrderIds),
                 AccountId = request.AccountId,
-                Provider = null, // Wallet là internal
+                Provider = PROVIDER_WALLET,
                 AmountVnd = request.TotalAmountVnd,
-                Status = PaymentStatus.Succeeded, // Thanh toán ngay lập tức
+                Status = PaymentStatus.Succeeded,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -451,9 +457,16 @@ public class PaymentAppService : IPaymentAppService
             await _walletRepository.AddTransactionAsync(transaction);
             await _unitOfWork.SaveChangesAsync();
 
-            // ===== Step 7: Optional - Publish event để OrderService update orders =====
-            // TODO: Publish OrderConfirmedEvent để OrderService update orders → CONFIRMED
-            // Hoặc: Call OrderService API để update orders
+            _paymentEventsPublisher.PublishPaymentOrdersPaid(new PaymentOrdersPaidEvent
+            {
+                PaymentId = payment.PaymentId,
+                AccountId = request.AccountId,
+                OrderIds = request.OrderIds,
+                Provider = PROVIDER_WALLET,
+                ProviderOrderCode = 0,
+                AmountVnd = request.TotalAmountVnd,
+                PaidAt = DateTime.UtcNow
+            });
 
             _logger.LogInformation("Wallet payment succeeded. PaymentId: {PaymentId}, RemainingBalance: {Balance}",
                 payment.PaymentId, wallet.BalanceVnd);
