@@ -104,6 +104,8 @@ builder.Services.AddScoped<OrderAwaitingPickupEventConsumer>();
 builder.Services.AddScoped<OrderReadyToShipEventConsumer>();
 builder.Services.AddScoped<OrderCreatedForShopEventConsumer>();
 builder.Services.AddScoped<MetricsAggregatedEventConsumer>();
+builder.Services.AddScoped<ShopTotalOrdersConsumer>();
+builder.Services.AddScoped<ShopTotalProductsConsumer>();
 
 var rootPath = Directory.GetParent(Directory.GetCurrentDirectory())?.Parent?.Parent?.Parent?.FullName;
 var envPath = Path.Combine(rootPath ?? "", ".env");

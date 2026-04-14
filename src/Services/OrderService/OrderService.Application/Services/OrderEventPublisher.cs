@@ -58,6 +58,26 @@ public class OrderEventPublisher
         }
     }
 
+    /// <summary>ProductService decrements stock once per order when physically delivered (no HTTP).</summary>
+    public void PublishOrderDeliveredStock(OrderDeliveredStockEvent evt)
+    {
+        if (_publisher == null)
+        {
+            Console.WriteLine("[OrderService] WARNING: RabbitMQ publisher is not available. Skipping OrderDeliveredStock event.");
+            return;
+        }
+
+        try
+        {
+            _publisher.Publish("order.events", "order.delivered.stock", evt);
+            Console.WriteLine($"[OrderService] Published OrderDeliveredStock: OrderId={evt.OrderId}, Lines={evt.Lines.Count}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[OrderService] Failed to publish OrderDeliveredStock: {ex.Message}");
+        }
+    }
+
     /// <summary>ProductService consumes to grant review eligibility (no HTTP).</summary>
     public void PublishOrderReviewEligible(OrderReviewEligibleEvent evt)
     {

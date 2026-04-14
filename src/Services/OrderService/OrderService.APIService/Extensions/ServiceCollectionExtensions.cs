@@ -51,6 +51,9 @@ namespace OrderService.APIService.Extensions
 
             var paymentPaidConsumer = serviceProvider.GetService<PaymentOrdersPaidConsumer>();
             paymentPaidConsumer?.StartListening();
+
+            var shipmentStatusConsumer = serviceProvider.GetService<ShipmentStatusChangedConsumer>();
+            shipmentStatusConsumer?.StartListening();
         }
     }
 }

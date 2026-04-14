@@ -13,6 +13,8 @@ public class ShopDbContext : DbContext
     public DbSet<Shop> Shops { get; set; }
     public DbSet<ShopFollower> ShopFollowers { get; set; }
     public DbSet<OrderMetricsSnapshot> OrderMetricsSnapshots { get; set; }
+    public DbSet<ShopOrderCounterLedger> ShopOrderCounterLedgers { get; set; }
+    public DbSet<ShopProductCounterLedger> ShopProductCounterLedgers { get; set; }
 
     private static string? GetConnectionString(string connectionStringName)
     {
@@ -121,6 +123,27 @@ public class ShopDbContext : DbContext
             entity.Property(e => e.ShopId).HasColumnName("shop_id");
             entity.Property(e => e.AccountId).HasColumnName("account_id");
             entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+        });
+
+        modelBuilder.Entity<ShopOrderCounterLedger>(entity =>
+        {
+            entity.ToTable("shop_order_counter_ledger");
+            entity.HasKey(e => e.OrderId);
+            entity.Property(e => e.OrderId).HasColumnName("order_id");
+            entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
+            entity.Property(e => e.CountedAt).HasColumnName("counted_at").IsRequired();
+            entity.HasIndex(e => e.ShopId);
+        });
+
+        modelBuilder.Entity<ShopProductCounterLedger>(entity =>
+        {
+            entity.ToTable("shop_product_counter_ledger");
+            entity.HasKey(e => e.ProductId);
+            entity.Property(e => e.ProductId).HasColumnName("product_id");
+            entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
+            entity.Property(e => e.CountedAt).HasColumnName("counted_at").IsRequired();
+            entity.Property(e => e.UncountedAt).HasColumnName("uncounted_at");
+            entity.HasIndex(e => e.ShopId);
         });
     }
 }

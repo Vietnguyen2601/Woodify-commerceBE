@@ -84,33 +84,38 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
         Guid? shopId,
         CancellationToken cancellationToken = default)
     {
-        OrderStatus[] excluded =
-        [
-            OrderStatus.CANCELLED,
-            OrderStatus.REFUNDED,
-            OrderStatus.REFUNDING
-        ];
-
-        var query =
+        // Only DELIVERED orders count toward "sold". Payment-only COMPLETED is excluded.
+        var versionSales =
             from oi in _context.OrderItems
             join o in _context.Orders on oi.OrderId equals o.OrderId
-            join c in _context.ProductVersionCaches on oi.VersionId equals c.VersionId
-            where !excluded.Contains(o.Status)
-                  && !c.IsDeleted
-                  && (!shopId.HasValue || o.ShopId == shopId.Value)
-            group oi by c.ProductId
+            where o.Status == OrderStatus.DELIVERED && (!shopId.HasValue || o.ShopId == shopId.Value)
+            group oi by oi.VersionId
             into g
             select new
             {
-                ProductId = g.Key,
+                VersionId = g.Key,
                 UnitsSold = g.Sum(x => (long)x.Quantity)
             };
 
-        var rows = await query
-            .OrderByDescending(x => x.UnitsSold)
-            .Take(productLimit)
+        var versionRows = await versionSales.ToListAsync(cancellationToken);
+        if (versionRows.Count == 0)
+            return new List<(Guid ProductId, long UnitsSold)>();
+
+        var versionIds = versionRows.Select(v => v.VersionId).Distinct().ToList();
+        var cacheLinks = await _context.ProductVersionCaches
+            .AsNoTracking()
+            .Where(c => versionIds.Contains(c.VersionId) && !c.IsDeleted)
+            .Select(c => new { c.VersionId, c.ProductId })
             .ToListAsync(cancellationToken);
 
-        return rows.ConvertAll(x => (x.ProductId, x.UnitsSold));
+        var versionToProduct = cacheLinks.ToDictionary(x => x.VersionId, x => x.ProductId);
+
+        return versionRows
+            .Where(v => versionToProduct.ContainsKey(v.VersionId))
+            .GroupBy(v => versionToProduct[v.VersionId])
+            .Select(g => (ProductId: g.Key, UnitsSold: g.Sum(x => x.UnitsSold)))
+            .OrderByDescending(x => x.UnitsSold)
+            .Take(productLimit)
+            .ToList();
     }
 }

@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrderService.Application.Interfaces;
+using OrderService.Application.DTOs;
 using OrderService.Domain.Entities;
 using OrderService.Infrastructure.Repositories.IRepositories;
 using Shared.Events;
@@ -56,6 +58,7 @@ public class PaymentOrdersPaidConsumer
         {
             using var scope = _scopeFactory.CreateScope();
             var orderRepository = scope.ServiceProvider.GetRequiredService<IOrderRepository>();
+            var notifier = scope.ServiceProvider.GetService<IOrderRealtimeNotifier>();
 
             var orders = await orderRepository.GetByIdsAsync(evt.OrderIds);
             foreach (var order in orders)
@@ -79,6 +82,23 @@ public class PaymentOrdersPaidConsumer
                 order.Status = OrderStatus.COMPLETED;
                 order.UpdatedAt = DateTime.UtcNow;
                 await orderRepository.UpdateAsync(order);
+
+                if (notifier != null)
+                {
+                    await notifier.NotifyOrderShipmentStatusAsync(new OrderShipmentRealtimePayload
+                    {
+                        ShipmentId = Guid.Empty,
+                        OrderId = order.OrderId,
+                        ShopId = order.ShopId,
+                        AccountId = order.AccountId,
+                        ShipmentPreviousStatus = string.Empty,
+                        ShipmentNewStatus = string.Empty,
+                        OrderPreviousStatus = OrderStatus.PENDING.ToString(),
+                        OrderNewStatus = OrderStatus.COMPLETED.ToString(),
+                        OrderRowUpdated = true,
+                        OccurredAt = DateTime.UtcNow
+                    });
+                }
 
                 _logger.LogInformation(
                     "Order {OrderId} completed after payment {PaymentId} ({Provider})",

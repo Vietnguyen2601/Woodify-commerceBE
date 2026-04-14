@@ -30,6 +30,8 @@ namespace ProductService.APIService.Extensions
                 new ProductReviewRepository(sp.GetRequiredService<ProductDbContext>()));
             services.AddScoped<IReviewPurchaseEligibilityRepository>(sp =>
                 new ReviewPurchaseEligibilityRepository(sp.GetRequiredService<ProductDbContext>()));
+            services.AddScoped<IOrderDeliveredStockLedgerRepository>(sp =>
+                new OrderDeliveredStockLedgerRepository(sp.GetRequiredService<ProductDbContext>()));
             services.AddScoped<IImageUrlRepository>(sp =>
                 new ImageUrlRepository(sp.GetRequiredService<ProductDbContext>()));
 
@@ -47,6 +49,7 @@ namespace ProductService.APIService.Extensions
             services.AddSingleton<ShopNameCacheService>();
 
             services.AddScoped<OrderReviewEligibilityIngestService>();
+            services.AddScoped<OrderDeliveredStockIngestService>();
 
             return services;
         }
@@ -58,6 +61,9 @@ namespace ProductService.APIService.Extensions
 
             var orderReviewEligibilityConsumer = serviceProvider.GetService<OrderReviewEligibilityConsumer>();
             orderReviewEligibilityConsumer?.StartListening();
+
+            var orderDeliveredStockConsumer = serviceProvider.GetService<OrderDeliveredStockConsumer>();
+            orderDeliveredStockConsumer?.StartListening();
         }
 
         public static IServiceCollection AddValidators(this IServiceCollection services)

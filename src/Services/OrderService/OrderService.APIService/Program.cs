@@ -62,6 +62,9 @@ builder.Services.AddDbContext<OrderDbContext>();
 // Register Order Services
 builder.Services.AddOrderServices(builder.Configuration);
 
+builder.Services.AddSingleton<OrderService.Application.Interfaces.IOrderRealtimeNotifier,
+    OrderService.APIService.Services.OrderRealtimeNotifier>();
+
 // Register MetricsPublisher background service (for real-time dashboard)
 builder.Services.AddHostedService<MetricsPublisherService>();
 
@@ -92,6 +95,7 @@ for (int i = 0; i < 5; i++)
         builder.Services.AddSingleton<ShippingFeeEventConsumer>();
         builder.Services.AddSingleton<ShopEventConsumer>();
         builder.Services.AddSingleton<PaymentOrdersPaidConsumer>();
+        builder.Services.AddSingleton<ShipmentStatusChangedConsumer>();
 
         Console.WriteLine("RabbitMQ Publisher and Consumer connected successfully");
         rabbitMQAvailable = true;
@@ -204,6 +208,7 @@ app.MapControllers();
 
 // Map SignalR Hubs for real-time dashboard
 app.MapHub<OrderService.APIService.Hubs.DashboardHub>("/admin-dashboard-hub");
+app.MapHub<OrderService.APIService.Hubs.OrdersHub>("/hubs/orders");
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "order-service" }));
 

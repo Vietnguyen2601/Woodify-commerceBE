@@ -236,7 +236,8 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Top product masters by units sold (aggregated by product_id). Display data from product_version_cache + shop_info_cache. Excludes cancelled/refunded orders.
+    /// Top product masters by units sold on <b>delivered</b> orders only. Marketplace: omit <c>shopId</c>. Per shop: pass <c>shopId</c>.
+    /// <c>limit</c> mặc định 5, tối đa 20.
     /// </summary>
     [HttpGet("analytics/top-selling-products")]
     [ProducesResponseType(typeof(ServiceResult<List<TopSellingProductAnalyticsDto>>), StatusCodes.Status200OK)]

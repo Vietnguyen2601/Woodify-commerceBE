@@ -21,6 +21,7 @@ public class ProductDbContext : DbContext
     public DbSet<ProductReview> ProductReviews { get; set; }
     public DbSet<ImageUrl> ImageUrls { get; set; }
     public DbSet<ReviewPurchaseEligibility> ReviewPurchaseEligibilities { get; set; }
+    public DbSet<OrderDeliveredStockLedger> OrderDeliveredStockLedgers { get; set; }
 
     private static string GetConnectionString(string connectionStringName)
     {
@@ -253,6 +254,14 @@ public class ProductDbContext : DbContext
             entity.HasIndex(e => e.AccountId);
             entity.HasIndex(e => e.OrderId);
             entity.HasIndex(e => e.ProductId);
+        });
+
+        modelBuilder.Entity<OrderDeliveredStockLedger>(entity =>
+        {
+            entity.ToTable("order_delivered_stock_ledger");
+            entity.HasKey(e => e.OrderId);
+            entity.Property(e => e.OrderId).HasColumnName("order_id");
+            entity.Property(e => e.ProcessedAt).HasColumnName("processed_at").IsRequired();
         });
 
         // ========================================
