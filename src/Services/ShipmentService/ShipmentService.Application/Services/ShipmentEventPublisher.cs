@@ -29,7 +29,15 @@ public class ShipmentEventPublisher
             Console.WriteLine(
                 $"[ShipmentService] Published ShipmentStatusChanged: ShipmentId={evt.ShipmentId}, OrderId={evt.OrderId}, {evt.PreviousStatus} -> {evt.NewStatus}");
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"[ShipmentService] Failed to publish ShipmentStatusChanged: {ex.Message}");
+        }
+        catch (ArgumentException ex)
+        {
+            Console.WriteLine($"[ShipmentService] Failed to publish ShipmentStatusChanged: {ex.Message}");
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException and not AccessViolationException)
         {
             Console.WriteLine($"[ShipmentService] Failed to publish ShipmentStatusChanged: {ex.Message}");
         }
