@@ -18,6 +18,7 @@ public class OrderService : IOrderService
     private readonly ICartItemRepository _cartItemRepository;
     private readonly IProductVersionCacheRepository _productCacheRepository;
     private readonly IShopInfoCacheRepository _shopInfoCacheRepository;
+    private readonly IAccountDirectoryRepository _accountDirectoryRepository;
     private readonly OrderEventPublisher _orderEventPublisher;
     private readonly IOrderRealtimeNotifier? _realtimeNotifier;
 
@@ -27,6 +28,7 @@ public class OrderService : IOrderService
         ICartItemRepository cartItemRepository,
         IProductVersionCacheRepository productCacheRepository,
         IShopInfoCacheRepository shopInfoCacheRepository,
+        IAccountDirectoryRepository accountDirectoryRepository,
         OrderEventPublisher orderEventPublisher,
         IOrderRealtimeNotifier? realtimeNotifier = null)
     {
@@ -35,6 +37,7 @@ public class OrderService : IOrderService
         _cartItemRepository = cartItemRepository;
         _productCacheRepository = productCacheRepository;
         _shopInfoCacheRepository = shopInfoCacheRepository;
+        _accountDirectoryRepository = accountDirectoryRepository;
         _orderEventPublisher = orderEventPublisher;
         _realtimeNotifier = realtimeNotifier;
     }
@@ -558,7 +561,8 @@ public class OrderService : IOrderService
                 return ServiceResult<OrderDto>.NotFound("Order not found");
             }
 
-            var orderDto = MapToOrderDto(order);
+            var accountMap = await _accountDirectoryRepository.GetByIdsAsync(new[] { order.AccountId });
+            var orderDto = MapToOrderDto(order, accountMap.GetValueOrDefault(order.AccountId));
             return ServiceResult<OrderDto>.Success(orderDto);
         }
         catch (Exception ex)
@@ -572,8 +576,10 @@ public class OrderService : IOrderService
         try
         {
             var orders = await _orderRepository.GetOrdersByAccountIdAsync(accountId);
-
-            var orderDtos = orders.Select(o => MapToOrderDto(o)).ToList();
+            var accountMap = await _accountDirectoryRepository.GetByIdsAsync(orders.Select(o => o.AccountId));
+            var orderDtos = orders
+                .Select(o => MapToOrderDto(o, accountMap.GetValueOrDefault(o.AccountId)))
+                .ToList();
 
             return ServiceResult<List<OrderDto>>.Success(orderDtos);
         }
@@ -605,11 +611,14 @@ public class OrderService : IOrderService
         {
             var orders = await _orderRepository.GetOrdersByShopIdAsync(shopId);
 
+            var accountMap = await _accountDirectoryRepository.GetByIdsAsync(orders.Select(o => o.AccountId));
             var orderDtos = new List<OrderWithProductDetailsDto>();
 
             foreach (var order in orders)
             {
-                var orderDto = await MapToOrderWithProductDetailsDto(order);
+                var orderDto = await MapToOrderWithProductDetailsDto(
+                    order,
+                    accountMap.GetValueOrDefault(order.AccountId));
                 orderDtos.Add(orderDto);
             }
 
@@ -694,7 +703,8 @@ public class OrderService : IOrderService
             }
 
             // 10. Return updated order
-            var orderDto = MapToOrderDto(order);
+            var accountMap = await _accountDirectoryRepository.GetByIdsAsync(new[] { order.AccountId });
+            var orderDto = MapToOrderDto(order, accountMap.GetValueOrDefault(order.AccountId));
             return ServiceResult<OrderDto>.Success(orderDto, "Order status updated successfully");
         }
         catch (Exception ex)
@@ -917,9 +927,10 @@ public class OrderService : IOrderService
             var (items, total) = await _orderRepository.GetAllPagedAsync(
                 page, pageSize, query.Status, query.ShopId, query.AccountId);
 
+            var accountMap = await _accountDirectoryRepository.GetByIdsAsync(items.Select(o => o.AccountId));
             var result = new OrderListResultDto
             {
-                Items = items.Select(o => MapToOrderDto(o)).ToList(),
+                Items = items.Select(o => MapToOrderDto(o, accountMap.GetValueOrDefault(o.AccountId))).ToList(),
                 Page = page,
                 PageSize = pageSize,
                 Total = total
@@ -933,12 +944,22 @@ public class OrderService : IOrderService
         }
     }
 
-    private OrderDto MapToOrderDto(Order order)
+    private static void ApplyAccountDirectoryToOrderDto(OrderDto dto, AccountDirectoryEntry? account)
     {
-        return new OrderDto
+        if (account == null)
+            return;
+        dto.AccountName = string.IsNullOrWhiteSpace(account.Name) ? null : account.Name.Trim();
+        dto.AccountEmail = string.IsNullOrWhiteSpace(account.Email) ? null : account.Email.Trim();
+    }
+
+    private OrderDto MapToOrderDto(Order order, AccountDirectoryEntry? account = null)
+    {
+        var dto = new OrderDto
         {
             OrderId = order.OrderId,
             AccountId = order.AccountId,
+            AccountName = null,
+            AccountEmail = null,
             ShopId = order.ShopId,
             SubtotalVnd = order.SubtotalVnd,
             TotalAmountVnd = order.TotalAmountVnd,
@@ -965,6 +986,8 @@ public class OrderService : IOrderService
                 CreatedAt = oi.CreatedAt
             }).ToList()
         };
+        ApplyAccountDirectoryToOrderDto(dto, account);
+        return dto;
     }
 
     /// <summary>
@@ -1153,12 +1176,18 @@ public class OrderService : IOrderService
         return null;
     }
 
-    private async Task<OrderWithProductDetailsDto> MapToOrderWithProductDetailsDto(Order order)
+    private async Task<OrderWithProductDetailsDto> MapToOrderWithProductDetailsDto(
+        Order order,
+        AccountDirectoryEntry? account = null)
     {
+        account ??= (await _accountDirectoryRepository.GetByIdsAsync(new[] { order.AccountId }))
+            .GetValueOrDefault(order.AccountId);
         var orderDto = new OrderWithProductDetailsDto
         {
             OrderId = order.OrderId,
             AccountId = order.AccountId,
+            AccountName = string.IsNullOrWhiteSpace(account?.Name) ? null : account!.Name.Trim(),
+            AccountEmail = string.IsNullOrWhiteSpace(account?.Email) ? null : account!.Email.Trim(),
             ShopId = order.ShopId,
             SubtotalVnd = order.SubtotalVnd,
             TotalAmountVnd = order.TotalAmountVnd,
@@ -1226,10 +1255,14 @@ public class OrderService : IOrderService
 
     private async Task<CustomerAccountOrderDto> MapToCustomerAccountOrderDtoAsync(Order order)
     {
+        var account = (await _accountDirectoryRepository.GetByIdsAsync(new[] { order.AccountId }))
+            .GetValueOrDefault(order.AccountId);
         var dto = new CustomerAccountOrderDto
         {
             OrderId = order.OrderId,
             AccountId = order.AccountId,
+            AccountName = string.IsNullOrWhiteSpace(account?.Name) ? null : account!.Name.Trim(),
+            AccountEmail = string.IsNullOrWhiteSpace(account?.Email) ? null : account!.Email.Trim(),
             ShopId = order.ShopId,
             SubtotalVnd = order.SubtotalVnd,
             TotalAmountVnd = order.TotalAmountVnd,

@@ -14,18 +14,23 @@ namespace IdentityService.Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailBackgroundQueue _emailBackgroundQueue;
         private readonly IPasswordHasher _passwordHasher;
-        private readonly RabbitMQPublisher? _publisher;
+        private readonly AccountEventPublisher _accountEventPublisher;
         private readonly ILogger<AuthenService>? _logger;
         private static readonly ConcurrentDictionary<string, (string Otp, DateTime Expiry)> _otpStorage = new();
         private static readonly ConcurrentDictionary<string, bool> _verifiedEmails = new();
         private static readonly ConcurrentDictionary<string, (string Email, DateTime Expiry)> _resetTokens = new();
 
-        public AuthenService(IUnitOfWork unitOfWork, IEmailBackgroundQueue emailBackgroundQueue, IPasswordHasher passwordHasher, RabbitMQPublisher? publisher = null, ILogger<AuthenService>? logger = null)
+        public AuthenService(
+            IUnitOfWork unitOfWork,
+            IEmailBackgroundQueue emailBackgroundQueue,
+            IPasswordHasher passwordHasher,
+            AccountEventPublisher accountEventPublisher,
+            ILogger<AuthenService>? logger = null)
         {
             _unitOfWork = unitOfWork;
             _emailBackgroundQueue = emailBackgroundQueue;
             _passwordHasher = passwordHasher;
-            _publisher = publisher;
+            _accountEventPublisher = accountEventPublisher;
             _logger = logger;
         }
 
@@ -135,44 +140,21 @@ namespace IdentityService.Application.Services
             // Xóa trạng thái verified sau khi đăng ký thành công
             _verifiedEmails.TryRemove(email, out _);
 
-            // 🔔 Publish AccountCreatedEvent để PaymentService tạo wallet
+            // 🔔 Publish AccountCreatedEvent (queue + identity.events) — không làm fail đăng ký nếu RabbitMQ lỗi
             try
             {
-                if (_publisher != null)
+                _accountEventPublisher.PublishAccountCreated(new AccountCreatedEvent
                 {
-                    var accountCreatedEvent = new AccountCreatedEvent
-                    {
-                        AccountId = account.AccountId,
-                        Username = account.Username,
-                        Email = account.Email,
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    // Publish directly to queue, not through exchange
-                    _publisher.PublishToQueue("account.created", accountCreatedEvent);
-                }
-            }
-            catch (InvalidOperationException ex)
-            {
-                // Log error but don't fail the registration for expected publishing issues
-                _logger?.LogError(ex, "Failed to publish AccountCreatedEvent for account {AccountId} due to an invalid operation. Registration succeeded but event was not published.", account.AccountId);
-                // Event publishing failed - registration still succeeds
-            }
-            catch (TimeoutException ex)
-            {
-                // Log timeout but don't fail the registration
-                _logger?.LogError(ex, "Timed out while publishing AccountCreatedEvent for account {AccountId}. Registration succeeded but event may not have been processed.", account.AccountId);
-            }
-            catch (IOException ex)
-            {
-                // Log I/O error but don't fail the registration
-                _logger?.LogError(ex, "Failed to publish AccountCreatedEvent for account {AccountId} due to a network error. Registration succeeded but event was not published.", account.AccountId);
+                    AccountId = account.AccountId,
+                    Username = account.Username,
+                    Name = string.IsNullOrWhiteSpace(account.Name) ? null : account.Name,
+                    Email = account.Email,
+                    CreatedAt = account.CreatedAt
+                });
             }
             catch (Exception ex)
             {
-                // Log unexpected errors and rethrow to avoid silently swallowing programming or critical errors
-                _logger?.LogError(ex, "Unexpected error while publishing AccountCreatedEvent for account {AccountId}.", account.AccountId);
-                throw;
+                _logger?.LogError(ex, "Failed to publish AccountCreatedEvent for account {AccountId}. Registration succeeded.", account.AccountId);
             }
 
             return (true, account.AccountId, null, ErrorCode.None);

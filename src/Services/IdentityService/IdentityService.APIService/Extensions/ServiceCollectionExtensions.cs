@@ -7,6 +7,7 @@ using IdentityService.Application.Services;
 using IdentityService.Application.Validators;
 using IdentityService.Infrastructure.Data.Context;
 using Microsoft.Extensions.DependencyInjection;
+using Shared.Messaging;
 
 namespace IdentityService.APIService.Extensions
 {
@@ -24,6 +25,8 @@ namespace IdentityService.APIService.Extensions
                 new RoleRepository(sp.GetRequiredService<AccountDbContext>()));
 
             // Services
+            services.AddSingleton(sp =>
+                new AccountEventPublisher(sp.GetService<RabbitMQPublisher>()));
             services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<IRoleService, RoleService>();
             services.AddScoped<IEmailService, EmailService>();

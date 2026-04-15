@@ -130,6 +130,7 @@ for (int attempt = 1; attempt <= 5; attempt++)
         builder.Services.AddSingleton(rabbitMQConsumer);
         builder.Services.AddSingleton(rabbitMQPublisher);
         builder.Services.AddHostedService<ShopCreatedConsumer>();
+        builder.Services.AddSingleton<AccountNamesRequestConsumer>();
         break;
     }
     catch (IOException ex)
@@ -278,6 +279,17 @@ try
 
     app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "identity-service" }));
     app.MapGet("/api/identity/health", () => Results.Ok(new { status = "healthy", service = "identity-service" }));
+
+    // Start RabbitMQ event consumers
+    try
+    {
+        var accountNamesRequestConsumer = app.Services.GetService<AccountNamesRequestConsumer>();
+        accountNamesRequestConsumer?.StartListening();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[IdentityService] Failed to start AccountNamesRequestConsumer: {ex.Message}");
+    }
 
     app.Run();
 }

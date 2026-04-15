@@ -7,6 +7,7 @@ using OrderService.Infrastructure.Data.Context;
 using OrderService.Infrastructure.Data.Seeders;
 using OrderService.APIService.Extensions;
 using OrderService.APIService.Services;
+using OrderService.APIService.HostedServices;
 using OrderService.Application.Consumers;
 using OrderService.Application.Services;
 
@@ -67,6 +68,7 @@ builder.Services.AddSingleton<OrderService.Application.Interfaces.IOrderRealtime
 
 // Register MetricsPublisher background service (for real-time dashboard)
 builder.Services.AddHostedService<MetricsPublisherService>();
+builder.Services.AddHostedService<AccountNamesRequestPublisherHostedService>();
 
 var rabbitMQSettings = new RabbitMQSettings
 {
@@ -93,6 +95,7 @@ for (int i = 0; i < 5; i++)
         builder.Services.AddSingleton<ProductEventConsumer>();
         builder.Services.AddSingleton<ShippingFeeEventConsumer>();
         builder.Services.AddSingleton<ShopEventConsumer>();
+        builder.Services.AddSingleton<AccountEventConsumer>();
         builder.Services.AddSingleton<PaymentOrdersPaidConsumer>();
         builder.Services.AddSingleton<ShipmentStatusChangedConsumer>();
 
