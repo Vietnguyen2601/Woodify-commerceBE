@@ -286,9 +286,15 @@ try
         var accountNamesRequestConsumer = app.Services.GetService<AccountNamesRequestConsumer>();
         accountNamesRequestConsumer?.StartListening();
     }
-    catch (Exception ex)
+    catch (InvalidOperationException ex)
     {
-        Console.WriteLine($"[IdentityService] Failed to start AccountNamesRequestConsumer: {ex.Message}");
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "[IdentityService] Failed to start AccountNamesRequestConsumer due to invalid operation.");
+    }
+    catch (System.IO.IOException ex)
+    {
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "[IdentityService] Failed to start AccountNamesRequestConsumer due to I/O error.");
     }
 
     app.Run();
