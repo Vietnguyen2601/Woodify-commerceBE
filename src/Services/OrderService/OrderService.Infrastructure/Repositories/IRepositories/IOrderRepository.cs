@@ -26,4 +26,10 @@ public interface IOrderRepository : IGenericRepository<Order>
     /// Top N product masters by units sold (joins version cache for product_id; excludes cancelled/refunded orders). Optional shop filter.
     /// </summary>
     Task<List<(Guid ProductId, long UnitsSold)>> GetTopSellingProductMasterAggregatesAsync(int productLimit, Guid? shopId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lấy tất cả orders có status DELIVERED (bao gồm items)
+    /// Dùng cho analytics: top categories, top products
+    /// </summary>
+    Task<List<Order>> GetAllDeliveredOrdersAsync();
 }

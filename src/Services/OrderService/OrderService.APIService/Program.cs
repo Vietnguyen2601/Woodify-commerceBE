@@ -134,6 +134,18 @@ using (var scope = app.Services.CreateScope())
         // Seed initial data
         await OrderDbSeeder.SeedAsync(dbContext);
         Console.WriteLine("Database seeding completed successfully");
+
+        // Perform initial sync of Category and ProductMaster data from ProductService
+        try
+        {
+            var initialSyncService = scope.ServiceProvider.GetRequiredService<InitialSyncService>();
+            await initialSyncService.SyncAllDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Initial sync failed (non-blocking): {ex.Message}");
+            // Don't throw - allow OrderService to start even if sync fails
+        }
     }
     catch (Exception ex)
     {

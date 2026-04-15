@@ -2,6 +2,7 @@ using ProductService.Application.DTOs;
 using ProductService.Application.Interfaces;
 using ProductService.Application.Mappers;
 using ProductService.Infrastructure.Repositories.IRepositories;
+using Shared.Events;
 using Shared.Results;
 
 namespace ProductService.Application.Services;
@@ -9,10 +10,12 @@ namespace ProductService.Application.Services;
 public class CategoryService : ICategoryService
 {
     private readonly ICategoryRepository _categoryRepository;
+    private readonly ProductEventPublisher _eventPublisher;
 
-    public CategoryService(ICategoryRepository categoryRepository)
+    public CategoryService(ICategoryRepository categoryRepository, ProductEventPublisher eventPublisher)
     {
         _categoryRepository = categoryRepository;
+        _eventPublisher = eventPublisher;
     }
 
     public async Task<ServiceResult<CategoryDto>> GetByIdAsync(Guid id)
@@ -80,6 +83,19 @@ public class CategoryService : ICategoryService
             var category = dto.ToModel();
             await _categoryRepository.CreateAsync(category);
 
+            // Publish CategoryCreatedEvent
+            _eventPublisher.PublishCategoryCreated(new CategoryCreatedEvent
+            {
+                CategoryId = category.CategoryId,
+                Name = category.Name,
+                Description = category.Description,
+                ParentCategoryId = category.ParentCategoryId,
+                Level = category.Level,
+                IsActive = category.IsActive,
+                CreatedAt = DateTime.UtcNow,
+                EventType = "CategoryCreated"
+            });
+
             var createdCategory = await _categoryRepository.GetByIdAsync(category.CategoryId);
             return ServiceResult<CategoryDto>.Created(createdCategory!.ToDto(), "Category created successfully");
         }
@@ -111,6 +127,19 @@ public class CategoryService : ICategoryService
 
             dto.MapToUpdate(category);
             await _categoryRepository.UpdateAsync(category);
+
+            // Publish CategoryUpdatedEvent
+            _eventPublisher.PublishCategoryUpdated(new CategoryUpdatedEvent
+            {
+                CategoryId = category.CategoryId,
+                Name = category.Name,
+                Description = category.Description,
+                ParentCategoryId = category.ParentCategoryId,
+                Level = category.Level,
+                IsActive = category.IsActive,
+                UpdatedAt = DateTime.UtcNow,
+                EventType = "CategoryUpdated"
+            });
             
             var updatedCategory = await _categoryRepository.GetByIdAsync(id);
             return ServiceResult<CategoryDto>.Success(updatedCategory!.ToDto(), "Category updated successfully");
@@ -134,6 +163,15 @@ public class CategoryService : ICategoryService
                 return ServiceResult.BadRequest("Cannot delete category with subcategories. Please delete or reassign subcategories first.");
             
             await _categoryRepository.RemoveAsync(category);
+
+            // Publish CategoryDeletedEvent
+            _eventPublisher.PublishCategoryDeleted(new CategoryDeletedEvent
+            {
+                CategoryId = category.CategoryId,
+                DeletedAt = DateTime.UtcNow,
+                EventType = "CategoryDeleted"
+            });
+
             return ServiceResult.Success("Category deleted successfully");
         }
         catch (Exception ex)

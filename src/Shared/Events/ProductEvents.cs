@@ -98,3 +98,77 @@ public class ImageUrlUpdatedEvent
     public DateTime UpdatedAt { get; set; }
     public string EventType { get; set; } = "ImageUrlUpdated"; // Updated, Deleted
 }
+
+/// <summary>
+/// Event được publish khi Category được tạo
+/// </summary>
+public class CategoryCreatedEvent
+{
+    public Guid CategoryId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public Guid? ParentCategoryId { get; set; }
+    public int Level { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAt { get; set; }
+    public string EventType { get; set; } = "CategoryCreated";
+}
+
+/// <summary>
+/// Event được publish khi Category được cập nhật
+/// </summary>
+public class CategoryUpdatedEvent
+{
+    public Guid CategoryId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public Guid? ParentCategoryId { get; set; }
+    public int Level { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTime UpdatedAt { get; set; }
+    public string EventType { get; set; } = "CategoryUpdated";
+}
+
+/// <summary>
+/// Event được publish khi Category bị xóa
+/// </summary>
+public class CategoryDeletedEvent
+{
+    public Guid CategoryId { get; set; }
+    public DateTime DeletedAt { get; set; }
+    public string EventType { get; set; } = "CategoryDeleted";
+}
+
+/// <summary>
+/// Event được publish khi ProductMaster được tạo
+/// </summary>
+public class ProductMasterCreatedEvent
+{
+    public Guid ProductId { get; set; }
+    public Guid ShopId { get; set; }
+    public Guid CategoryId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string Status { get; set; } = "DRAFT"; // DRAFT, PUBLISHED, ARCHIVED, DELETED
+    public string? ModerationStatus { get; set; }
+    public bool HasVersions { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public string EventType { get; set; } = "ProductMasterCreated";
+}
+
+/// <summary>
+/// Event được publish khi ProductMaster được cập nhật
+/// </summary>
+public class ProductMasterUpdatedEvent
+{
+    public Guid ProductId { get; set; }
+    public Guid ShopId { get; set; }
+    public Guid CategoryId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string Status { get; set; } = "DRAFT";
+    public string? ModerationStatus { get; set; }
+    public bool HasVersions { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public string EventType { get; set; } = "ProductMasterUpdated";
+}
