@@ -16,7 +16,7 @@ public class ProductMasterService : IProductMasterService
     private readonly IUnitOfWork _unitOfWork;
     private readonly ProductEventPublisher _eventPublisher;
     private readonly IImageUrlRepository _imageUrlRepository;
-    private readonly ShopNameCacheService _shopNameCache;
+    private readonly IShopRegistryRepository _shopRegistry;
 
     public ProductMasterService(
         IProductMasterRepository productMasterRepository,
@@ -24,14 +24,14 @@ public class ProductMasterService : IProductMasterService
         IUnitOfWork unitOfWork,
         ProductEventPublisher eventPublisher,
         IImageUrlRepository imageUrlRepository,
-        ShopNameCacheService shopNameCache)
+        IShopRegistryRepository shopRegistry)
     {
         _productMasterRepository = productMasterRepository;
         _productVersionRepository = productVersionRepository;
         _unitOfWork = unitOfWork;
         _eventPublisher = eventPublisher;
         _imageUrlRepository = imageUrlRepository;
-        _shopNameCache = shopNameCache;
+        _shopRegistry = shopRegistry;
     }
 
     public async Task<ServiceResult<ProductMasterDto>> GetByIdAsync(Guid id)
@@ -46,7 +46,7 @@ public class ProductMasterService : IProductMasterService
             product.ProductId,
             firstVersion?.VersionId,
             product.CategoryId))?.OriginalUrl;
-        dto.ShopName = _shopNameCache.Get(product.ShopId);
+        dto.ShopName = await _shopRegistry.GetNameAsync(product.ShopId);
         return ServiceResult<ProductMasterDto>.Success(dto);
     }
 
@@ -57,7 +57,7 @@ public class ProductMasterService : IProductMasterService
             return ServiceResult<ProductMasterDto>.NotFound("Product not found");
 
         var dto = product.ToDto();
-        dto.ShopName = _shopNameCache.Get(product.ShopId);
+        dto.ShopName = await _shopRegistry.GetNameAsync(product.ShopId);
         return ServiceResult<ProductMasterDto>.Success(dto);
     }
 
@@ -66,13 +66,14 @@ public class ProductMasterService : IProductMasterService
         var products = await _productMasterRepository.GetAllAsync();
         var productList = products.ToList();
         var thumbnailMap = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT", productList.Select(p => p.ProductId));
+        var shopNameMap = await _shopRegistry.GetNamesAsync(productList.Select(p => p.ShopId));
         var productDtos = new List<ProductMasterDto>();
 
         foreach (var p in productList)
         {
             var dto = p.ToDto();
             dto.ThumbnailUrl = thumbnailMap.GetValueOrDefault(p.ProductId);
-            dto.ShopName = _shopNameCache.Get(p.ShopId);
+            dto.ShopName = shopNameMap.GetValueOrDefault(p.ShopId);
             productDtos.Add(dto);
         }
 
@@ -84,7 +85,7 @@ public class ProductMasterService : IProductMasterService
         var products = await _productMasterRepository.GetByShopIdAsync(shopId);
         var productList = products.ToList();
         var thumbnailMap = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT", productList.Select(p => p.ProductId));
-        var shopName = _shopNameCache.Get(shopId);
+        var shopName = await _shopRegistry.GetNameAsync(shopId);
         var productDtos = productList.Select(p =>
         {
             var dto = p.ToDto();
@@ -278,13 +279,14 @@ public class ProductMasterService : IProductMasterService
             var archivedProducts = await _productMasterRepository.GetByStatusAsync(Domain.Entities.ProductStatus.ARCHIVED);
             var productList = archivedProducts.ToList();
             var thumbnailMap = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT", productList.Select(p => p.ProductId));
+            var shopNameMap = await _shopRegistry.GetNamesAsync(productList.Select(p => p.ShopId));
             var productDtos = new List<ProductMasterDto>();
 
             foreach (var p in productList)
             {
                 var dto = p.ToDto();
                 dto.ThumbnailUrl = thumbnailMap.GetValueOrDefault(p.ProductId);
-                dto.ShopName = _shopNameCache.Get(p.ShopId);
+                dto.ShopName = shopNameMap.GetValueOrDefault(p.ShopId);
                 productDtos.Add(dto);
             }
 
@@ -339,13 +341,14 @@ public class ProductMasterService : IProductMasterService
             var publishedProducts = await _productMasterRepository.GetByStatusAsync(Domain.Entities.ProductStatus.PUBLISHED);
             var productList = publishedProducts.ToList();
             var thumbnailMap = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT", productList.Select(p => p.ProductId));
+            var shopNameMap = await _shopRegistry.GetNamesAsync(productList.Select(p => p.ShopId));
             var productDtos = new List<ProductMasterDto>();
 
             foreach (var p in productList)
             {
                 var dto = p.ToDto();
                 dto.ThumbnailUrl = thumbnailMap.GetValueOrDefault(p.ProductId);
-                dto.ShopName = _shopNameCache.Get(p.ShopId);
+                dto.ShopName = shopNameMap.GetValueOrDefault(p.ShopId);
                 productDtos.Add(dto);
             }
 
@@ -376,12 +379,13 @@ public class ProductMasterService : IProductMasterService
             var (products, totalCount) = await _productMasterRepository.SearchAsync(searchParams);
             var productDtos = new List<ProductMasterDto>();
             var thumbnailMap = await _imageUrlRepository.GetPrimaryImageBatchAsync("PRODUCT", products.Select(p => p.ProductId));
+            var shopNameMap = await _shopRegistry.GetNamesAsync(products.Select(p => p.ShopId));
 
             foreach (var p in products)
             {
                 var dto = p.ToDto();
                 dto.ThumbnailUrl = thumbnailMap.GetValueOrDefault(dto.ProductId);
-                dto.ShopName = _shopNameCache.Get(p.ShopId);
+                dto.ShopName = shopNameMap.GetValueOrDefault(p.ShopId);
                 productDtos.Add(dto);
             }
 
@@ -591,7 +595,7 @@ public class ProductMasterService : IProductMasterService
             var productImages = await _imageUrlRepository.GetByTypeAndReferenceAsync("PRODUCT", productId);
             var versionIds = filteredVersions.Select(v => v.VersionId).ToList();
             var versionImagesMap = await _imageUrlRepository.GetImagesBatchAsync("PRODUCT_VERSION", versionIds);
-            var shopName = _shopNameCache.Get(product.ShopId);
+            var shopName = await _shopRegistry.GetNameAsync(product.ShopId);
 
             // Map to detail DTO
             var detailDto = new ProductMasterDetailDto
@@ -707,6 +711,7 @@ public class ProductMasterService : IProductMasterService
 
             // Build product details with versions
             var productDetails = new List<ProductMasterDetailDto>();
+            var shopNameMap = await _shopRegistry.GetNamesAsync(pagedProducts.Select(p => p.ShopId));
             foreach (var product in pagedProducts)
             {
                 // Get versions for this product
@@ -721,7 +726,7 @@ public class ProductMasterService : IProductMasterService
                 var productImages = await _imageUrlRepository.GetByTypeAndReferenceAsync("PRODUCT", product.ProductId);
                 var versionIds = filteredVersions.Select(v => v.VersionId).ToList();
                 var versionImagesMap = await _imageUrlRepository.GetImagesBatchAsync("PRODUCT_VERSION", versionIds);
-                var shopName = _shopNameCache.Get(product.ShopId);
+                var shopName = shopNameMap.GetValueOrDefault(product.ShopId);
 
                 var detailDto = new ProductMasterDetailDto
                 {
@@ -802,7 +807,7 @@ public class ProductMasterService : IProductMasterService
 
             var dto = product.ToDto();
             dto.ThumbnailUrl = (await _imageUrlRepository.GetPrimaryImageAsync("PRODUCT", product.ProductId))?.OriginalUrl;
-            dto.ShopName = _shopNameCache.Get(product.ShopId);
+            dto.ShopName = await _shopRegistry.GetNameAsync(product.ShopId);
 
             // TODO: Publish product submission cancellation event
 

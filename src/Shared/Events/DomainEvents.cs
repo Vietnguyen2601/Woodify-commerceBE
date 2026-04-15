@@ -57,6 +57,32 @@ public class ShopDeletedEvent
 }
 
 /// <summary>
+/// ProductService (hoặc service khác) publish — ShopService đọc DB và trả lời bằng <see cref="ShopNamesPublishedEvent"/>.
+/// Exchange: shop.events / Routing key: shop.names.request
+/// </summary>
+public class ShopNamesRequestEvent
+{
+    public string RequestedBy { get; set; } = string.Empty;
+    public DateTime RequestedAt { get; set; }
+}
+
+/// <summary>
+/// Danh sách shop id + tên (đồng bộ cache ProductService, không HTTP).
+/// Exchange: shop.events / Routing key: shop.names.published
+/// </summary>
+public class ShopNamesPublishedEvent
+{
+    public DateTime PublishedAt { get; set; }
+    public List<ShopNameRegistryEntry> Shops { get; set; } = new();
+}
+
+public class ShopNameRegistryEntry
+{
+    public Guid ShopId { get; set; }
+    public string ShopName { get; set; } = string.Empty;
+}
+
+/// <summary>
 /// Event khi Order được tạo mới
 /// OrderService publish → ShipmentService consume
 /// Exchange: "order.events" / Routing key: "order.created"

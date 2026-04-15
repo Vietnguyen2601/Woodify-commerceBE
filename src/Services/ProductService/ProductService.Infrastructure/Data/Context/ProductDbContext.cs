@@ -22,6 +22,7 @@ public class ProductDbContext : DbContext
     public DbSet<ImageUrl> ImageUrls { get; set; }
     public DbSet<ReviewPurchaseEligibility> ReviewPurchaseEligibilities { get; set; }
     public DbSet<OrderDeliveredStockLedger> OrderDeliveredStockLedgers { get; set; }
+    public DbSet<ShopRegistryEntry> ShopRegistry { get; set; }
 
     private static string GetConnectionString(string connectionStringName)
     {
@@ -80,6 +81,21 @@ public class ProductDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // ========================================
+        // Cấu hình bảng Shop_Registry (không gọi HTTP)
+        // ========================================
+        modelBuilder.Entity<ShopRegistryEntry>(entity =>
+        {
+            entity.ToTable("shop_registry");
+            entity.HasKey(e => e.ShopId);
+
+            entity.Property(e => e.ShopId).HasColumnName("shop_id");
+            entity.Property(e => e.Name).HasColumnName("name").IsRequired();
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            entity.HasIndex(e => e.Name);
+        });
 
         // ========================================
         // Cấu hình bảng Product_Master

@@ -34,6 +34,8 @@ namespace ProductService.APIService.Extensions
                 new OrderDeliveredStockLedgerRepository(sp.GetRequiredService<ProductDbContext>()));
             services.AddScoped<IImageUrlRepository>(sp =>
                 new ImageUrlRepository(sp.GetRequiredService<ProductDbContext>()));
+            services.AddScoped<IShopRegistryRepository>(sp =>
+                new ShopRegistryRepository(sp.GetRequiredService<ProductDbContext>()));
 
             // Services
             services.AddScoped<IProductMasterService, ProductMasterService>();
@@ -44,9 +46,6 @@ namespace ProductService.APIService.Extensions
 
             // Event Publisher
             services.AddSingleton<ProductEventPublisher>();
-
-            // Shop name cache (populated by ShopEventConsumer via RabbitMQ)
-            services.AddSingleton<ShopNameCacheService>();
 
             services.AddScoped<OrderReviewEligibilityIngestService>();
             services.AddScoped<OrderDeliveredStockIngestService>();

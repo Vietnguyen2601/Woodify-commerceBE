@@ -75,6 +75,7 @@ for (int attempt = 0; attempt < 5; attempt++)
         var consumer = new RabbitMQConsumer(rabbitMQSettings);
         builder.Services.AddSingleton(consumer);
         builder.Services.AddSingleton<ShopReviewStatsUpdatedConsumer>();
+        builder.Services.AddSingleton<ShopNamesRequestConsumer>();
         break;
     }
     catch (Exception ex) when (
@@ -208,6 +209,9 @@ try
 {
     var statsConsumer = app.Services.GetService<ShopReviewStatsUpdatedConsumer>();
     statsConsumer?.StartListening();
+
+    var shopNamesRequestConsumer = app.Services.GetService<ShopNamesRequestConsumer>();
+    shopNamesRequestConsumer?.StartListening();
 }
 catch (InvalidOperationException ex)
 {
