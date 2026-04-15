@@ -3,6 +3,7 @@ using IdentityService.Application.Interfaces;
 using IdentityService.Application.Mappers;
 using IdentityService.Domain.Entities;
 using IdentityService.Infrastructure.Repositories.IRepositories;
+using Shared.Events;
 using Shared.Results;
 using System.Threading.Tasks;
 namespace IdentityService.Application.Services;
@@ -11,11 +12,13 @@ public class AccountService : IAccountService
 {
     private readonly IAccountRepository _accountRepository;
     private readonly IRoleRepository _roleRepository;
+    private readonly AccountEventPublisher _eventPublisher;
 
-    public AccountService(IAccountRepository accountRepository, IRoleRepository roleRepository)
+    public AccountService(IAccountRepository accountRepository, IRoleRepository roleRepository, AccountEventPublisher eventPublisher)
     {
         _accountRepository = accountRepository;
         _roleRepository = roleRepository;
+        _eventPublisher = eventPublisher;
     }
 
     public async Task<ServiceResult<AccountDto>> GetByIdAsync(Guid id)
@@ -54,6 +57,15 @@ public class AccountService : IAccountService
             if (account.RoleId.HasValue)
                 account.Role = await _roleRepository.GetByIdAsync(account.RoleId.Value);
 
+            _eventPublisher.PublishAccountCreated(new AccountCreatedEvent
+            {
+                AccountId = account.AccountId,
+                Username = account.Username,
+                Name = string.IsNullOrWhiteSpace(account.Name) ? null : account.Name,
+                Email = account.Email,
+                CreatedAt = account.CreatedAt
+            });
+
             return ServiceResult<AccountDto>.Created(account.ToDto(), "Account created successfully");
         }
         catch (Exception ex)
@@ -74,6 +86,18 @@ public class AccountService : IAccountService
             await _accountRepository.UpdateAsync(account);
 
             var updatedAccount = await _accountRepository.GetByIdAsync(id);
+            if (updatedAccount != null)
+            {
+                _eventPublisher.PublishAccountUpdated(new AccountUpdatedEvent
+                {
+                    AccountId = updatedAccount.AccountId,
+                    Username = updatedAccount.Username,
+                    Name = string.IsNullOrWhiteSpace(updatedAccount.Name) ? null : updatedAccount.Name,
+                    Email = updatedAccount.Email ?? string.Empty,
+                    IsActive = updatedAccount.IsActive,
+                    UpdatedAt = updatedAccount.UpdatedAt
+                });
+            }
             return ServiceResult<AccountDto>.Success(updatedAccount!.ToDto(), "Account updated successfully");
         }
         catch (OperationCanceledException)
@@ -118,6 +142,16 @@ public class AccountService : IAccountService
             account.IsActive = dto.IsActive;
             account.UpdatedAt = DateTime.UtcNow;
             await _accountRepository.UpdateAsync(account);
+
+            _eventPublisher.PublishAccountUpdated(new AccountUpdatedEvent
+            {
+                AccountId = account.AccountId,
+                Username = account.Username,
+                Name = string.IsNullOrWhiteSpace(account.Name) ? null : account.Name,
+                Email = account.Email ?? string.Empty,
+                IsActive = account.IsActive,
+                UpdatedAt = account.UpdatedAt
+            });
 
             var message = dto.IsActive ? "Account activated successfully" : "Account deactivated successfully";
             return ServiceResult<AccountDto>.Success(account.ToDto(), message);

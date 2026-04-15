@@ -20,6 +20,7 @@ public class OrderDbContext : DbContext
     public DbSet<CartItem> CartItems { get; set; }
     public DbSet<ProductVersionCache> ProductVersionCaches { get; set; }
     public DbSet<ShopInfoCache> ShopInfoCaches { get; set; }
+    public DbSet<AccountDirectoryEntry> AccountDirectory { get; set; }
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }
 
@@ -82,6 +83,23 @@ public class OrderDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // ========================================
+        // Cấu hình bảng Account_Directory (mirror IdentityService)
+        // ========================================
+        modelBuilder.Entity<AccountDirectoryEntry>(entity =>
+        {
+            entity.ToTable("account_directory");
+            entity.HasKey(e => e.AccountId);
+
+            entity.Property(e => e.AccountId).HasColumnName("account_id");
+            entity.Property(e => e.Name).HasColumnName("name").IsRequired();
+            entity.Property(e => e.Email).HasColumnName("email").IsRequired();
+            entity.Property(e => e.IsActive).HasColumnName("is_active").IsRequired();
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            entity.HasIndex(e => e.Name);
+        });
 
         // ========================================
         // Cấu hình bảng Carts

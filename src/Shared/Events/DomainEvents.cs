@@ -19,8 +19,54 @@ public class AccountCreatedEvent
 {
     public Guid AccountId { get; set; }
     public string Username { get; set; } = string.Empty;
+    /// <summary>Tên hiển thị (Identity accounts.name). Có thể null nếu client chưa set.</summary>
+    public string? Name { get; set; }
     public string Email { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+}
+
+/// <summary>
+/// IdentityService publish khi account được update (username/status/...), consumers mirror sang local DB.
+/// Exchange: identity.events / Routing key: account.updated
+/// </summary>
+public class AccountUpdatedEvent
+{
+    public Guid AccountId { get; set; }
+    public string Username { get; set; } = string.Empty;
+    /// <summary>Tên hiển thị (Identity accounts.name).</summary>
+    public string? Name { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
+
+/// <summary>
+/// Service khác (OrderService) publish để yêu cầu IdentityService phát toàn bộ danh sách account (bulk refill).
+/// Exchange: identity.events / Routing key: account.names.request
+/// </summary>
+public class AccountNamesRequestEvent
+{
+    public string RequestedBy { get; set; } = string.Empty;
+    public DateTime RequestedAt { get; set; }
+}
+
+/// <summary>
+/// IdentityService publish danh sách account id + tên hiển thị để refill mirror table ở service khác.
+/// Exchange: identity.events / Routing key: account.names.published
+/// </summary>
+public class AccountNamesPublishedEvent
+{
+    public DateTime PublishedAt { get; set; }
+    public List<AccountNameRegistryEntry> Accounts { get; set; } = new();
+}
+
+public class AccountNameRegistryEntry
+{
+    public Guid AccountId { get; set; }
+    /// <summary>Tên hiển thị (ưu tiên Name, fallback Username khi build ở IdentityService).</summary>
+    public string Name { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
 }
 
 /// <summary>
@@ -54,6 +100,32 @@ public class ShopDeletedEvent
 {
     public Guid ShopId { get; set; }
     public DateTime DeletedAt { get; set; }
+}
+
+/// <summary>
+/// ProductService (hoặc service khác) publish — ShopService đọc DB và trả lời bằng <see cref="ShopNamesPublishedEvent"/>.
+/// Exchange: shop.events / Routing key: shop.names.request
+/// </summary>
+public class ShopNamesRequestEvent
+{
+    public string RequestedBy { get; set; } = string.Empty;
+    public DateTime RequestedAt { get; set; }
+}
+
+/// <summary>
+/// Danh sách shop id + tên (đồng bộ cache ProductService, không HTTP).
+/// Exchange: shop.events / Routing key: shop.names.published
+/// </summary>
+public class ShopNamesPublishedEvent
+{
+    public DateTime PublishedAt { get; set; }
+    public List<ShopNameRegistryEntry> Shops { get; set; } = new();
+}
+
+public class ShopNameRegistryEntry
+{
+    public Guid ShopId { get; set; }
+    public string ShopName { get; set; } = string.Empty;
 }
 
 /// <summary>

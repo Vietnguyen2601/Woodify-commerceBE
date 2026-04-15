@@ -23,6 +23,8 @@ namespace OrderService.APIService.Extensions
                 new OrderRepository(sp.GetRequiredService<OrderDbContext>()));
             services.AddScoped<IShopInfoCacheRepository>(sp =>
                 new ShopInfoCacheRepository(sp.GetRequiredService<OrderDbContext>()));
+            services.AddScoped<IAccountDirectoryRepository>(sp =>
+                new AccountDirectoryRepository(sp.GetRequiredService<OrderDbContext>()));
 
             // Services
             services.AddScoped<ICartService, CartService>();
@@ -54,6 +56,9 @@ namespace OrderService.APIService.Extensions
 
             var shipmentStatusConsumer = serviceProvider.GetService<ShipmentStatusChangedConsumer>();
             shipmentStatusConsumer?.StartListening();
+
+            var accountConsumer = serviceProvider.GetService<AccountEventConsumer>();
+            accountConsumer?.StartListening();
         }
     }
 }

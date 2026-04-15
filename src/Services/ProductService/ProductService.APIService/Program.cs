@@ -13,6 +13,7 @@ using ProductService.APIService.Middlewares;
 using ProductService.APIService.Filters;
 using ProductService.APIService.Converters;
 using ProductService.APIService.Extensions;
+using ProductService.APIService.HostedServices;
 using DotNetEnv;
 using System.Text.Json.Serialization;
 
@@ -67,6 +68,8 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 builder.Services.AddDbContext<ProductDbContext>();
+
+builder.Services.AddHostedService<ShopNamesRequestPublisherHostedService>();
 
 var rabbitMQSettings = new RabbitMQSettings
 {
