@@ -147,4 +147,99 @@ public class ProductEventPublisher
             Console.WriteLine($"[ProductService] Failed to publish ShopReviewStatsUpdated event: {ex.Message}");
         }
     }
+
+    public void PublishCategoryCreated(CategoryCreatedEvent evt)
+    {
+        if (_publisher == null)
+        {
+            Console.WriteLine("[ProductService] WARNING: RabbitMQ publisher is not available. Skipping CategoryCreated event.");
+            return;
+        }
+
+        try
+        {
+            _publisher.Publish("product.events", "category.created", evt);
+            Console.WriteLine($"[ProductService] Published CategoryCreated event: CategoryId={evt.CategoryId}, Name={evt.Name}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ProductService] Failed to publish CategoryCreated event: {ex.Message}");
+        }
+    }
+
+    public void PublishCategoryUpdated(CategoryUpdatedEvent evt)
+    {
+        if (_publisher == null)
+        {
+            Console.WriteLine("[ProductService] WARNING: RabbitMQ publisher is not available. Skipping CategoryUpdated event.");
+            return;
+        }
+
+        try
+        {
+            _publisher.Publish("product.events", "category.updated", evt);
+            Console.WriteLine($"[ProductService] Published CategoryUpdated event: CategoryId={evt.CategoryId}, Name={evt.Name}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ProductService] Failed to publish CategoryUpdated event: {ex.Message}");
+        }
+    }
+
+    public void PublishCategoryDeleted(CategoryDeletedEvent evt)
+    {
+        if (_publisher == null)
+        {
+            Console.WriteLine("[ProductService] WARNING: RabbitMQ publisher is not available. Skipping CategoryDeleted event.");
+            return;
+        }
+
+        try
+        {
+            _publisher.Publish("product.events", "category.deleted", evt);
+            Console.WriteLine($"[ProductService] Published CategoryDeleted event: CategoryId={evt.CategoryId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ProductService] Failed to publish CategoryDeleted event: {ex.Message}");
+        }
+    }
+
+    public void PublishProductMasterCreated(ProductMasterCreatedEvent evt)
+    {
+        if (_publisher == null)
+        {
+            Console.WriteLine("[ProductService] WARNING: RabbitMQ publisher is not available. Skipping ProductMasterCreated event.");
+            return;
+        }
+
+        try
+        {
+            _publisher.Publish("product.events", "product.master.created", evt);
+            Console.WriteLine($"[ProductService] Published ProductMasterCreated event: ProductId={evt.ProductId}, Name={evt.Name}, CategoryId={evt.CategoryId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ProductService] Failed to publish ProductMasterCreated event: {ex.Message}");
+        }
+    }
+
+    public void PublishProductMasterUpdated(ProductMasterUpdatedEvent evt)
+    {
+        if (_publisher == null)
+        {
+            Console.WriteLine("[ProductService] WARNING: RabbitMQ publisher is not available. Skipping ProductMasterUpdated event.");
+            return;
+        }
+
+        try
+        {
+            _publisher.Publish("product.events", "product.master.updated", evt);
+            Console.WriteLine($"[ProductService] Published ProductMasterUpdated event: ProductId={evt.ProductId}, Name={evt.Name}, Status={evt.Status}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ProductService] Failed to publish ProductMasterUpdated event: {ex.Message}");
+        }
+    }
 }

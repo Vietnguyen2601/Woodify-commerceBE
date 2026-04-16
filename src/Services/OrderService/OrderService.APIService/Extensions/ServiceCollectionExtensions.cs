@@ -19,6 +19,10 @@ namespace OrderService.APIService.Extensions
                 new CartItemRepository(sp.GetRequiredService<OrderDbContext>()));
             services.AddScoped<IProductVersionCacheRepository>(sp =>
                 new ProductVersionCacheRepository(sp.GetRequiredService<OrderDbContext>()));
+            services.AddScoped<IProductMasterCacheRepository>(sp =>
+                new ProductMasterCacheRepository(sp.GetRequiredService<OrderDbContext>()));
+            services.AddScoped<ICategoryCacheRepository>(sp =>
+                new CategoryCacheRepository(sp.GetRequiredService<OrderDbContext>()));
             services.AddScoped<IOrderRepository>(sp =>
                 new OrderRepository(sp.GetRequiredService<OrderDbContext>()));
             services.AddScoped<IShopInfoCacheRepository>(sp =>
@@ -33,6 +37,8 @@ namespace OrderService.APIService.Extensions
 
             // Register event consumers (startup uses singletons from Program.cs when RabbitMQ is available)
             services.AddScoped<ProductEventConsumer>();
+            services.AddScoped<ProductMasterEventConsumer>();
+            services.AddScoped<CategoryEventConsumer>();
             services.AddScoped<ShippingFeeEventConsumer>();
 
             return services;
@@ -43,6 +49,12 @@ namespace OrderService.APIService.Extensions
             // Start Product Event Consumer
             var productConsumer = serviceProvider.GetService<ProductEventConsumer>();
             productConsumer?.StartListening();
+
+            var productMasterConsumer = serviceProvider.GetService<ProductMasterEventConsumer>();
+            productMasterConsumer?.StartListening();
+
+            var categoryConsumer = serviceProvider.GetService<CategoryEventConsumer>();
+            categoryConsumer?.StartListening();
 
             // Start Shipping Fee Event Consumer
             var shippingFeeConsumer = serviceProvider.GetService<ShippingFeeEventConsumer>();

@@ -118,4 +118,13 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
             .Take(productLimit)
             .ToList();
     }
+
+    public async Task<List<Order>> GetAllDeliveredOrdersAsync()
+    {
+        return await _dbSet
+            .Include(o => o.OrderItems)
+            .Where(o => o.Status == OrderStatus.DELIVERED)
+            .OrderByDescending(o => o.CreatedAt)
+            .ToListAsync();
+    }
 }

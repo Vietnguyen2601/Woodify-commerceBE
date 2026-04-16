@@ -109,6 +109,21 @@ public class ProductMasterService : IProductMasterService
             var product = dto.ToModel();
             await _productMasterRepository.CreateAsync(product);
 
+            // Publish ProductMasterCreatedEvent
+            _eventPublisher.PublishProductMasterCreated(new ProductMasterCreatedEvent
+            {
+                ProductId = product.ProductId,
+                ShopId = product.ShopId,
+                CategoryId = product.CategoryId,
+                Name = product.Name,
+                Description = product.Description,
+                Status = product.Status.ToString(),
+                ModerationStatus = product.ModerationStatus.ToString(),
+                HasVersions = false,
+                CreatedAt = DateTime.UtcNow,
+                EventType = "ProductMasterCreated"
+            });
+
             return ServiceResult<ProductMasterDto>.Created(product.ToDto(), "Product created successfully");
         }
         catch (Exception ex)
@@ -192,6 +207,21 @@ public class ProductMasterService : IProductMasterService
 
             // Save changes
             await _productMasterRepository.UpdateAsync(product);
+
+            // Publish ProductMasterUpdatedEvent
+            _eventPublisher.PublishProductMasterUpdated(new ProductMasterUpdatedEvent
+            {
+                ProductId = product.ProductId,
+                ShopId = product.ShopId,
+                CategoryId = product.CategoryId,
+                Name = product.Name,
+                Description = product.Description,
+                Status = product.Status.ToString(),
+                ModerationStatus = product.ModerationStatus.ToString(),
+                HasVersions = product.Versions?.Any() ?? false,
+                UpdatedAt = DateTime.UtcNow,
+                EventType = "ProductMasterUpdated"
+            });
 
             var updatedProduct = await _productMasterRepository.GetByIdAsync(id);
 

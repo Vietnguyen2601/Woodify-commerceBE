@@ -18,6 +18,8 @@ public class OrderDbContext : DbContext
 
     public DbSet<Cart> Carts { get; set; }
     public DbSet<CartItem> CartItems { get; set; }
+    public DbSet<CategoryCache> CategoryCaches { get; set; }
+    public DbSet<ProductMasterCache> ProductMasterCaches { get; set; }
     public DbSet<ProductVersionCache> ProductVersionCaches { get; set; }
     public DbSet<ShopInfoCache> ShopInfoCaches { get; set; }
     public DbSet<AccountDirectoryEntry> AccountDirectory { get; set; }
@@ -99,6 +101,64 @@ public class OrderDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 
             entity.HasIndex(e => e.Name);
+        });
+
+        // ========================================
+        // Cấu hình bảng Category_Cache
+        // ========================================
+        modelBuilder.Entity<CategoryCache>(entity =>
+        {
+            entity.ToTable("category_cache");
+            entity.HasKey(e => e.CategoryId);
+
+            entity.Property(e => e.CategoryId).HasColumnName("category_id");
+            entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(500).IsRequired();
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(2000);
+            entity.Property(e => e.ParentCategoryId).HasColumnName("parent_category_id");
+            entity.Property(e => e.Level).HasColumnName("level").IsRequired();
+            entity.Property(e => e.IsActive).HasColumnName("is_active").IsRequired().HasDefaultValue(true);
+
+            // Soft Delete
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted").IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.DeletedAt).HasColumnName("deleted_at");
+
+            // Sync tracking
+            entity.Property(e => e.LastUpdated).HasColumnName("last_updated").IsRequired();
+
+            // Indexes for faster lookups
+            entity.HasIndex(e => e.IsActive);
+            entity.HasIndex(e => e.ParentCategoryId);
+        });
+
+        // ========================================
+        // Cấu hình bảng Product_Master_Cache
+        // ========================================
+        modelBuilder.Entity<ProductMasterCache>(entity =>
+        {
+            entity.ToTable("product_master_cache");
+            entity.HasKey(e => e.ProductId);
+
+            entity.Property(e => e.ProductId).HasColumnName("product_id");
+            entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
+            entity.Property(e => e.CategoryId).HasColumnName("category_id").IsRequired();
+            entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(500).IsRequired();
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(2000);
+            entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.ModerationStatus).HasColumnName("moderation_status").HasMaxLength(50);
+            entity.Property(e => e.HasVersions).HasColumnName("has_versions").IsRequired().HasDefaultValue(false);
+
+            // Soft Delete
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted").IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.DeletedAt).HasColumnName("deleted_at");
+
+            // Sync tracking
+            entity.Property(e => e.LastUpdated).HasColumnName("last_updated").IsRequired();
+
+            // Indexes for faster lookups
+            entity.HasIndex(e => e.ShopId);
+            entity.HasIndex(e => e.CategoryId);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.IsDeleted);
         });
 
         // ========================================
