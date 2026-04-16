@@ -1,0 +1,52 @@
+name: Docker Compose Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'docker-compose.yml'
+      - '.github/workflows/docker-compose.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'docker-compose.yml'
+
+jobs:
+  validate:
+    name: Validate Docker Compose
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Create .env file from secrets
+      run: |
+        cat > .env << EOF
+        POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+        POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+        POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+        RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}
+        RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}
+        RabbitMQ_Host=${{ secrets.RABBITMQ_HOST }}
+        RabbitMQ_Port=${{ secrets.RABBITMQ_PORT }}
+        RabbitMQ_Username=${{ secrets.RABBITMQ_USER }}
+        RabbitMQ_Password=${{ secrets.RABBITMQ_PASSWORD }}
+        EOF
+
+    - name: Validate docker-compose.yml syntax
+      run: |
+        docker compose config --quiet
+        if [ $? -eq 0 ]; then
+          echo "✅ docker-compose.yml syntax is valid"
+        else
+          echo "❌ docker-compose.yml has syntax errors"
+          exit 1
+        fi
+
+    - name: Check required services
+      run: |
+        echo "Checking required services..."
+        docker compose config | grep -q "postgres" && echo "✅ PostgreSQL service found"
+        docker compose config | grep -q "rabbitmq" && echo "✅ RabbitMQ service found"
+        docker compose config | grep -q "api-gateway" && echo "✅ API Gateway service found"

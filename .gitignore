@@ -250,7 +250,6 @@ __pycache__/
 .env
 .env.*
 *.local
-**/appsettings*.json
 secrets.json
 *.key
 *.pem
@@ -272,4 +271,5 @@ $RECYCLE.BIN/
 ._*
 .Spotlight-V100
 .Trashes
-
+src/ApiGateway/start-services.ps1
+.agent

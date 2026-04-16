@@ -1,5 +1,3 @@
-"# Woodify-commerceBE
-
 ## 🌲 Giới thiệu
 
 Woodify là hệ thống thương mại điện tử chuyên về sản phẩm gỗ, được xây dựng theo kiến trúc **Microservices** với .NET 8.
@@ -9,18 +7,19 @@ Woodify là hệ thống thương mại điện tử chuyên về sản phẩm g
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        API Gateway (YARP)                       │
-│                         Port: 5000                              │
+│                         Port: ...                               │
 └─────────────────────────────────────────────────────────────────┘
                                 │
-        ┌───────────────────────┼───────────────────────┐
-        ▼                       ▼                       ▼
-┌───────────────┐    ┌───────────────┐    ┌───────────────┐
-│ AccountService│    │  ShopService  │    │ CatalogService│
-│   Port: 5010  │    │   Port: 5011  │    │   Port: 5012  │
-└───────────────┘    └───────────────┘    └───────────────┘
-        │                       │                       │
-        └───────────────────────┼───────────────────────┘
-                                ▼
+        ┌───────────┬───────────┼───────────┬───────────┬──────────┐
+        ▼           ▼           ▼           ▼           ▼          ▼
+┌──────────────┐ ┌──────────┐ ┌─────────┐ ┌─────────┐ ┌────────┐ ┌─────────┐
+│   Identity   │ │  Shop    │ │Product  │ │Inventory│ │ Order  │ │Payment  │
+│   Service    │ │ Service  │ │Service  │ │Service  │ │Service │ │Service  │
+│  Port: ...   │ │Port: ... │ │Port:... │ │Port:... │ │Port:...│ │Port:... │
+└──────────────┘ └──────────┘ └─────────┘ └─────────┘ └────────┘ └─────────┘
+        │           │           │           │           │          │
+        └───────────┴───────────┴───────────┴───────────┴──────────┴──────
+                                │
                     ┌───────────────────────┐
                     │   PostgreSQL + RabbitMQ│
                     └───────────────────────┘
@@ -28,18 +27,15 @@ Woodify là hệ thống thương mại điện tử chuyên về sản phẩm g
 
 ### Microservices
 
-| Service | Port | Database | Mô tả |
-|---------|------|----------|-------|
-| API Gateway | 5000 | - | YARP Reverse Proxy |
-| Account Service | 5010 | account_db | Quản lý tài khoản, roles |
-| Shop Service | 5011 | shop_db | Quản lý cửa hàng |
-| Catalog Service | 5012 | catalog_db | Quản lý danh mục |
-| Product Service | 5013 | product_db | Quản lý sản phẩm |
-| Certification Service | 5014 | certification_db | Chứng nhận gỗ |
-| Inventory Service | 5015 | inventory_db | Quản lý kho |
-| Order Service | 5016 | order_db | Quản lý đơn hàng |
-| Payment Service | 5017 | payment_db | Thanh toán |
-| Audit Service | 5018 | audit_db | Log tài chính |
+| Service | Port | Database | Domain |
+|---------|------|----------|--------|
+| API Gateway | ... | - | YARP Reverse Proxy |
+| Identity Service | ... | identity_db | User, Account |
+| Shop Service | ... | shop_db | Shop, Follow |
+| Product Service | ... | product_db | Product, Certificate |
+| Inventory Service | ... | inventory_db | Stock |
+| Order Service | ... | order_db | Cart, Order |
+| Payment Service | ... | payment_db | Payment, Wallet |
 
 ## 📋 Yêu cầu hệ thống
 
@@ -76,27 +72,63 @@ Tạo file `appsettings.json` trong folder `src/Services/AccountService/AccountS
   },
   "RabbitMQ": {
     "Host": "localhost",
-    "Port": 5672,
+    "Port": "<RABBITMQ_PORT>",
     "Username": "<RABBITMQ_USER>",
     "Password": "<RABBITMQ_PASSWORD>"
   }
 }
 ```
 
-### Bước 3: Khởi động Docker Containers
+### Bước 3: Khởi động Docker Infrastructure
 
 ```bash
 # Khởi động PostgreSQL, RabbitMQ và Adminer
-docker-compose up -d postgres rabbitmq adminer
+docker-compose up -d
 ```
 
 Đợi khoảng 10-15 giây để containers khởi động hoàn tất.
 
-### Bước 4: Chạy Service
+### Bước 4: Chạy Services (Tự động - Recommended)
+
+Chúng tôi cung cấp PowerShell Script để quản lý tất cả services một cách dễ dàng:
+
+```powershell
+# Từ root folder, chạy script
+.\src\ApiGateway\start-services.ps1
+```
+
+**Script sẽ:**
+1. Hiển thị menu chọn services cần chạy
+2. Tự động chạy `dotnet run` cho từng service trong terminal riêng
+3. Hiển thị thông tin port và URLs
+
+**Ví dụ:**
+```
+========================================
+  WOODIFY SERVICES LAUNCHER
+========================================
+[Chọn services cần chạy]
+
+1. Identity Service
+2. Shop Service
+3. Product Service
+...
+0. Start Selected Services
+
+Chọn (0-9): 1
+[Chọn] 2
+[Chọn] 0
+
+=> Khởi động Identity Service và Shop Service
+```
+
+### Bước 4 (Alternative): Chạy Service Thủ Công
+
+Nếu bạn muốn chạy từng service một cách thủ công:
 
 ```bash
-# Di chuyển vào folder AccountService
-cd src/Services/....
+# Di chuyển vào folder service
+cd src/Services/IdentityService/IdentityService.APIService
 
 # Chạy service
 dotnet run
@@ -104,10 +136,6 @@ dotnet run
 
 ### Bước 5: Kiểm tra
 
-- **Swagger UI**: http://localhost:5000/swagger
-- **Health Check**: http://localhost:5000/health
-- **Adminer (DB UI)**: http://localhost:8080
-- **RabbitMQ Management**: http://localhost:15672
 
 ## 🔧 Các lệnh thường dùng
 
@@ -243,6 +271,52 @@ taskkill /PID <PID> /F
 
 - Backend Development Team
 
-## 📄 License
+## 🐰 RabbitMQ - Message Broker
 
-Private - All rights reserved" 
+### Giới thiệu
+
+RabbitMQ là **Message Broker** dùng để giao tiếp **bất đồng bộ** giữa các microservices. Thay vì gọi API trực tiếp (HTTP), services gửi **message/event** qua RabbitMQ.
+
+### Kiến trúc
+
+```
+┌─────────────────┐                              ┌─────────────────┐
+│   ShopService   │                              │ AccountService  │
+│   (Publisher)   │                              │   (Consumer)    │
+└────────┬────────┘                              └────────▲────────┘
+         │                                                │
+         │ 1. Publish "shop.created"                      │ 3. Subscribe & Process
+         │    event sau khi tạo Shop                      │
+         ▼                                                │
+┌─────────────────────────────────────────────────────────┴────────┐
+│                         RabbitMQ                                 │
+│                    Queue: "shop.created"                         │
+│                                                                  │
+│    ┌─────────────────────────────────────────────────────────┐   │
+│    │ Message: { ShopId, ShopName, OwnerId, CreatedAt }       │   │
+│    └─────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│                     2. Message chờ trong Queue                   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Khi nào dùng RabbitMQ vs HTTP?
+
+| Use Case | Phương án | Ví dụ |
+|----------|-----------|-------|
+| Cần data ngay + chính xác | **HTTP Call** | Lấy thông tin Owner khi xem Shop |
+| Thông báo sự kiện (fire & forget) | **RabbitMQ** | Shop được tạo → gửi email |
+| Side effects không cần response | **RabbitMQ** | Order đặt → trừ kho, ghi log |
+
+### Cấu trúc code
+
+```
+src/
+├── Shared/
+│   ├── Events/
+│   │   └── DomainEvents.cs           # Định nghĩa các Event classes
+│   └── Messaging/
+│       ├── RabbitMQPublisher.cs      # Gửi message
+│       ├── RabbitMQConsumer.cs       # Nhận message
+│       └── RabbitMQSettings.cs       # Config connection
+

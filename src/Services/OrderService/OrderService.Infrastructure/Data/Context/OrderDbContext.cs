@@ -1,0 +1,349 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using System;
+using System.IO;
+using OrderService.Domain.Entities;
+
+namespace OrderService.Infrastructure.Data.Context;
+
+public class OrderDbContext : DbContext
+{
+    public OrderDbContext(DbContextOptions<OrderDbContext> options) : base(options)
+    {
+    }
+
+    public OrderDbContext() : base()
+    {
+    }
+
+    public DbSet<Cart> Carts { get; set; }
+    public DbSet<CartItem> CartItems { get; set; }
+    public DbSet<CategoryCache> CategoryCaches { get; set; }
+    public DbSet<ProductMasterCache> ProductMasterCaches { get; set; }
+    public DbSet<ProductVersionCache> ProductVersionCaches { get; set; }
+    public DbSet<ShopInfoCache> ShopInfoCaches { get; set; }
+    public DbSet<AccountDirectoryEntry> AccountDirectory { get; set; }
+    public DbSet<Order> Orders { get; set; }
+    public DbSet<OrderItem> OrderItems { get; set; }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            var connectionString = GetConnectionString("OrderService");
+            if (!string.IsNullOrEmpty(connectionString))
+            {
+                optionsBuilder.UseNpgsql(connectionString);
+            }
+        }
+    }
+
+    private static string? GetConnectionString(string connectionStringName)
+    {
+        var rootEnvPath = FindEnvFile();
+        if (rootEnvPath != null && File.Exists(rootEnvPath))
+        {
+            foreach (var line in File.ReadAllLines(rootEnvPath))
+            {
+                if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#"))
+                    continue;
+                var parts = line.Split('=', 2);
+                if (parts.Length == 2)
+                    Environment.SetEnvironmentVariable(parts[0].Trim(), parts[1].Trim());
+            }
+        }
+
+        // Check environment variable first
+        string? envConnectionString = Environment.GetEnvironmentVariable($"ConnectionStrings__{connectionStringName}");
+        if (!string.IsNullOrEmpty(envConnectionString))
+        {
+            return envConnectionString;
+        }
+
+        var config = new ConfigurationBuilder()
+            .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+            .AddJsonFile("appsettings.json", optional: true)
+            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development"}.json", optional: true)
+            .AddEnvironmentVariables()
+            .Build();
+
+        return config.GetConnectionString(connectionStringName);
+    }
+
+    private static string? FindEnvFile()
+    {
+        var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+        while (dir != null)
+        {
+            if (File.Exists(Path.Combine(dir.FullName, ".env")))
+                return Path.Combine(dir.FullName, ".env");
+            dir = dir.Parent;
+        }
+        return null;
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        // ========================================
+        // Cấu hình bảng Account_Directory (mirror IdentityService)
+        // ========================================
+        modelBuilder.Entity<AccountDirectoryEntry>(entity =>
+        {
+            entity.ToTable("account_directory");
+            entity.HasKey(e => e.AccountId);
+
+            entity.Property(e => e.AccountId).HasColumnName("account_id");
+            entity.Property(e => e.Name).HasColumnName("name").IsRequired();
+            entity.Property(e => e.Email).HasColumnName("email").IsRequired();
+            entity.Property(e => e.IsActive).HasColumnName("is_active").IsRequired();
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            entity.HasIndex(e => e.Name);
+        });
+
+        // ========================================
+        // Cấu hình bảng Category_Cache
+        // ========================================
+        modelBuilder.Entity<CategoryCache>(entity =>
+        {
+            entity.ToTable("category_cache");
+            entity.HasKey(e => e.CategoryId);
+
+            entity.Property(e => e.CategoryId).HasColumnName("category_id");
+            entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(500).IsRequired();
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(2000);
+            entity.Property(e => e.ParentCategoryId).HasColumnName("parent_category_id");
+            entity.Property(e => e.Level).HasColumnName("level").IsRequired();
+            entity.Property(e => e.IsActive).HasColumnName("is_active").IsRequired().HasDefaultValue(true);
+
+            // Soft Delete
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted").IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.DeletedAt).HasColumnName("deleted_at");
+
+            // Sync tracking
+            entity.Property(e => e.LastUpdated).HasColumnName("last_updated").IsRequired();
+
+            // Indexes for faster lookups
+            entity.HasIndex(e => e.IsActive);
+            entity.HasIndex(e => e.ParentCategoryId);
+        });
+
+        // ========================================
+        // Cấu hình bảng Product_Master_Cache
+        // ========================================
+        modelBuilder.Entity<ProductMasterCache>(entity =>
+        {
+            entity.ToTable("product_master_cache");
+            entity.HasKey(e => e.ProductId);
+
+            entity.Property(e => e.ProductId).HasColumnName("product_id");
+            entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
+            entity.Property(e => e.CategoryId).HasColumnName("category_id").IsRequired();
+            entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(500).IsRequired();
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(2000);
+            entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.ModerationStatus).HasColumnName("moderation_status").HasMaxLength(50);
+            entity.Property(e => e.HasVersions).HasColumnName("has_versions").IsRequired().HasDefaultValue(false);
+
+            // Soft Delete
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted").IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.DeletedAt).HasColumnName("deleted_at");
+
+            // Sync tracking
+            entity.Property(e => e.LastUpdated).HasColumnName("last_updated").IsRequired();
+
+            // Indexes for faster lookups
+            entity.HasIndex(e => e.ShopId);
+            entity.HasIndex(e => e.CategoryId);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.IsDeleted);
+        });
+
+        // ========================================
+        // Cấu hình bảng Carts
+        // ========================================
+        modelBuilder.Entity<Cart>(entity =>
+        {
+            entity.ToTable("carts");
+            entity.HasKey(e => e.CartId);
+
+            entity.Property(e => e.CartId).HasColumnName("cart_id");
+            entity.Property(e => e.AccountId).HasColumnName("account_id").IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
+
+            // Index for faster lookups
+            entity.HasIndex(e => e.AccountId);
+        });
+
+        // ========================================
+        // Cấu hình bảng Cart_Items
+        // ========================================
+        modelBuilder.Entity<CartItem>(entity =>
+        {
+            entity.ToTable("cart_items");
+            entity.HasKey(e => e.CartItemId);
+
+            entity.Property(e => e.CartItemId).HasColumnName("cart_item_id");
+            entity.Property(e => e.CartId).HasColumnName("cart_id").IsRequired();
+            entity.Property(e => e.VersionId).HasColumnName("version_id").IsRequired();
+            entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
+            entity.Property(e => e.Quantity).HasColumnName("quantity").IsRequired().HasDefaultValue(1);
+            entity.Property(e => e.Price).HasColumnName("price").HasColumnType("double precision").IsRequired();
+
+            // Relationship with Cart
+            entity.HasOne(e => e.Cart)
+                .WithMany(c => c.CartItems)
+                .HasForeignKey(e => e.CartId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Indexes for faster lookups
+            entity.HasIndex(e => e.CartId);
+            entity.HasIndex(e => e.VersionId);
+        });
+
+        // ========================================
+        // Cấu hình bảng Product_Version_Cache
+        // ========================================
+        modelBuilder.Entity<ProductVersionCache>(entity =>
+        {
+            entity.ToTable("product_version_cache");
+            entity.HasKey(e => e.VersionId);
+
+            entity.Property(e => e.VersionId).HasColumnName("version_id");
+            entity.Property(e => e.ProductId).HasColumnName("product_id").IsRequired();
+            entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
+
+            // Product Master Info
+            entity.Property(e => e.ProductName).HasColumnName("product_name").HasMaxLength(500).IsRequired();
+            entity.Property(e => e.ProductDescription).HasColumnName("product_description").HasMaxLength(2000);
+            entity.Property(e => e.ProductStatus).HasColumnName("product_status").HasMaxLength(50);
+
+            // Version Info
+            entity.Property(e => e.SellerSku).HasColumnName("seller_sku").HasMaxLength(255).IsRequired();
+            entity.Property(e => e.VersionNumber).HasColumnName("version_number");
+            entity.Property(e => e.VersionName).HasColumnName("version_name").HasMaxLength(255);
+
+            // Pricing
+            entity.Property(e => e.Price).HasColumnName("price").HasColumnType("decimal(18,2)").IsRequired();
+            entity.Property(e => e.Currency).HasColumnName("currency").HasMaxLength(10);
+
+            // Stock
+            entity.Property(e => e.StockQuantity).HasColumnName("stock_quantity").HasDefaultValue(0);
+
+            // Shipping Dimensions
+            entity.Property(e => e.WoodType).HasColumnName("wood_type").HasMaxLength(200);
+            entity.Property(e => e.WeightGrams).HasColumnName("weight_grams");
+            entity.Property(e => e.LengthCm).HasColumnName("length_cm").HasColumnType("decimal(10,2)");
+            entity.Property(e => e.WidthCm).HasColumnName("width_cm").HasColumnType("decimal(10,2)");
+            entity.Property(e => e.HeightCm).HasColumnName("height_cm").HasColumnType("decimal(10,2)");
+
+            // Status
+            entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+
+            // Thumbnail
+            entity.Property(e => e.ThumbnailUrl).HasColumnName("thumbnail_url").HasMaxLength(2000);
+
+            // Soft Delete
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted").IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.DeletedAt).HasColumnName("deleted_at");
+
+            // Sync tracking
+            entity.Property(e => e.LastUpdated).HasColumnName("last_updated").IsRequired();
+
+            // Indexes for faster lookups
+            entity.HasIndex(e => e.ProductId);
+            entity.HasIndex(e => e.ShopId);
+            entity.HasIndex(e => e.SellerSku);
+            entity.HasIndex(e => e.IsActive);
+        });
+
+        // ========================================
+        // Bảng mirror shop (ShopService → RabbitMQ)
+        // ========================================
+        modelBuilder.Entity<ShopInfoCache>(entity =>
+        {
+            entity.ToTable("shop_info_cache");
+            entity.HasKey(e => e.ShopId);
+
+            entity.Property(e => e.ShopId).HasColumnName("shop_id");
+            entity.Property(e => e.OwnerAccountId).HasColumnName("owner_account_id").IsRequired();
+            entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(500).IsRequired();
+            entity.Property(e => e.DefaultPickupAddress).HasColumnName("default_pickup_address").HasMaxLength(2000);
+            entity.Property(e => e.DefaultProvider).HasColumnName("default_provider");
+            entity.Property(e => e.DefaultProviderServiceCode).HasColumnName("default_provider_service_code")
+                .HasMaxLength(100);
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").IsRequired();
+        });
+
+        // ========================================
+        // Cấu hình bảng Orders
+        // ========================================
+        modelBuilder.Entity<Order>(entity =>
+        {
+            entity.ToTable("orders");
+            entity.HasKey(e => e.OrderId);
+
+            entity.Property(e => e.OrderId).HasColumnName("order_id");
+            entity.Property(e => e.AccountId).HasColumnName("account_id").IsRequired();
+            entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
+            entity.Property(e => e.SubtotalVnd).HasColumnName("subtotal_cents").HasColumnType("double precision").IsRequired();
+            entity.Property(e => e.TotalAmountVnd).HasColumnName("total_amount_cents").HasColumnType("double precision").IsRequired();
+            entity.Property(e => e.CommissionRate).HasColumnName("CommissionRate").HasColumnType("numeric(5,2)").IsRequired();
+            entity.Property(e => e.CommissionVnd).HasColumnName("CommissionCents").IsRequired();
+            entity.Property(e => e.VoucherId).HasColumnName("voucher_id");
+
+            entity.Property(e => e.Status).HasColumnName("status")
+                .HasConversion<string>()
+                .HasMaxLength(50)
+                .HasDefaultValue(OrderStatus.PENDING);
+            entity.Property(e => e.DeliveryAddress).HasColumnName("delivery_address");
+            entity.Property(e => e.ProviderServiceCode).HasColumnName("provider_service_code")
+                .HasMaxLength(20)
+                .IsRequired()
+                .HasDefaultValue("STD");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            // Indexes for faster lookups
+            entity.HasIndex(e => e.AccountId);
+            entity.HasIndex(e => e.ShopId);
+            entity.HasIndex(e => e.Status);
+        });
+
+        // ========================================
+        // Cấu hình bảng Order_Items
+        // ========================================
+        modelBuilder.Entity<OrderItem>(entity =>
+        {
+            entity.ToTable("order_items");
+            entity.HasKey(e => e.OrderItemId);
+
+            entity.Property(e => e.OrderItemId).HasColumnName("order_item_id");
+            entity.Property(e => e.OrderId).HasColumnName("order_id").IsRequired();
+            entity.Property(e => e.VersionId).HasColumnName("version_id").IsRequired();
+            entity.Property(e => e.UnitPriceVnd).HasColumnName("unit_price_cents").IsRequired();
+            entity.Property(e => e.Quantity).HasColumnName("quantity").IsRequired().HasDefaultValue(1);
+            entity.Property(e => e.DiscountVnd).HasColumnName("discount_cents").HasDefaultValue(0);
+            entity.Property(e => e.TaxVnd).HasColumnName("tax_cents").HasColumnType("double precision").HasDefaultValue(0);
+            entity.Property(e => e.ShipmentId).HasColumnName("shipment_id");
+            entity.Property(e => e.LineTotalVnd).HasColumnName("line_total_cents").HasColumnType("double precision").IsRequired();
+            entity.Property(e => e.Status).HasColumnName("status")
+                .HasConversion<string>()
+                .HasMaxLength(50)
+                .HasDefaultValue(FulfillmentStatus.UNFULFILLED);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
+
+            // Relationship with Order
+            entity.HasOne(e => e.Order)
+                .WithMany(o => o.OrderItems)
+                .HasForeignKey(e => e.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Indexes for faster lookups
+            entity.HasIndex(e => e.OrderId);
+            entity.HasIndex(e => e.VersionId);
+        });
+    }
+}

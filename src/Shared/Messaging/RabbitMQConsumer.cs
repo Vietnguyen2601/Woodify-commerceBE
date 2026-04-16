@@ -21,7 +21,10 @@ public class RabbitMQConsumer : IDisposable
             Port = settings.Port,
             UserName = settings.Username,
             Password = settings.Password,
-            VirtualHost = settings.VirtualHost
+            VirtualHost = settings.VirtualHost,
+            RequestedConnectionTimeout = TimeSpan.FromSeconds(10),
+            NetworkRecoveryInterval = TimeSpan.FromSeconds(10),
+            AutomaticRecoveryEnabled = true
         };
 
         _connection = factory.CreateConnection();
@@ -53,6 +56,58 @@ public class RabbitMQConsumer : IDisposable
             }
 
             _channel.BasicAck(ea.DeliveryTag, multiple: false);
+        };
+
+        _channel.BasicConsume(
+            queue: queueName,
+            autoAck: false,
+            consumer: consumer
+        );
+    }
+
+    /// <summary>
+    /// Subscribe để nhận message từ exchange với routing key
+    /// </summary>
+    public void Subscribe<T>(string queueName, string exchange, string routingKey, Func<T, Task> handler)
+    {
+        // Declare exchange
+        _channel.ExchangeDeclare(exchange, ExchangeType.Direct, durable: true);
+        
+        // Declare queue
+        _channel.QueueDeclare(
+            queue: queueName,
+            durable: true,
+            exclusive: false,
+            autoDelete: false
+        );
+
+        // Bind queue to exchange with routing key
+        _channel.QueueBind(
+            queue: queueName,
+            exchange: exchange,
+            routingKey: routingKey
+        );
+
+        var consumer = new EventingBasicConsumer(_channel);
+        consumer.Received += async (model, ea) =>
+        {
+            try
+            {
+                var body = ea.Body.ToArray();
+                var json = Encoding.UTF8.GetString(body);
+                var message = JsonSerializer.Deserialize<T>(json);
+                
+                if (message != null)
+                {
+                    await handler(message);
+                }
+
+                _channel.BasicAck(ea.DeliveryTag, multiple: false);
+            }
+            catch (Exception )
+            {
+                // Optionally: _channel.BasicNack(ea.DeliveryTag, false, true); // requeue on error
+            }
         };
 
         _channel.BasicConsume(
