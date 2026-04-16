@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using PaymentService.Application.DTOs;
 using PaymentService.Application.Interfaces;
 using PaymentService.Application.Helpers;
@@ -22,6 +23,7 @@ public class PaymentAppService : IPaymentAppService
     private readonly IPaymentPollingTrigger _pollingTrigger;
     private readonly IPayOsWebhookHandler _payOsWebhookHandler;
     private readonly IPaymentEventsPublisher _paymentEventsPublisher;
+    private readonly PaymentCallbackOptions _callbackOptions;
     private readonly ILogger<PaymentAppService> _logger;
 
     private const string PROVIDER_PAYOS = "PAYOS";
@@ -35,6 +37,7 @@ public class PaymentAppService : IPaymentAppService
         IPaymentPollingTrigger pollingTrigger,
         IPayOsWebhookHandler payOsWebhookHandler,
         IPaymentEventsPublisher paymentEventsPublisher,
+        IOptions<PaymentCallbackOptions> callbackOptions,
         ILogger<PaymentAppService> logger)
     {
         _payOsService = payOsService;
@@ -44,6 +47,7 @@ public class PaymentAppService : IPaymentAppService
         _pollingTrigger = pollingTrigger;
         _payOsWebhookHandler = payOsWebhookHandler;
         _paymentEventsPublisher = paymentEventsPublisher;
+        _callbackOptions = callbackOptions.Value;
         _logger = logger;
     }
 
@@ -516,6 +520,14 @@ public class PaymentAppService : IPaymentAppService
                 ? int.MaxValue
                 : (int)request.TotalAmountVnd;
 
+            var returnUrl = request.ReturnUrl ?? _callbackOptions.ReturnUrl;
+            var cancelUrl = request.CancelUrl ?? _callbackOptions.CancelUrl;
+            if (string.IsNullOrWhiteSpace(returnUrl) || string.IsNullOrWhiteSpace(cancelUrl))
+            {
+                return ServiceResult<CreatePaymentResponse>.BadRequest(
+                    "ReturnUrl/CancelUrl is missing. Please configure PAYMENT_CALLBACK_RETURN_URL and PAYMENT_CALLBACK_CANCEL_URL.");
+            }
+
             // Description đơn giản: khách hàng chỉ cần biết số đơn hàng và tổng tiền
             var rawDesc = $"Thanh toan {request.OrderIds.Count} don hang Woodify";
             var payOsRequest = new PayOsCreatePaymentInput
@@ -523,8 +535,8 @@ public class PaymentAppService : IPaymentAppService
                 OrderCode = orderCode,
                 Amount = amountVnd, // PayOS dùng VND, không phải cents
                 Description = rawDesc.Length > 25 ? rawDesc[..25] : rawDesc,
-                ReturnUrl = request.ReturnUrl ?? "https://woodify.vn/payment/success",
-                CancelUrl = request.CancelUrl ?? "https://woodify.vn/payment/cancel"
+                ReturnUrl = returnUrl,
+                CancelUrl = cancelUrl
                 // Items = null (không cần chi tiết từng shop - khách hàng chỉ quan tâm tổng tiền)
             };
 
