@@ -17,12 +17,12 @@ namespace OrderService.APIService.Extensions
                 new CartRepository(sp.GetRequiredService<OrderDbContext>()));
             services.AddScoped<ICartItemRepository>(sp =>
                 new CartItemRepository(sp.GetRequiredService<OrderDbContext>()));
-            services.AddScoped<ICategoryCacheRepository>(sp =>
-                new CategoryCacheRepository(sp.GetRequiredService<OrderDbContext>()));
-            services.AddScoped<IProductMasterCacheRepository>(sp =>
-                new ProductMasterCacheRepository(sp.GetRequiredService<OrderDbContext>()));
             services.AddScoped<IProductVersionCacheRepository>(sp =>
                 new ProductVersionCacheRepository(sp.GetRequiredService<OrderDbContext>()));
+            services.AddScoped<IProductMasterCacheRepository>(sp =>
+                new ProductMasterCacheRepository(sp.GetRequiredService<OrderDbContext>()));
+            services.AddScoped<ICategoryCacheRepository>(sp =>
+                new CategoryCacheRepository(sp.GetRequiredService<OrderDbContext>()));
             services.AddScoped<IOrderRepository>(sp =>
                 new OrderRepository(sp.GetRequiredService<OrderDbContext>()));
             services.AddScoped<IShopInfoCacheRepository>(sp =>
@@ -34,18 +34,12 @@ namespace OrderService.APIService.Extensions
             services.AddScoped<ICartService, CartService>();
             services.AddScoped<IOrderService, Application.Services.OrderService>();
             services.AddScoped<IDashboardService, DashboardService>();
-            services.AddScoped<IAnalyticsService, AnalyticsService>();
-
-            // HttpClient for InitialSyncService
             services.AddHttpClient<InitialSyncService>();
 
-            // Initial Sync Service
-            services.AddScoped<InitialSyncService>();
-
             // Register event consumers (startup uses singletons from Program.cs when RabbitMQ is available)
-            services.AddScoped<CategoryEventConsumer>();
-            services.AddScoped<ProductMasterEventConsumer>();
             services.AddScoped<ProductEventConsumer>();
+            services.AddScoped<ProductMasterEventConsumer>();
+            services.AddScoped<CategoryEventConsumer>();
             services.AddScoped<ShippingFeeEventConsumer>();
 
             return services;
@@ -53,17 +47,15 @@ namespace OrderService.APIService.Extensions
 
         public static void StartEventConsumers(IServiceProvider serviceProvider)
         {
-            // Start Category Event Consumer
-            var categoryConsumer = serviceProvider.GetService<CategoryEventConsumer>();
-            categoryConsumer?.StartListening();
-
-            // Start ProductMaster Event Consumer
-            var productMasterConsumer = serviceProvider.GetService<ProductMasterEventConsumer>();
-            productMasterConsumer?.StartListening();
-
             // Start Product Event Consumer
             var productConsumer = serviceProvider.GetService<ProductEventConsumer>();
             productConsumer?.StartListening();
+
+            var productMasterConsumer = serviceProvider.GetService<ProductMasterEventConsumer>();
+            productMasterConsumer?.StartListening();
+
+            var categoryConsumer = serviceProvider.GetService<CategoryEventConsumer>();
+            categoryConsumer?.StartListening();
 
             // Start Shipping Fee Event Consumer
             var shippingFeeConsumer = serviceProvider.GetService<ShippingFeeEventConsumer>();

@@ -25,10 +25,12 @@ public class InitialSyncService
         _httpClient = httpClient;
         _categoryCacheRepository = categoryCacheRepository;
         _productMasterCacheRepository = productMasterCacheRepository;
-        // Default ProductService URL - override bằng env var hoặc config
-        _productServiceUrl = productServiceUrl ?? (
-            Environment.GetEnvironmentVariable("ProductService_URL") ?? "http://product-service:5000"
-        );
+        var resolvedUrl = productServiceUrl
+            ?? Environment.GetEnvironmentVariable("ProductService_URL")
+            ?? Environment.GetEnvironmentVariable("ProductService_Url")
+            ?? "http://product-service:5012";
+
+        _productServiceUrl = resolvedUrl.TrimEnd('/');
     }
 
     /// <summary>

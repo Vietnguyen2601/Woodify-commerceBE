@@ -94,6 +94,8 @@ for (int i = 0; i < 5; i++)
         // Register OrderEventPublisher and Event Consumers
         builder.Services.AddSingleton<OrderEventPublisher>();
         builder.Services.AddSingleton<ProductEventConsumer>();
+        builder.Services.AddSingleton<ProductMasterEventConsumer>();
+        builder.Services.AddSingleton<CategoryEventConsumer>();
         builder.Services.AddSingleton<ShippingFeeEventConsumer>();
         builder.Services.AddSingleton<ShopEventConsumer>();
         builder.Services.AddSingleton<AccountEventConsumer>();
