@@ -20,7 +20,6 @@ public class PaymentAppService : IPaymentAppService
     private readonly IPaymentRepository _paymentRepository;
     private readonly IWalletRepository _walletRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IPaymentPollingTrigger _pollingTrigger;
     private readonly IPayOsWebhookHandler _payOsWebhookHandler;
     private readonly IPaymentEventsPublisher _paymentEventsPublisher;
     private readonly PaymentCallbackOptions _callbackOptions;
@@ -34,7 +33,6 @@ public class PaymentAppService : IPaymentAppService
         IPaymentRepository paymentRepository,
         IWalletRepository walletRepository,
         IUnitOfWork unitOfWork,
-        IPaymentPollingTrigger pollingTrigger,
         IPayOsWebhookHandler payOsWebhookHandler,
         IPaymentEventsPublisher paymentEventsPublisher,
         IOptions<PaymentCallbackOptions> callbackOptions,
@@ -44,7 +42,6 @@ public class PaymentAppService : IPaymentAppService
         _paymentRepository = paymentRepository;
         _walletRepository = walletRepository;
         _unitOfWork = unitOfWork;
-        _pollingTrigger = pollingTrigger;
         _payOsWebhookHandler = payOsWebhookHandler;
         _paymentEventsPublisher = paymentEventsPublisher;
         _callbackOptions = callbackOptions.Value;
@@ -577,8 +574,6 @@ public class PaymentAppService : IPaymentAppService
 
             await _paymentRepository.CreateAsync(payment);
             await _unitOfWork.SaveChangesAsync();
-
-            _pollingTrigger.Trigger();
 
             _logger.LogInformation("PayOS payment created. PaymentId: {PaymentId}, OrderCode: {OrderCode}, Amount: {Amount}",
                 payment.PaymentId, orderCode, amountVnd);
