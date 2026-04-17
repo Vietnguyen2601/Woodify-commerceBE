@@ -20,7 +20,6 @@ public class PaymentAppService : IPaymentAppService
     private readonly IPaymentRepository _paymentRepository;
     private readonly IWalletRepository _walletRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IPaymentPollingTrigger _pollingTrigger;
     private readonly IPayOsWebhookHandler _payOsWebhookHandler;
     private readonly IPaymentEventsPublisher _paymentEventsPublisher;
     private readonly PaymentCallbackOptions _callbackOptions;
@@ -34,7 +33,6 @@ public class PaymentAppService : IPaymentAppService
         IPaymentRepository paymentRepository,
         IWalletRepository walletRepository,
         IUnitOfWork unitOfWork,
-        IPaymentPollingTrigger pollingTrigger,
         IPayOsWebhookHandler payOsWebhookHandler,
         IPaymentEventsPublisher paymentEventsPublisher,
         IOptions<PaymentCallbackOptions> callbackOptions,
@@ -44,7 +42,6 @@ public class PaymentAppService : IPaymentAppService
         _paymentRepository = paymentRepository;
         _walletRepository = walletRepository;
         _unitOfWork = unitOfWork;
-        _pollingTrigger = pollingTrigger;
         _payOsWebhookHandler = payOsWebhookHandler;
         _paymentEventsPublisher = paymentEventsPublisher;
         _callbackOptions = callbackOptions.Value;
@@ -68,11 +65,13 @@ public class PaymentAppService : IPaymentAppService
             if (request.Amount <= 0)
                 return ServiceResult<CreatePaymentLinkResponse>.BadRequest("Amount phải lớn hơn 0");
 
-            if (string.IsNullOrWhiteSpace(request.ReturnUrl))
-                return ServiceResult<CreatePaymentLinkResponse>.BadRequest("ReturnUrl không được để trống");
-
-            if (string.IsNullOrWhiteSpace(request.CancelUrl))
-                return ServiceResult<CreatePaymentLinkResponse>.BadRequest("CancelUrl không được để trống");
+            var returnUrl = ResolveCallbackUrl(request.ReturnUrl, _callbackOptions.ReturnUrl);
+            var cancelUrl = ResolveCallbackUrl(request.CancelUrl, _callbackOptions.CancelUrl);
+            if (returnUrl == null || cancelUrl == null)
+            {
+                return ServiceResult<CreatePaymentLinkResponse>.BadRequest(
+                    "ReturnUrl/CancelUrl không hợp lệ. Vui lòng truyền absolute URL hợp lệ hoặc cấu hình PAYMENT_CALLBACK_RETURN_URL/PAYMENT_CALLBACK_CANCEL_URL.");
+            }
 
             // Check nếu orderCode đã tồn tại
             var existingPayment = await _paymentRepository.GetByProviderPaymentIdAsync(request.OrderCode.ToString());
@@ -90,8 +89,8 @@ public class PaymentAppService : IPaymentAppService
                 Description = request.Description.Length > 25
                     ? request.Description.Substring(0, 25)
                     : request.Description,
-                ReturnUrl = request.ReturnUrl,
-                CancelUrl = request.CancelUrl,
+                ReturnUrl = returnUrl,
+                CancelUrl = cancelUrl,
                 BuyerName = request.BuyerName,
                 BuyerEmail = request.BuyerEmail,
                 BuyerPhone = request.BuyerPhone
@@ -527,6 +526,11 @@ public class PaymentAppService : IPaymentAppService
                 return ServiceResult<CreatePaymentResponse>.BadRequest(
                     "ReturnUrl/CancelUrl is missing. Please configure PAYMENT_CALLBACK_RETURN_URL and PAYMENT_CALLBACK_CANCEL_URL.");
             }
+            if (!Uri.TryCreate(returnUrl, UriKind.Absolute, out _) || !Uri.TryCreate(cancelUrl, UriKind.Absolute, out _))
+            {
+                return ServiceResult<CreatePaymentResponse>.BadRequest(
+                    "ReturnUrl/CancelUrl is invalid. Please provide absolute URLs.");
+            }
 
             // Description đơn giản: khách hàng chỉ cần biết số đơn hàng và tổng tiền
             var rawDesc = $"Thanh toan {request.OrderIds.Count} don hang Woodify";
@@ -571,8 +575,6 @@ public class PaymentAppService : IPaymentAppService
             await _paymentRepository.CreateAsync(payment);
             await _unitOfWork.SaveChangesAsync();
 
-            _pollingTrigger.Trigger();
-
             _logger.LogInformation("PayOS payment created. PaymentId: {PaymentId}, OrderCode: {OrderCode}, Amount: {Amount}",
                 payment.PaymentId, orderCode, amountVnd);
 
@@ -611,6 +613,24 @@ public class PaymentAppService : IPaymentAppService
             "EXPIRED" => PaymentStatus.Failed,
             _ => PaymentStatus.Created
         };
+    }
+
+    private static string? ResolveCallbackUrl(string? requestUrl, string? fallbackUrl)
+    {
+        if (!string.IsNullOrWhiteSpace(requestUrl) &&
+            requestUrl != "string" &&
+            Uri.TryCreate(requestUrl, UriKind.Absolute, out _))
+        {
+            return requestUrl;
+        }
+
+        if (!string.IsNullOrWhiteSpace(fallbackUrl) &&
+            Uri.TryCreate(fallbackUrl, UriKind.Absolute, out _))
+        {
+            return fallbackUrl;
+        }
+
+        return null;
     }
 
     #endregion
