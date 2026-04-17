@@ -79,7 +79,9 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 
             _logger.LogInformation("Payment found: {PaymentId}, Status: {Status}", payment.PaymentId, payment.Status);
 
-            if (webhook.Data.Status?.ToUpper() == "PAID")
+            var normalizedStatus = webhook.Data.Status?.Trim().ToUpperInvariant();
+
+            if (normalizedStatus == "PAID")
             {
                 if (payment.Status == PaymentStatus.Succeeded)
                 {
@@ -89,12 +91,18 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 
                 await HandleSuccessfulPaymentAsync(payment, webhook.Data);
             }
-            else if (webhook.Data.Status?.ToUpper() == "CANCELLED")
+            else if (normalizedStatus == "CANCELLED")
             {
                 payment.Status = PaymentStatus.Failed;
                 payment.UpdatedAt = DateTime.UtcNow;
                 await _paymentRepository.UpdateAsync(payment);
                 _logger.LogInformation("Payment cancelled: {PaymentId}", payment.PaymentId);
+            }
+            else
+            {
+                _logger.LogWarning("Unsupported PayOS status: {Status} for orderCode: {OrderCode}",
+                    webhook.Data.Status, webhook.Data.OrderCode);
+                return new PayOsWebhookResponse { Code = "01", Desc = $"Unsupported status: {webhook.Data.Status}" };
             }
 
             return new PayOsWebhookResponse { Code = "00", Desc = "success" };
