@@ -79,7 +79,7 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 
             _logger.LogInformation("Payment found: {PaymentId}, Status: {Status}", payment.PaymentId, payment.Status);
 
-            var normalizedStatus = webhook.Data.Status?.Trim().ToUpperInvariant();
+            var normalizedStatus = ResolveWebhookStatus(webhook);
 
             if (normalizedStatus == "PAID")
             {
@@ -228,29 +228,104 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
                 return false;
             }
 
-            var dataToVerify = webhook.Data.OrderCode
-                + webhook.Data.Amount
-                + webhook.Data.Description
-                + webhook.Data.OrderCode
-                + webhook.Data.Reference;
+            var candidates = BuildSignatureCandidates(webhook.Data);
+            var providedSignature = webhook.Signature.Trim();
 
-            _logger.LogDebug("Webhook signature verification - Data: {Data}, Signature: {Signature}",
-                dataToVerify, webhook.Signature);
+            foreach (var dataToVerify in candidates)
+            {
+                var utf8Signature = GenerateHmacSignature(dataToVerify, useHexKey: false);
+                if (utf8Signature.Equals(providedSignature, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogInformation("Webhook signature verification: True using UTF8 key. Data: {Data}",
+                        dataToVerify);
+                    return true;
+                }
 
-            var checksumKeyBytes = Convert.FromHexString(_payOsOptions.ChecksumKey);
-            using var hmac = new HMACSHA256(checksumKeyBytes);
-            var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(dataToVerify));
-            var calculatedSignature = BitConverter.ToString(hash).Replace("-", "").ToLower();
+                var hexSignature = GenerateHmacSignature(dataToVerify, useHexKey: true);
+                if (!string.IsNullOrEmpty(hexSignature) &&
+                    hexSignature.Equals(providedSignature, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogInformation("Webhook signature verification: True using HEX key. Data: {Data}",
+                        dataToVerify);
+                    return true;
+                }
+            }
 
-            var isValid = calculatedSignature.Equals(webhook.Signature, StringComparison.OrdinalIgnoreCase);
-            _logger.LogInformation("Webhook signature verification: {Result}. Calculated: {Calculated}, Provided: {Provided}",
-                isValid, calculatedSignature, webhook.Signature);
-
-            return isValid;
+            _logger.LogInformation("Webhook signature verification: False. Provided: {Provided}", providedSignature);
+            return false;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error verifying webhook signature");
+            return false;
+        }
+    }
+
+    private static string ResolveWebhookStatus(PayOsWebhookData webhook)
+    {
+        var status = webhook.Data?.Status?.Trim().ToUpperInvariant();
+        if (!string.IsNullOrWhiteSpace(status))
+            return status;
+
+        var dataCode = webhook.Data?.Code?.Trim();
+        if (string.Equals(dataCode, "00", StringComparison.OrdinalIgnoreCase))
+            return "PAID";
+
+        var rootCode = webhook.Code?.Trim();
+        if (string.Equals(rootCode, "00", StringComparison.OrdinalIgnoreCase))
+            return "PAID";
+
+        return string.Empty;
+    }
+
+    private static List<string> BuildSignatureCandidates(PayOsWebhookPaymentData data)
+    {
+        var description = data.Description ?? string.Empty;
+        var reference = data.Reference ?? string.Empty;
+        var transactionDateTime = data.TransactionDateTime ?? string.Empty;
+
+        return new List<string>
+        {
+            // Current PayOS webhook format (recommended canonical key-value style)
+            $"amount={data.Amount}&description={description}&orderCode={data.OrderCode}&reference={reference}&transactionDateTime={transactionDateTime}",
+            // Older/inconsistent integrations observed in production
+            $"amount={data.Amount}&description={description}&orderCode={data.OrderCode}&reference={reference}",
+            $"{data.OrderCode}{data.Amount}{description}{data.OrderCode}{reference}",
+            $"{data.Amount}{description}{data.OrderCode}{reference}"
+        };
+    }
+
+    private string GenerateHmacSignature(string data, bool useHexKey)
+    {
+        byte[] keyBytes;
+        if (useHexKey)
+        {
+            if (!TryGetHexKeyBytes(_payOsOptions.ChecksumKey, out keyBytes))
+                return string.Empty;
+        }
+        else
+        {
+            keyBytes = Encoding.UTF8.GetBytes(_payOsOptions.ChecksumKey);
+        }
+
+        using var hmac = new HMACSHA256(keyBytes);
+        var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
+        return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+    }
+
+    private static bool TryGetHexKeyBytes(string? checksumKey, out byte[] keyBytes)
+    {
+        keyBytes = Array.Empty<byte>();
+        if (string.IsNullOrWhiteSpace(checksumKey))
+            return false;
+
+        try
+        {
+            keyBytes = Convert.FromHexString(checksumKey.Trim());
+            return true;
+        }
+        catch
+        {
             return false;
         }
     }
