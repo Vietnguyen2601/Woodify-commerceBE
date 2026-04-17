@@ -39,7 +39,7 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
     /// <summary>
     /// Xử lý webhook PayOS
     /// </summary>
-    public async Task<PayOsWebhookResponse> HandleWebhookAsync(PayOsWebhookData webhook)
+    public async Task<PayOsWebhookResponse> HandleWebhookAsync(PayOsWebhookData webhook, JsonElement? rawData = null)
     {
         try
         {
@@ -55,7 +55,7 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
             if (webhook.Signature?.Equals("manual-confirm", StringComparison.Ordinal) != true &&
                 webhook.Signature?.Equals("auto-polling", StringComparison.Ordinal) != true)
             {
-                if (!VerifySignature(webhook))
+                if (!VerifySignature(webhook, rawData))
                 {
                     _logger.LogWarning("Webhook signature verification failed for orderCode: {OrderCode}",
                         webhook.Data.OrderCode);
@@ -218,7 +218,7 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
         return new List<Guid>();
     }
 
-    private bool VerifySignature(PayOsWebhookData webhook)
+    private bool VerifySignature(PayOsWebhookData webhook, JsonElement? rawData)
     {
         try
         {
@@ -228,31 +228,18 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
                 return false;
             }
 
-            var candidates = BuildSignatureCandidates(webhook.Data);
             var providedSignature = webhook.Signature.Trim();
+            var canonical = rawData.HasValue && rawData.Value.ValueKind == JsonValueKind.Object
+                ? BuildCanonicalDataString(rawData.Value)
+                : BuildCanonicalDataString(webhook.Data);
 
-            foreach (var dataToVerify in candidates)
-            {
-                var utf8Signature = GenerateHmacSignature(dataToVerify, useHexKey: false);
-                if (utf8Signature.Equals(providedSignature, StringComparison.OrdinalIgnoreCase))
-                {
-                    _logger.LogInformation("Webhook signature verification: True using UTF8 key. Data: {Data}",
-                        dataToVerify);
-                    return true;
-                }
+            var calculated = GenerateHmacSignature(canonical);
+            var isValid = calculated.Equals(providedSignature, StringComparison.OrdinalIgnoreCase);
+            _logger.LogInformation(
+                "Webhook signature verification: {Result}. CanonicalData: {CanonicalData}. Calculated: {Calculated}. Provided: {Provided}",
+                isValid, canonical, calculated, providedSignature);
 
-                var hexSignature = GenerateHmacSignature(dataToVerify, useHexKey: true);
-                if (!string.IsNullOrEmpty(hexSignature) &&
-                    hexSignature.Equals(providedSignature, StringComparison.OrdinalIgnoreCase))
-                {
-                    _logger.LogInformation("Webhook signature verification: True using HEX key. Data: {Data}",
-                        dataToVerify);
-                    return true;
-                }
-            }
-
-            _logger.LogInformation("Webhook signature verification: False. Provided: {Provided}", providedSignature);
-            return false;
+            return isValid;
         }
         catch (Exception ex)
         {
@@ -278,56 +265,53 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
         return string.Empty;
     }
 
-    private static List<string> BuildSignatureCandidates(PayOsWebhookPaymentData data)
+    private static string BuildCanonicalDataString(JsonElement dataObject)
     {
-        var description = data.Description ?? string.Empty;
-        var reference = data.Reference ?? string.Empty;
-        var transactionDateTime = data.TransactionDateTime ?? string.Empty;
+        var pairs = dataObject.EnumerateObject()
+            .OrderBy(p => p.Name, StringComparer.Ordinal)
+            .Select(p => $"{p.Name}={ConvertJsonValueToCanonicalString(p.Value)}");
+        return string.Join("&", pairs);
+    }
 
-        return new List<string>
+    private static string BuildCanonicalDataString(PayOsWebhookPaymentData data)
+    {
+        var fields = new SortedDictionary<string, string>(StringComparer.Ordinal)
         {
-            // Current PayOS webhook format (recommended canonical key-value style)
-            $"amount={data.Amount}&description={description}&orderCode={data.OrderCode}&reference={reference}&transactionDateTime={transactionDateTime}",
-            // Older/inconsistent integrations observed in production
-            $"amount={data.Amount}&description={description}&orderCode={data.OrderCode}&reference={reference}",
-            $"{data.OrderCode}{data.Amount}{description}{data.OrderCode}{reference}",
-            $"{data.Amount}{description}{data.OrderCode}{reference}"
+            ["accountName"] = data.AccountName ?? string.Empty,
+            ["accountNumber"] = data.AccountNumber ?? string.Empty,
+            ["amount"] = data.Amount.ToString(),
+            ["code"] = data.Code ?? string.Empty,
+            ["currency"] = data.Currency ?? string.Empty,
+            ["desc"] = data.Desc ?? string.Empty,
+            ["description"] = data.Description ?? string.Empty,
+            ["orderCode"] = data.OrderCode.ToString(),
+            ["reference"] = data.Reference ?? string.Empty,
+            ["status"] = data.Status ?? string.Empty,
+            ["transactionDateTime"] = data.TransactionDateTime ?? string.Empty
+        };
+
+        return string.Join("&", fields.Select(kv => $"{kv.Key}={kv.Value}"));
+    }
+
+    private static string ConvertJsonValueToCanonicalString(JsonElement value)
+    {
+        return value.ValueKind switch
+        {
+            JsonValueKind.Null or JsonValueKind.Undefined => string.Empty,
+            JsonValueKind.String => value.GetString() ?? string.Empty,
+            JsonValueKind.Number => value.GetRawText(),
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            _ => value.GetRawText()
         };
     }
 
-    private string GenerateHmacSignature(string data, bool useHexKey)
+    private string GenerateHmacSignature(string data)
     {
-        byte[] keyBytes;
-        if (useHexKey)
-        {
-            if (!TryGetHexKeyBytes(_payOsOptions.ChecksumKey, out keyBytes))
-                return string.Empty;
-        }
-        else
-        {
-            keyBytes = Encoding.UTF8.GetBytes(_payOsOptions.ChecksumKey);
-        }
-
+        var keyBytes = Encoding.UTF8.GetBytes(_payOsOptions.ChecksumKey);
         using var hmac = new HMACSHA256(keyBytes);
         var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
         return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
-    }
-
-    private static bool TryGetHexKeyBytes(string? checksumKey, out byte[] keyBytes)
-    {
-        keyBytes = Array.Empty<byte>();
-        if (string.IsNullOrWhiteSpace(checksumKey))
-            return false;
-
-        try
-        {
-            keyBytes = Convert.FromHexString(checksumKey.Trim());
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     #endregion

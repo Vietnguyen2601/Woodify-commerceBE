@@ -1,4 +1,5 @@
 using PaymentService.Application.DTOs;
+using System.Text.Json;
 
 namespace PaymentService.Application.Interfaces;
 
@@ -10,5 +11,5 @@ public interface IPayOsWebhookHandler
     /// <summary>
     /// Xử lý webhook callback từ PayOS
     /// </summary>
-    Task<PayOsWebhookResponse> HandleWebhookAsync(PayOsWebhookData webhook);
+    Task<PayOsWebhookResponse> HandleWebhookAsync(PayOsWebhookData webhook, JsonElement? rawData = null);
 }
