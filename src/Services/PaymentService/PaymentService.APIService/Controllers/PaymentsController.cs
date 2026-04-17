@@ -125,15 +125,13 @@ public class PaymentsController : ControllerBase
             webhook.Data?.OrderCode, webhook.Data?.Status);
 
         var result = await _webhookHandler.HandleWebhookAsync(webhook);
-
-        // PayOS expects 200 OK with code "00" for success, or code "01" for failure
-        if (result.Code == "00")
+        if (result.Code != "00")
         {
-            return Ok(result);
+            _logger.LogWarning("Webhook handler returned error: {Code} - {Desc}", result.Code, result.Desc);
         }
 
-        _logger.LogWarning("Webhook handler returned error: {Code} - {Desc}", result.Code, result.Desc);
-        return StatusCode(StatusCodes.Status400BadRequest, result);
+        // Always return 200 so provider webhook validation/retries are not blocked by HTTP status.
+        return Ok(result);
     }
 
     /// <summary>
