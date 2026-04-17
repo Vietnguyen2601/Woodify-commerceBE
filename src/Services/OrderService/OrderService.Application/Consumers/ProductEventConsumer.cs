@@ -259,6 +259,10 @@ public class ProductEventConsumer
             {
                 Console.WriteLine($"[OrderService] No product versions found in cache for deleted product: {evt.ProductId}");
             }
+
+            var masterCacheRepository = scope.ServiceProvider.GetRequiredService<IProductMasterCacheRepository>();
+            await masterCacheRepository.SoftDeleteAsync(evt.ProductId);
+            Console.WriteLine($"[OrderService] ProductMaster cache soft-deleted (if existed): ProductId={evt.ProductId}");
         }
         catch (Exception ex)
         {

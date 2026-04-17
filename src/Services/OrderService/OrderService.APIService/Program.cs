@@ -63,6 +63,9 @@ builder.Services.AddDbContext<OrderDbContext>();
 // Register Order Services
 builder.Services.AddOrderServices(builder.Configuration);
 
+// Always register publisher; it no-ops if RabbitMQPublisher isn't available
+builder.Services.AddSingleton<OrderEventPublisher>();
+
 builder.Services.AddSingleton<OrderService.Application.Interfaces.IOrderRealtimeNotifier,
     OrderService.APIService.Services.OrderRealtimeNotifier>();
 
@@ -92,7 +95,6 @@ for (int i = 0; i < 5; i++)
         builder.Services.AddSingleton(publisher);
 
         // Register OrderEventPublisher and Event Consumers
-        builder.Services.AddSingleton<OrderEventPublisher>();
         builder.Services.AddSingleton<ProductEventConsumer>();
         builder.Services.AddSingleton<ProductMasterEventConsumer>();
         builder.Services.AddSingleton<CategoryEventConsumer>();

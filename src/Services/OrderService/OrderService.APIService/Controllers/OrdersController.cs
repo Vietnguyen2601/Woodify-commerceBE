@@ -236,7 +236,7 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Top product masters by units sold on <b>delivered</b> orders only. Marketplace: omit <c>shopId</c>. Per shop: pass <c>shopId</c>.
+    /// Top product masters by units sold trên đơn <b>COMPLETED</b>. Marketplace: bỏ <c>shopId</c>. Theo shop: truyền <c>shopId</c>.
     /// <c>limit</c> mặc định 5, tối đa 20.
     /// </summary>
     [HttpGet("analytics/top-selling-products")]
