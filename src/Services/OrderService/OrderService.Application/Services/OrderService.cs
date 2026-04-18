@@ -733,7 +733,7 @@ public class OrderService : IOrderService
                 return ServiceResult<OrderShipmentRealtimePayload>.Success(payload);
             }
 
-            // Pay flow sets COMPLETED; do not regress to pre-shipping states when shipment is still preparing.
+            // If order is COMPLETED (e.g. legacy/manual), do not regress to pre-shipping states when shipment is still preparing.
             if (order.Status == OrderStatus.COMPLETED && mapped.HasValue &&
                 mapped.Value is OrderStatus.CONFIRMED or OrderStatus.PROCESSING or OrderStatus.READY_TO_SHIP)
             {

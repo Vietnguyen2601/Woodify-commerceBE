@@ -77,7 +77,7 @@ public class OrdersController : ControllerBase
     /// 2. ✅ Explicit shop validation
     /// 3. ✅ Return ShippingFeeVnd transparency
     /// 4. ✅ Better error messages
-    /// 5. ✅ Order stays PENDING until payment success
+    /// 5. ✅ Payment success does not set order to COMPLETED (fulfillment / shipment drives status)
     /// 
     /// SECURITY:
     /// - CartItemIds must all belong to specified ShopId
