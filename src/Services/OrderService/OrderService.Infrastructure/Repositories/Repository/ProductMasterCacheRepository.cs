@@ -34,6 +34,12 @@ public class ProductMasterCacheRepository : GenericRepository<ProductMasterCache
 
     public async Task UpsertAsync(ProductMasterCache cache)
     {
+        if (string.Equals(cache.Status, "DELETED", StringComparison.OrdinalIgnoreCase))
+        {
+            await SoftDeleteAsync(cache.ProductId);
+            return;
+        }
+
         var existing = await _dbSet.FirstOrDefaultAsync(p => p.ProductId == cache.ProductId);
         if (existing != null)
         {

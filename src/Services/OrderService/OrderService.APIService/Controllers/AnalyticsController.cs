@@ -22,6 +22,8 @@ public class AnalyticsController : ControllerBase
     /// </summary>
     /// <remarks>
     /// GET /api/analytics/top-categories?topN=10
+    ///
+    /// Doanh số chỉ tính từ các đơn có trạng thái COMPLETED.
     /// 
     /// Returns:
     /// - CategoryId, Name, Description, Level
@@ -53,6 +55,8 @@ public class AnalyticsController : ControllerBase
     /// </summary>
     /// <remarks>
     /// GET /api/analytics/top-products-by-category/{categoryId}?topN=10
+    ///
+    /// Doanh số chỉ tính từ các đơn có trạng thái COMPLETED.
     /// 
     /// Returns:
     /// - ProductId, Name, Description, Status
@@ -96,6 +100,8 @@ public class AnalyticsController : ControllerBase
     /// </summary>
     /// <remarks>
     /// GET /api/analytics/top-products?topN=20
+    ///
+    /// Doanh số chỉ tính từ các đơn có trạng thái COMPLETED.
     /// 
     /// Returns:
     /// - ProductId, Name, Description, Status

@@ -12,7 +12,7 @@ public class OrderEventPublisher
 {
     private readonly RabbitMQPublisher? _publisher;
 
-    public OrderEventPublisher(RabbitMQPublisher? publisher)
+    public OrderEventPublisher(RabbitMQPublisher? publisher = null)
     {
         _publisher = publisher;
     }

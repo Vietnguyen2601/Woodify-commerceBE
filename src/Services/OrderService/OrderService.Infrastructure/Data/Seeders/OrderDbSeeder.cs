@@ -123,7 +123,7 @@ public static class OrderDbSeeder
                     ShopId = shopId,
                     SubtotalVnd = 99950.00,
                     TotalAmountVnd = 102950.00,
-                    Status = OrderStatus.DELIVERED,
+                    Status = OrderStatus.COMPLETED,
                     DeliveryAddress = "Address-001",
                     ProviderServiceCode = "STD",
                     CreatedAt = DateTime.UtcNow.AddDays(-5),

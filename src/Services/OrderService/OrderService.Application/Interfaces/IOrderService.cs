@@ -48,8 +48,8 @@ public interface IOrderService
     Task<ServiceResult<OrderListResultDto>> GetAllOrdersAsync(GetAllOrdersQueryDto query);
 
     /// <summary>
-    /// Top product masters by units sold on <b>delivered</b> orders only (<see cref="OrderStatus.DELIVERED"/>).
-    /// Enriched from product_version_cache and shop_info_cache. <paramref name="limit"/> is clamped 1–20.
+    /// Top product masters by units sold trên đơn <see cref="OrderStatus.COMPLETED"/> (cùng rule analytics).
+    /// Enriched từ product_version_cache và shop_info_cache. <paramref name="limit"/> clamp 1–20.
     /// </summary>
     Task<ServiceResult<List<TopSellingProductAnalyticsDto>>> GetTopSellingProductsAsync(int limit = 5, Guid? shopId = null);
 }

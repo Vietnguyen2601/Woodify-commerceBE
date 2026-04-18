@@ -23,13 +23,13 @@ public interface IOrderRepository : IGenericRepository<Order>
     Task<(List<Order> Items, int Total)> GetAllPagedAsync(int page, int pageSize, string? status, Guid? shopId, Guid? accountId);
 
     /// <summary>
-    /// Top N product masters by units sold (joins version cache for product_id; excludes cancelled/refunded orders). Optional shop filter.
+    /// Top N product masters by units sold trên đơn <see cref="OrderStatus.COMPLETED"/> (join version cache). Optional shop filter.
     /// </summary>
     Task<List<(Guid ProductId, long UnitsSold)>> GetTopSellingProductMasterAggregatesAsync(int productLimit, Guid? shopId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Lấy tất cả orders có status DELIVERED (bao gồm items)
-    /// Dùng cho analytics: top categories, top products
+    /// Lấy tất cả orders có status COMPLETED (bao gồm items).
+    /// Dùng cho analytics: top categories, top products.
     /// </summary>
-    Task<List<Order>> GetAllDeliveredOrdersAsync();
+    Task<List<Order>> GetAllCompletedOrdersAsync();
 }

@@ -38,8 +38,8 @@ public class AnalyticsService : IAnalyticsService
     {
         try
         {
-            // Lấy tất cả delivered orders để tính sales
-            var orders = await _orderRepository.GetAllDeliveredOrdersAsync();
+            // Lấy tất cả orders COMPLETED để tính sales
+            var orders = await _orderRepository.GetAllCompletedOrdersAsync();
             
             if (!orders.Any())
                 return ServiceResult<IEnumerable<TopCategoryDto>>.Success(Enumerable.Empty<TopCategoryDto>(), "No sales data available");
@@ -143,8 +143,8 @@ public class AnalyticsService : IAnalyticsService
             if (category == null)
                 return ServiceResult<IEnumerable<TopProductDto>>.NotFound("Category not found");
 
-            // Lấy tất cả delivered orders
-            var orders = await _orderRepository.GetAllDeliveredOrdersAsync();
+            // Lấy tất cả orders COMPLETED
+            var orders = await _orderRepository.GetAllCompletedOrdersAsync();
             
             if (!orders.Any())
                 return ServiceResult<IEnumerable<TopProductDto>>.Success(Enumerable.Empty<TopProductDto>(), "No sales data available");
@@ -243,8 +243,8 @@ public class AnalyticsService : IAnalyticsService
     {
         try
         {
-            // Lấy tất cả delivered orders
-            var orders = await _orderRepository.GetAllDeliveredOrdersAsync();
+            // Lấy tất cả orders COMPLETED
+            var orders = await _orderRepository.GetAllCompletedOrdersAsync();
             
             if (!orders.Any())
                 return ServiceResult<IEnumerable<TopProductDto>>.Success(Enumerable.Empty<TopProductDto>(), "No sales data available");
