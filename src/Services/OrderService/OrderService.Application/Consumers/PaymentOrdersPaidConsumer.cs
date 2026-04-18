@@ -19,17 +19,20 @@ public class PaymentOrdersPaidConsumer
     private readonly RabbitMQConsumer _consumer;
     private readonly ILogger<PaymentOrdersPaidConsumer> _logger;
     private readonly OrderSideEffectPublisher _orderSideEffects;
+    private readonly OrderEventPublisher _orderEventPublisher;
 
     public PaymentOrdersPaidConsumer(
         IServiceScopeFactory scopeFactory,
         RabbitMQConsumer consumer,
         ILogger<PaymentOrdersPaidConsumer> logger,
-        OrderSideEffectPublisher orderSideEffects)
+        OrderSideEffectPublisher orderSideEffects,
+        OrderEventPublisher orderEventPublisher)
     {
         _scopeFactory = scopeFactory;
         _consumer = consumer;
         _logger = logger;
         _orderSideEffects = orderSideEffects;
+        _orderEventPublisher = orderEventPublisher;
     }
 
     public void StartListening()
@@ -62,6 +65,7 @@ public class PaymentOrdersPaidConsumer
         {
             using var scope = _scopeFactory.CreateScope();
             var orderRepository = scope.ServiceProvider.GetRequiredService<IOrderRepository>();
+            var shopInfoCache = scope.ServiceProvider.GetRequiredService<IShopInfoCacheRepository>();
             var notifier = scope.ServiceProvider.GetService<IOrderRealtimeNotifier>();
 
             var orders = await orderRepository.GetByIdsAsync(evt.OrderIds);
@@ -90,7 +94,35 @@ public class PaymentOrdersPaidConsumer
 
                 var fullOrder = await orderRepository.GetOrderWithItemsAsync(order.OrderId);
                 if (fullOrder != null)
+                {
                     _orderSideEffects.PublishAfterStatusChange(fullOrder, oldStatus, OrderStatus.COMPLETED.ToString());
+
+                    var shopRow = await shopInfoCache.GetByShopIdAsync(fullOrder.ShopId);
+                    if (shopRow != null && shopRow.OwnerAccountId != Guid.Empty)
+                    {
+                        var net = (long)Math.Max(0, fullOrder.TotalAmountVnd - fullOrder.CommissionVnd);
+                        if (net > 0)
+                        {
+                            _orderEventPublisher.PublishOrderSellerNetEligible(new OrderSellerNetEligibleEvent
+                            {
+                                OrderId = fullOrder.OrderId,
+                                ShopId = fullOrder.ShopId,
+                                SellerAccountId = shopRow.OwnerAccountId,
+                                TotalAmountVnd = (long)fullOrder.TotalAmountVnd,
+                                CommissionVnd = fullOrder.CommissionVnd,
+                                NetAmountVnd = net,
+                                OccurredAt = DateTime.UtcNow,
+                                IdempotencyKey = $"order_net:{fullOrder.OrderId}"
+                            });
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Skip seller net event: no shop owner for ShopId {ShopId}",
+                            fullOrder.ShopId);
+                    }
+                }
 
                 if (notifier != null)
                 {

@@ -668,6 +668,7 @@ public class OrderService : IOrderService
 
             // 6–8. Dashboard, ProductService mirror, review eligibility, delivered stock (event-driven)
             _orderSideEffects.PublishAfterStatusChange(order, oldStatus, newStatus.ToString());
+            await PublishSellerNetReversalIfNeededAsync(order, oldStatus, newStatus);
 
             // 9. SignalR realtime (order list by account/shop/order detail)
             if (_realtimeNotifier != null)
@@ -752,6 +753,7 @@ public class OrderService : IOrderService
             await _orderRepository.UpdateAsync(order);
 
             _orderSideEffects.PublishAfterStatusChange(order, oldStatus, mapped.Value.ToString());
+            await PublishSellerNetReversalIfNeededAsync(order, oldStatus, mapped.Value);
 
             payload.OrderPreviousStatus = oldStatus;
             payload.OrderNewStatus = mapped.Value.ToString();
@@ -1244,5 +1246,31 @@ public class OrderService : IOrderService
         }
 
         return ServiceResult<List<TopSellingProductAnalyticsDto>>.Success(list);
+    }
+
+    private async Task PublishSellerNetReversalIfNeededAsync(Order order, string oldStatus, OrderStatus newStatus)
+    {
+        if (!string.Equals(oldStatus, "COMPLETED", StringComparison.OrdinalIgnoreCase))
+            return;
+        if (newStatus != OrderStatus.CANCELLED && newStatus != OrderStatus.REFUNDED)
+            return;
+
+        var shop = await _shopInfoCacheRepository.GetByShopIdAsync(order.ShopId);
+        if (shop == null || shop.OwnerAccountId == Guid.Empty)
+            return;
+
+        var net = (long)Math.Max(0, order.TotalAmountVnd - order.CommissionVnd);
+        if (net <= 0)
+            return;
+
+        _orderEventPublisher.PublishOrderSellerNetReversed(new OrderSellerNetReversedEvent
+        {
+            OrderId = order.OrderId,
+            ShopId = order.ShopId,
+            SellerAccountId = shop.OwnerAccountId,
+            NetAmountVnd = net,
+            OccurredAt = DateTime.UtcNow,
+            IdempotencyKey = $"order_net_rev:{order.OrderId}"
+        });
     }
 }

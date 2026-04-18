@@ -46,6 +46,7 @@ public class WalletService : IWalletService
             var wallet = new Wallet
             {
                 AccountId = request.AccountId,
+                WalletKind = WalletKind.Buyer,
                 Currency = request.Currency,
                 BalanceVnd = 0,
                 Status = WalletStatus.Active
@@ -310,6 +311,7 @@ public class WalletService : IWalletService
         {
             WalletId = wallet.WalletId,
             AccountId = wallet.AccountId,
+            WalletKind = wallet.WalletKind.ToString(),
             Balance = wallet.BalanceVnd,
             Currency = wallet.Currency,
             Status = wallet.Status.ToString(),
@@ -330,6 +332,8 @@ public class WalletService : IWalletService
             BalanceAfter = tx.BalanceAfterVnd,
             RelatedOrderId = tx.RelatedOrderId,
             RelatedPaymentId = tx.RelatedPaymentId,
+            RelatedShopId = tx.RelatedShopId,
+            ReferenceType = tx.ReferenceType,
             Status = tx.Status.ToString(),
             CreatedAt = tx.CreatedAt,
             CompletedAt = tx.CompletedAt,
