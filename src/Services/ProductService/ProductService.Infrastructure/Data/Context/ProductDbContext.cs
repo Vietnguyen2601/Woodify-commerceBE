@@ -23,6 +23,7 @@ public class ProductDbContext : DbContext
     public DbSet<ReviewPurchaseEligibility> ReviewPurchaseEligibilities { get; set; }
     public DbSet<OrderDeliveredStockLedger> OrderDeliveredStockLedgers { get; set; }
     public DbSet<ShopRegistryEntry> ShopRegistry { get; set; }
+    public DbSet<OrderProductMirror> OrderProductMirrors { get; set; }
 
     private static string GetConnectionString(string connectionStringName)
     {
@@ -133,6 +134,7 @@ public class ProductDbContext : DbContext
             entity.Property(e => e.PublishedAt).HasColumnName("published_at");
             entity.Property(e => e.AverageRating).HasColumnName("average_rating").HasColumnType("double precision");
             entity.Property(e => e.ReviewCount).HasColumnName("review_count").HasDefaultValue(0);
+            entity.Property(e => e.Sales).HasColumnName("sales").HasDefaultValue(0);
 
             // Foreign Key to Category
             entity.HasOne(p => p.Category)
@@ -278,6 +280,32 @@ public class ProductDbContext : DbContext
             entity.HasKey(e => e.OrderId);
             entity.Property(e => e.OrderId).HasColumnName("order_id");
             entity.Property(e => e.ProcessedAt).HasColumnName("processed_at").IsRequired();
+        });
+
+        modelBuilder.Entity<OrderProductMirror>(entity =>
+        {
+            entity.ToTable("order_product_mirror");
+            entity.HasKey(e => e.OrderId);
+            entity.Property(e => e.OrderId).HasColumnName("order_id");
+            entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
+            entity.Property(e => e.AccountId).HasColumnName("account_id").IsRequired();
+            entity.Property(e => e.Status).HasColumnName("status").IsRequired().HasMaxLength(32);
+            entity.Property(e => e.SubtotalVnd).HasColumnName("subtotal_vnd");
+            entity.Property(e => e.TotalAmountVnd).HasColumnName("total_amount_vnd");
+            entity.Property(e => e.CommissionVnd).HasColumnName("commission_vnd");
+            entity.Property(e => e.CommissionRate).HasColumnName("commission_rate").HasPrecision(18, 6);
+            entity.Property(e => e.VoucherId).HasColumnName("voucher_id");
+            entity.Property(e => e.DeliveryAddress).HasColumnName("delivery_address");
+            entity.Property(e => e.ProviderServiceCode).HasColumnName("provider_service_code").HasMaxLength(32);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+            entity.Property(e => e.LastSnapshotAt).HasColumnName("last_snapshot_at").IsRequired();
+            entity.Property(e => e.LineItemsJson).HasColumnName("line_items_json").HasColumnType("jsonb");
+
+            entity.HasIndex(e => e.ShopId);
+            entity.HasIndex(e => e.AccountId);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.LastSnapshotAt);
         });
 
         // ========================================

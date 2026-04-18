@@ -655,6 +655,7 @@ public class ProductMasterService : IProductMasterService
                 PublishedAt = product.PublishedAt,
                 AverageRating = product.AverageRating,
                 ReviewCount = product.ReviewCount,
+                Sales = product.Sales,
                 Images = productImages.Select(i => i.ToDto()).ToList(),
                 Versions = filteredVersions.Select(v => new ProductVersionDetailDto
                 {
@@ -785,6 +786,7 @@ public class ProductMasterService : IProductMasterService
                     PublishedAt = product.PublishedAt,
                     AverageRating = product.AverageRating,
                     ReviewCount = product.ReviewCount,
+                    Sales = product.Sales,
                     Images = productImages.Select(i => i.ToDto()).ToList(),
                     Versions = filteredVersions.Select(v => new ProductVersionDetailDto
                     {
@@ -870,6 +872,7 @@ public class ProductMasterService : IProductMasterService
             {
                 ProductId = product.ProductId,
                 ProductName = product.Name,
+                Sales = product.Sales,
                 CurrentStatus = product.Status.ToString(),
                 ModerationStatus = product.ModerationStatus.ToString(),
                 SubmittedAt = product.UpdatedAt, // UpdatedAt represents submission time

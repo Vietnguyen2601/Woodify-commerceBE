@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Interfaces;
 using OrderService.Application.DTOs;
+using OrderService.Application.Services;
 using OrderService.Domain.Entities;
 using OrderService.Infrastructure.Repositories.IRepositories;
 using Shared.Events;
@@ -17,15 +18,18 @@ public class PaymentOrdersPaidConsumer
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly RabbitMQConsumer _consumer;
     private readonly ILogger<PaymentOrdersPaidConsumer> _logger;
+    private readonly OrderSideEffectPublisher _orderSideEffects;
 
     public PaymentOrdersPaidConsumer(
         IServiceScopeFactory scopeFactory,
         RabbitMQConsumer consumer,
-        ILogger<PaymentOrdersPaidConsumer> logger)
+        ILogger<PaymentOrdersPaidConsumer> logger,
+        OrderSideEffectPublisher orderSideEffects)
     {
         _scopeFactory = scopeFactory;
         _consumer = consumer;
         _logger = logger;
+        _orderSideEffects = orderSideEffects;
     }
 
     public void StartListening()
@@ -79,9 +83,14 @@ public class PaymentOrdersPaidConsumer
                     continue;
                 }
 
+                var oldStatus = order.Status.ToString();
                 order.Status = OrderStatus.COMPLETED;
                 order.UpdatedAt = DateTime.UtcNow;
                 await orderRepository.UpdateAsync(order);
+
+                var fullOrder = await orderRepository.GetOrderWithItemsAsync(order.OrderId);
+                if (fullOrder != null)
+                    _orderSideEffects.PublishAfterStatusChange(fullOrder, oldStatus, OrderStatus.COMPLETED.ToString());
 
                 if (notifier != null)
                 {

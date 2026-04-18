@@ -98,6 +98,7 @@ for (int i = 0; i < 5; i++)
         builder.Services.AddSingleton<ShopEventConsumer>();
         builder.Services.AddSingleton<OrderReviewEligibilityConsumer>();
         builder.Services.AddSingleton<OrderDeliveredStockConsumer>();
+        builder.Services.AddSingleton<OrderProductMirrorConsumer>();
 
         rabbitMQAvailable = true;
         break;

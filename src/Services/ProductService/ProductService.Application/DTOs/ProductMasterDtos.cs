@@ -115,6 +115,9 @@ public class ProductMasterDto
 
     /// <summary>Visible review count for this product master.</summary>
     public int ReviewCount { get; set; }
+
+    /// <summary>Total units sold (synced from orders).</summary>
+    public int Sales { get; set; }
 }
 
 /// <summary>
@@ -143,6 +146,9 @@ public class ProductMasterDetailDto
 
     public double? AverageRating { get; set; }
     public int ReviewCount { get; set; }
+
+    /// <summary>Total units sold (synced from orders).</summary>
+    public int Sales { get; set; }
 
     /// <summary>All images for this product, sorted by SortOrder</summary>
     public List<ImageUrlDto> Images { get; set; } = new();
@@ -240,6 +246,10 @@ public class SubmissionStatusDto
 {
     public Guid ProductId { get; set; }
     public string ProductName { get; set; } = string.Empty;
+
+    /// <summary>Total units sold (synced from orders).</summary>
+    public int Sales { get; set; }
+
     public string CurrentStatus { get; set; } = string.Empty; // DRAFT, PENDING_APPROVAL, APPROVED, REJECTED, PUBLISHED, ARCHIVED
     public string ModerationStatus { get; set; } = string.Empty; // PENDING, APPROVED, REJECTED
     public DateTime? SubmittedAt { get; set; }
