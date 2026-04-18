@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 using PaymentService.Application.DTOs;
 using PaymentService.Application.Interfaces;
 using Shared.Results;
@@ -119,21 +120,35 @@ public class PaymentsController : ControllerBase
     [ProducesResponseType(typeof(PayOsWebhookResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(PayOsWebhookResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<PayOsWebhookResponse>> HandleWebhook(
-        [FromBody] PayOsWebhookData webhook)
+        [FromBody] JsonElement payload)
     {
+        var webhook = payload.Deserialize<PayOsWebhookData>(new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+        if (webhook == null)
+        {
+            _logger.LogWarning("Invalid webhook payload: cannot deserialize");
+            return Ok(new PayOsWebhookResponse { Code = "01", Desc = "Invalid data" });
+        }
+
         _logger.LogInformation("PayOS webhook received. OrderCode: {OrderCode}, Status: {Status}",
             webhook.Data?.OrderCode, webhook.Data?.Status);
 
-        var result = await _webhookHandler.HandleWebhookAsync(webhook);
-
-        // PayOS expects 200 OK with code "00" for success, or code "01" for failure
-        if (result.Code == "00")
+        JsonElement? rawData = null;
+        if (payload.TryGetProperty("data", out var dataElement))
         {
-            return Ok(result);
+            rawData = dataElement.Clone();
         }
 
-        _logger.LogWarning("Webhook handler returned error: {Code} - {Desc}", result.Code, result.Desc);
-        return StatusCode(StatusCodes.Status400BadRequest, result);
+        var result = await _webhookHandler.HandleWebhookAsync(webhook, rawData);
+        if (result.Code != "00")
+        {
+            _logger.LogWarning("Webhook handler returned error: {Code} - {Desc}", result.Code, result.Desc);
+        }
+
+        // Always return 200 so provider webhook validation/retries are not blocked by HTTP status.
+        return Ok(result);
     }
 
     /// <summary>

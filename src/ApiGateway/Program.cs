@@ -18,6 +18,8 @@ builder.Host.UseSerilog((ctx, _, cfg) => cfg
         outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}",
         theme: AnsiConsoleTheme.Code));
 
+ApplyReverseProxyEnvOverrides(builder.Configuration);
+
 // ================================================================
 // YARP REVERSE PROXY CONFIGURATION
 // ================================================================
@@ -30,10 +32,19 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "https://localhost:5173")
-               .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials();
+        var allowedOrigins = ParseAllowedOrigins(builder.Configuration["GATEWAY_ALLOWED_ORIGINS"]);
+        if (allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+            return;
+        }
+
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
     });
 });
 
@@ -58,3 +69,51 @@ app.MapReverseProxy();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "api-gateway" }));
 
 app.Run();
+
+static void ApplyReverseProxyEnvOverrides(IConfiguration configuration)
+{
+    var envToConfigMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["GATEWAY_IDENTITY_URL"] =
+            "ReverseProxy:Clusters:identity-cluster:Destinations:identity-destination:Address",
+        ["GATEWAY_ROLES_URL"] =
+            "ReverseProxy:Clusters:identity-cluster:Destinations:identity-destination:Address",
+        ["GATEWAY_ACCOUNTS_URL"] =
+            "ReverseProxy:Clusters:identity-cluster:Destinations:identity-destination:Address",
+        ["GATEWAY_AUTH_URL"] =
+            "ReverseProxy:Clusters:identity-cluster:Destinations:identity-destination:Address",
+        ["GATEWAY_SHOP_URL"] =
+            "ReverseProxy:Clusters:shop-cluster:Destinations:shop-destination:Address",
+        ["GATEWAY_PRODUCT_URL"] =
+            "ReverseProxy:Clusters:product-cluster:Destinations:product-destination:Address",
+        ["GATEWAY_INVENTORY_URL"] =
+            "ReverseProxy:Clusters:inventory-cluster:Destinations:inventory-destination:Address",
+        ["GATEWAY_ORDER_URL"] =
+            "ReverseProxy:Clusters:order-cluster:Destinations:order-destination:Address",
+        ["GATEWAY_PAYMENT_URL"] =
+            "ReverseProxy:Clusters:payment-cluster:Destinations:payment-destination:Address",
+        ["GATEWAY_SHIPMENT_URL"] =
+            "ReverseProxy:Clusters:shipment-cluster:Destinations:shipment-destination:Address"
+    };
+
+    foreach (var mapping in envToConfigMap)
+    {
+        var envValue = Environment.GetEnvironmentVariable(mapping.Key);
+        if (!string.IsNullOrWhiteSpace(envValue))
+        {
+            configuration[mapping.Value] = envValue.Trim();
+        }
+    }
+}
+
+static string[] ParseAllowedOrigins(string? originsCsv)
+{
+    if (string.IsNullOrWhiteSpace(originsCsv))
+        return Array.Empty<string>();
+
+    return originsCsv
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Where(origin => Uri.TryCreate(origin, UriKind.Absolute, out _))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+}

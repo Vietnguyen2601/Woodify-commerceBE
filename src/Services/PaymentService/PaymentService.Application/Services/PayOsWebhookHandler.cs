@@ -39,7 +39,7 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
     /// <summary>
     /// Xử lý webhook PayOS
     /// </summary>
-    public async Task<PayOsWebhookResponse> HandleWebhookAsync(PayOsWebhookData webhook)
+    public async Task<PayOsWebhookResponse> HandleWebhookAsync(PayOsWebhookData webhook, JsonElement? rawData = null)
     {
         try
         {
@@ -55,7 +55,7 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
             if (webhook.Signature?.Equals("manual-confirm", StringComparison.Ordinal) != true &&
                 webhook.Signature?.Equals("auto-polling", StringComparison.Ordinal) != true)
             {
-                if (!VerifySignature(webhook))
+                if (!VerifySignature(webhook, rawData))
                 {
                     _logger.LogWarning("Webhook signature verification failed for orderCode: {OrderCode}",
                         webhook.Data.OrderCode);
@@ -79,7 +79,9 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 
             _logger.LogInformation("Payment found: {PaymentId}, Status: {Status}", payment.PaymentId, payment.Status);
 
-            if (webhook.Data.Status?.ToUpper() == "PAID")
+            var normalizedStatus = ResolveWebhookStatus(webhook);
+
+            if (normalizedStatus == "PAID")
             {
                 if (payment.Status == PaymentStatus.Succeeded)
                 {
@@ -89,12 +91,18 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
 
                 await HandleSuccessfulPaymentAsync(payment, webhook.Data);
             }
-            else if (webhook.Data.Status?.ToUpper() == "CANCELLED")
+            else if (normalizedStatus == "CANCELLED")
             {
                 payment.Status = PaymentStatus.Failed;
                 payment.UpdatedAt = DateTime.UtcNow;
                 await _paymentRepository.UpdateAsync(payment);
                 _logger.LogInformation("Payment cancelled: {PaymentId}", payment.PaymentId);
+            }
+            else
+            {
+                _logger.LogWarning("Unsupported PayOS status: {Status} for orderCode: {OrderCode}",
+                    webhook.Data.Status, webhook.Data.OrderCode);
+                return new PayOsWebhookResponse { Code = "01", Desc = $"Unsupported status: {webhook.Data.Status}" };
             }
 
             return new PayOsWebhookResponse { Code = "00", Desc = "success" };
@@ -210,7 +218,7 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
         return new List<Guid>();
     }
 
-    private bool VerifySignature(PayOsWebhookData webhook)
+    private bool VerifySignature(PayOsWebhookData webhook, JsonElement? rawData)
     {
         try
         {
@@ -220,23 +228,16 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
                 return false;
             }
 
-            var dataToVerify = webhook.Data.OrderCode
-                + webhook.Data.Amount
-                + webhook.Data.Description
-                + webhook.Data.OrderCode
-                + webhook.Data.Reference;
+            var providedSignature = webhook.Signature.Trim();
+            var canonical = rawData.HasValue && rawData.Value.ValueKind == JsonValueKind.Object
+                ? BuildCanonicalDataString(rawData.Value)
+                : BuildCanonicalDataString(webhook.Data);
 
-            _logger.LogDebug("Webhook signature verification - Data: {Data}, Signature: {Signature}",
-                dataToVerify, webhook.Signature);
-
-            var checksumKeyBytes = Convert.FromHexString(_payOsOptions.ChecksumKey);
-            using var hmac = new HMACSHA256(checksumKeyBytes);
-            var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(dataToVerify));
-            var calculatedSignature = BitConverter.ToString(hash).Replace("-", "").ToLower();
-
-            var isValid = calculatedSignature.Equals(webhook.Signature, StringComparison.OrdinalIgnoreCase);
-            _logger.LogInformation("Webhook signature verification: {Result}. Calculated: {Calculated}, Provided: {Provided}",
-                isValid, calculatedSignature, webhook.Signature);
+            var calculated = GenerateHmacSignature(canonical);
+            var isValid = calculated.Equals(providedSignature, StringComparison.OrdinalIgnoreCase);
+            _logger.LogInformation(
+                "Webhook signature verification: {Result}. CanonicalData: {CanonicalData}. Calculated: {Calculated}. Provided: {Provided}",
+                isValid, canonical, calculated, providedSignature);
 
             return isValid;
         }
@@ -245,6 +246,72 @@ public class PayOsWebhookHandler : IPayOsWebhookHandler
             _logger.LogError(ex, "Error verifying webhook signature");
             return false;
         }
+    }
+
+    private static string ResolveWebhookStatus(PayOsWebhookData webhook)
+    {
+        var status = webhook.Data?.Status?.Trim().ToUpperInvariant();
+        if (!string.IsNullOrWhiteSpace(status))
+            return status;
+
+        var dataCode = webhook.Data?.Code?.Trim();
+        if (string.Equals(dataCode, "00", StringComparison.OrdinalIgnoreCase))
+            return "PAID";
+
+        var rootCode = webhook.Code?.Trim();
+        if (string.Equals(rootCode, "00", StringComparison.OrdinalIgnoreCase))
+            return "PAID";
+
+        return string.Empty;
+    }
+
+    private static string BuildCanonicalDataString(JsonElement dataObject)
+    {
+        var pairs = dataObject.EnumerateObject()
+            .OrderBy(p => p.Name, StringComparer.Ordinal)
+            .Select(p => $"{p.Name}={ConvertJsonValueToCanonicalString(p.Value)}");
+        return string.Join("&", pairs);
+    }
+
+    private static string BuildCanonicalDataString(PayOsWebhookPaymentData data)
+    {
+        var fields = new SortedDictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["accountName"] = data.AccountName ?? string.Empty,
+            ["accountNumber"] = data.AccountNumber ?? string.Empty,
+            ["amount"] = data.Amount.ToString(),
+            ["code"] = data.Code ?? string.Empty,
+            ["currency"] = data.Currency ?? string.Empty,
+            ["desc"] = data.Desc ?? string.Empty,
+            ["description"] = data.Description ?? string.Empty,
+            ["orderCode"] = data.OrderCode.ToString(),
+            ["reference"] = data.Reference ?? string.Empty,
+            ["status"] = data.Status ?? string.Empty,
+            ["transactionDateTime"] = data.TransactionDateTime ?? string.Empty
+        };
+
+        return string.Join("&", fields.Select(kv => $"{kv.Key}={kv.Value}"));
+    }
+
+    private static string ConvertJsonValueToCanonicalString(JsonElement value)
+    {
+        return value.ValueKind switch
+        {
+            JsonValueKind.Null or JsonValueKind.Undefined => string.Empty,
+            JsonValueKind.String => value.GetString() ?? string.Empty,
+            JsonValueKind.Number => value.GetRawText(),
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            _ => value.GetRawText()
+        };
+    }
+
+    private string GenerateHmacSignature(string data)
+    {
+        var keyBytes = Encoding.UTF8.GetBytes(_payOsOptions.ChecksumKey);
+        using var hmac = new HMACSHA256(keyBytes);
+        var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
+        return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
     }
 
     #endregion

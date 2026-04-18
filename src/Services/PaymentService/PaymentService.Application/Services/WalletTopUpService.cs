@@ -17,7 +17,6 @@ public class WalletTopUpService
     private readonly IWalletRepository _walletRepository;
     private readonly IPaymentRepository _paymentRepository;
     private readonly IPayOsService _payOsService;
-    private readonly IPaymentPollingTrigger _pollingTrigger;
     private readonly PaymentCallbackOptions _callbackOptions;
     private readonly ILogger<WalletTopUpService> _logger;
 
@@ -29,14 +28,12 @@ public class WalletTopUpService
         IWalletRepository walletRepository,
         IPaymentRepository paymentRepository,
         IPayOsService payOsService,
-        IPaymentPollingTrigger pollingTrigger,
         IOptions<PaymentCallbackOptions> callbackOptions,
         ILogger<WalletTopUpService> logger)
     {
         _walletRepository = walletRepository;
         _paymentRepository = paymentRepository;
         _payOsService = payOsService;
-        _pollingTrigger = pollingTrigger;
         _callbackOptions = callbackOptions.Value;
         _logger = logger;
     }
@@ -194,9 +191,6 @@ public class WalletTopUpService
 
             _logger.LogInformation("Payment record created: {PaymentId}, OrderCode: {OrderCode}",
                 savedPayment.PaymentId, orderCode);
-
-            // Trigger polling session để auto-detect khi user thanh toán xong
-            _pollingTrigger.Trigger();
 
             // Return response
             return ServiceResult<WalletTopUpResponse>.Created(new WalletTopUpResponse
