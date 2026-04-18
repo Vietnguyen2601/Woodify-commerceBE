@@ -3,6 +3,7 @@ using ShopService.Infrastructure.Repositories;
 using ShopService.Infrastructure.Repositories.IRepositories;
 using ShopService.Infrastructure.UnitOfWork;
 using ShopService.Application.Interfaces;
+using ShopService.Application.Queries;
 using ShopService.Application.Services;
 using ShopService.Application.Validators;
 using ShopService.Infrastructure.Data.Context;
@@ -21,7 +22,8 @@ namespace ShopService.APIService.Extensions
 
             // Repositories
             services.AddScoped<IShopRepository, ShopRepository>();
-            
+            services.AddScoped<IShopReadModelTotalsQuery, ShopReadModelTotalsQuery>();
+
             // Dashboard Repository
             services.AddScoped<IDashboardRepository, DashboardRepository>();
 
@@ -29,8 +31,9 @@ namespace ShopService.APIService.Extensions
             services.AddScoped<IShopService>(sp =>
             {
                 var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
+                var totalsQuery = sp.GetRequiredService<IShopReadModelTotalsQuery>();
                 var publisher = sp.GetService<RabbitMQPublisher>();
-                return new ShopService.Application.Services.ShopService(unitOfWork, publisher);
+                return new ShopService.Application.Services.ShopService(unitOfWork, totalsQuery, publisher);
             });
             
             // Dashboard Service

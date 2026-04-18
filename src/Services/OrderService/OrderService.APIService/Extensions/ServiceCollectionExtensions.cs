@@ -34,12 +34,7 @@ namespace OrderService.APIService.Extensions
             services.AddScoped<ICartService, CartService>();
             services.AddScoped<IOrderService, Application.Services.OrderService>();
             services.AddScoped<IDashboardService, DashboardService>();
-
-            // Register event consumers (startup uses singletons from Program.cs when RabbitMQ is available)
-            services.AddScoped<ProductEventConsumer>();
-            services.AddScoped<ProductMasterEventConsumer>();
-            services.AddScoped<CategoryEventConsumer>();
-            services.AddScoped<ShippingFeeEventConsumer>();
+            services.AddScoped<IAnalyticsService, AnalyticsService>();
 
             return services;
         }

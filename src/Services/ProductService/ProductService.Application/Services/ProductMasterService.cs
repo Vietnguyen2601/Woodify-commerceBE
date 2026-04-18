@@ -34,6 +34,37 @@ public class ProductMasterService : IProductMasterService
         _shopRegistry = shopRegistry;
     }
 
+    /// <summary>
+    /// Đồng bộ OrderService: ProductStatusChanged cập nhật ProductVersionCache;
+    /// ProductMasterUpdated cập nhật ProductMasterCache (analytics, v.v.).
+    /// </summary>
+    private async Task PublishProductMasterStateForOrderSyncAsync(Domain.Entities.ProductMaster product)
+    {
+        var changedAt = product.UpdatedAt ?? DateTime.UtcNow;
+
+        _eventPublisher.PublishProductStatusChanged(new ProductStatusChangedEvent
+        {
+            ProductId = product.ProductId,
+            Status = product.Status.ToString(),
+            ChangedAt = changedAt
+        });
+
+        var versions = await _productVersionRepository.GetByProductIdAsync(product.ProductId);
+        _eventPublisher.PublishProductMasterUpdated(new ProductMasterUpdatedEvent
+        {
+            ProductId = product.ProductId,
+            ShopId = product.ShopId,
+            CategoryId = product.CategoryId,
+            Name = product.Name,
+            Description = product.Description,
+            Status = product.Status.ToString(),
+            ModerationStatus = product.ModerationStatus.ToString(),
+            HasVersions = versions.Count != 0,
+            UpdatedAt = changedAt,
+            EventType = "ProductMasterUpdated"
+        });
+    }
+
     public async Task<ServiceResult<ProductMasterDto>> GetByIdAsync(Guid id)
     {
         var product = await _productMasterRepository.GetByIdAsync(id);
@@ -253,7 +284,9 @@ public class ProductMasterService : IProductMasterService
 
             await _productMasterRepository.UpdateAsync(product);
 
-            // Publish event để thông báo cho OrderService
+            await PublishProductMasterStateForOrderSyncAsync(product);
+
+            // Publish event để thông báo cho OrderService (version cache + soft-delete versions)
             _eventPublisher.PublishProductDeleted(new ProductDeletedEvent
             {
                 ProductId = product.ProductId,
@@ -286,13 +319,7 @@ public class ProductMasterService : IProductMasterService
             product.UpdatedAt = DateTime.UtcNow;
             await _productMasterRepository.UpdateAsync(product);
 
-            // Publish status change event
-            _eventPublisher.PublishProductStatusChanged(new ProductStatusChangedEvent
-            {
-                ProductId = product.ProductId,
-                Status = product.Status.ToString(),
-                ChangedAt = DateTime.UtcNow
-            });
+            await PublishProductMasterStateForOrderSyncAsync(product);
 
             return ServiceResult<ProductMasterDto>.Success(product.ToDto(), "Product archived successfully");
         }
@@ -348,13 +375,7 @@ public class ProductMasterService : IProductMasterService
             product.UpdatedAt = DateTime.UtcNow;
             await _productMasterRepository.UpdateAsync(product);
 
-            // Publish status change event
-            _eventPublisher.PublishProductStatusChanged(new ProductStatusChangedEvent
-            {
-                ProductId = product.ProductId,
-                Status = product.Status.ToString(),
-                ChangedAt = DateTime.UtcNow
-            });
+            await PublishProductMasterStateForOrderSyncAsync(product);
 
             return ServiceResult<ProductMasterDto>.Success(product.ToDto(), "Product published successfully");
         }
@@ -465,13 +486,7 @@ public class ProductMasterService : IProductMasterService
             product.UpdatedAt = DateTime.UtcNow;
             await _productMasterRepository.UpdateAsync(product);
 
-            // Publish status change event
-            _eventPublisher.PublishProductStatusChanged(new ProductStatusChangedEvent
-            {
-                ProductId = product.ProductId,
-                Status = product.Status.ToString(),
-                ChangedAt = DateTime.UtcNow
-            });
+            await PublishProductMasterStateForOrderSyncAsync(product);
 
             return ServiceResult<ProductMasterDto>.Success(product.ToDto(), "Product submitted for approval successfully");
         }
@@ -495,13 +510,7 @@ public class ProductMasterService : IProductMasterService
             dto.MapToModerate(product);
             await _productMasterRepository.UpdateAsync(product);
 
-            // Publish status change event
-            _eventPublisher.PublishProductStatusChanged(new ProductStatusChangedEvent
-            {
-                ProductId = product.ProductId,
-                Status = product.Status.ToString(),
-                ChangedAt = DateTime.UtcNow
-            });
+            await PublishProductMasterStateForOrderSyncAsync(product);
 
             var message = dto.ModerationStatus == Domain.Entities.ModerationStatus.APPROVED
                 ? "Product approved successfully"
@@ -839,7 +848,7 @@ public class ProductMasterService : IProductMasterService
             dto.ThumbnailUrl = (await _imageUrlRepository.GetPrimaryImageAsync("PRODUCT", product.ProductId))?.OriginalUrl;
             dto.ShopName = await _shopRegistry.GetNameAsync(product.ShopId);
 
-            // TODO: Publish product submission cancellation event
+            await PublishProductMasterStateForOrderSyncAsync(product);
 
             return ServiceResult<ProductMasterDto>.Success(dto, "Submission cancelled successfully");
         }

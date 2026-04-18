@@ -175,6 +175,7 @@ public class OrderDto
     /// <summary>Customer email mirrored from Identity via account_directory.</summary>
     public string? AccountEmail { get; set; }
     public Guid ShopId { get; set; }
+    public string? ShopName { get; set; }
 
     public double SubtotalVnd { get; set; }
     public double TotalAmountVnd { get; set; }
@@ -243,6 +244,9 @@ public class OrderItemDto
     public string Status { get; set; } = string.Empty;
 
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>Ảnh đại diện phiên bản sản phẩm từ product_version_cache.</summary>
+    public string? ThumbnailUrl { get; set; }
 }
 
 /// <summary>
@@ -317,6 +321,9 @@ public class OrderItemWithProductDetailsDto
     public decimal LengthCm { get; set; }
     public decimal WidthCm { get; set; }
     public decimal HeightCm { get; set; }
+
+    /// <summary>Ảnh đại diện từ product_version_cache.</summary>
+    public string? ThumbnailUrl { get; set; }
 }
 
 /// <summary>
@@ -367,6 +374,9 @@ public class CustomerAccountOrderItemDto
     public decimal LengthCm { get; set; }
     public decimal WidthCm { get; set; }
     public decimal HeightCm { get; set; }
+
+    /// <summary>Ảnh đại diện từ product_version_cache.</summary>
+    public string? ThumbnailUrl { get; set; }
 }
 
 /// <summary>

@@ -84,11 +84,11 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
         Guid? shopId,
         CancellationToken cancellationToken = default)
     {
-        // Only DELIVERED orders count toward "sold". Payment-only COMPLETED is excluded.
+        // Chỉ đơn COMPLETED (cùng rule với analytics /api/analytics/*).
         var versionSales =
             from oi in _context.OrderItems
             join o in _context.Orders on oi.OrderId equals o.OrderId
-            where o.Status == OrderStatus.DELIVERED && (!shopId.HasValue || o.ShopId == shopId.Value)
+            where o.Status == OrderStatus.COMPLETED && (!shopId.HasValue || o.ShopId == shopId.Value)
             group oi by oi.VersionId
             into g
             select new
@@ -119,11 +119,11 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
             .ToList();
     }
 
-    public async Task<List<Order>> GetAllDeliveredOrdersAsync()
+    public async Task<List<Order>> GetAllCompletedOrdersAsync()
     {
         return await _dbSet
             .Include(o => o.OrderItems)
-            .Where(o => o.Status == OrderStatus.DELIVERED)
+            .Where(o => o.Status == OrderStatus.COMPLETED)
             .OrderByDescending(o => o.CreatedAt)
             .ToListAsync();
     }
