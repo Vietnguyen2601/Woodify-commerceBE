@@ -9,8 +9,6 @@ using ShopService.APIService.Extensions;
 using ShopService.APIService.Middlewares;
 using ShopService.APIService.Filters;
 using ShopService.Infrastructure.Data.Context;
-using ShopService.Infrastructure.Data.Seeders;
-
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
@@ -125,9 +123,6 @@ using (var scope = app.Services.CreateScope())
     try
     {
         dbContext.Database.Migrate();
-
-        // Seed initial data
-        await ShopDbSeeder.SeedAsync(dbContext);
     }
     catch (Exception)
     {

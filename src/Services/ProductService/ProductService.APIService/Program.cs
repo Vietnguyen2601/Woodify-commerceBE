@@ -1,5 +1,4 @@
 using ProductService.Infrastructure.Data.Context;
-using ProductService.Infrastructure.Data.Seeders;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.SystemConsole.Themes;
@@ -141,14 +140,10 @@ using (var scope = app.Services.CreateScope())
     {
         dbContext.Database.Migrate();
         Console.WriteLine("Database migration applied successfully");
-
-        // Seed initial data
-        await ProductDbSeeder.SeedAsync(dbContext);
-        Console.WriteLine("Database seeding completed successfully");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Database migration/seeding failed: {ex.Message}");
+        Console.WriteLine($"Database migration failed: {ex.Message}");
     }
 }
 
