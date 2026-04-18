@@ -187,6 +187,104 @@ public class OrderEventPublisher
             Console.WriteLine($"[OrderService] Failed to publish OrderCreatedForShop event: {ex.Message}");
         }
     }
+
+    /// <summary>ProductService order mirror (full snapshot, line items). Exchange order.events / order.product.snapshot</summary>
+    public void PublishOrderSnapshotForProduct(OrderSnapshotForProductEvent evt)
+    {
+        if (_publisher == null)
+        {
+            Console.WriteLine("[OrderService] WARNING: RabbitMQ publisher is not available. Skipping OrderSnapshotForProduct event.");
+            return;
+        }
+
+        try
+        {
+            _publisher.Publish("order.events", "order.product.snapshot", evt);
+            Console.WriteLine($"[OrderService] Published OrderSnapshotForProduct: OrderId={evt.OrderId}, Status={evt.Status}, Lines={evt.Lines.Count}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[OrderService] Failed to publish OrderSnapshotForProduct: {ex.Message}");
+        }
+    }
+
+    public void PublishOrderAwaitingPickup(OrderAwaitingPickupEvent evt)
+    {
+        if (_publisher == null)
+        {
+            Console.WriteLine("[OrderService] WARNING: RabbitMQ publisher is not available. Skipping OrderAwaitingPickup event.");
+            return;
+        }
+
+        try
+        {
+            _publisher.Publish("order.events", "order.awaiting.pickup", evt);
+            Console.WriteLine($"[OrderService] Published OrderAwaitingPickup: OrderId={evt.OrderId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[OrderService] Failed to publish OrderAwaitingPickup: {ex.Message}");
+        }
+    }
+
+    public void PublishOrderReadyToShip(OrderReadyToShipEvent evt)
+    {
+        if (_publisher == null)
+        {
+            Console.WriteLine("[OrderService] WARNING: RabbitMQ publisher is not available. Skipping OrderReadyToShip event.");
+            return;
+        }
+
+        try
+        {
+            _publisher.Publish("order.events", "order.ready.to.ship", evt);
+            Console.WriteLine($"[OrderService] Published OrderReadyToShip: OrderId={evt.OrderId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[OrderService] Failed to publish OrderReadyToShip: {ex.Message}");
+        }
+    }
+
+    /// <summary>PaymentService ghi có ví seller (net) — idempotent theo OrderId.</summary>
+    public void PublishOrderSellerNetEligible(OrderSellerNetEligibleEvent evt)
+    {
+        if (_publisher == null)
+        {
+            Console.WriteLine("[OrderService] WARNING: RabbitMQ not available. Skipping OrderSellerNetEligible.");
+            return;
+        }
+
+        try
+        {
+            _publisher.Publish("order.events", "order.seller.net.eligible", evt);
+            Console.WriteLine($"[OrderService] Published OrderSellerNetEligible: OrderId={evt.OrderId}, Net={evt.NetAmountVnd}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[OrderService] Failed to publish OrderSellerNetEligible: {ex.Message}");
+        }
+    }
+
+    /// <summary>PaymentService hoàn tác ghi có khi đơn hủy/hoàn sau COMPLETED.</summary>
+    public void PublishOrderSellerNetReversed(OrderSellerNetReversedEvent evt)
+    {
+        if (_publisher == null)
+        {
+            Console.WriteLine("[OrderService] WARNING: RabbitMQ not available. Skipping OrderSellerNetReversed.");
+            return;
+        }
+
+        try
+        {
+            _publisher.Publish("order.events", "order.seller.net.reversed", evt);
+            Console.WriteLine($"[OrderService] Published OrderSellerNetReversed: OrderId={evt.OrderId}, Net={evt.NetAmountVnd}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[OrderService] Failed to publish OrderSellerNetReversed: {ex.Message}");
+        }
+    }
 }
 
 

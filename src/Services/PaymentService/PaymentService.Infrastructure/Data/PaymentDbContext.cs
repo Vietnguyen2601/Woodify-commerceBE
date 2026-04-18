@@ -19,6 +19,7 @@ public class PaymentDbContext : DbContext
     public DbSet<Payment> Payments { get; set; } = null!;
     public DbSet<Wallet> Wallets { get; set; } = null!;
     public DbSet<WalletTransaction> WalletTransactions { get; set; } = null!;
+    public DbSet<WithdrawalTicket> WithdrawalTickets { get; set; } = null!;
 
     private static string GetConnectionString(string connectionStringName)
     {
@@ -145,6 +146,12 @@ public class PaymentDbContext : DbContext
             entity.Property(e => e.AccountId)
                 .HasColumnName("account_id");
 
+            entity.Property(e => e.WalletKind)
+                .HasColumnName("wallet_kind")
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .HasDefaultValue(WalletKind.Buyer);
+
             entity.Property(e => e.BalanceVnd)
                 .HasColumnName("balance_cents")
                 .HasDefaultValue(0);
@@ -166,7 +173,7 @@ public class PaymentDbContext : DbContext
             entity.Property(e => e.UpdatedAt)
                 .HasColumnName("updated_at");
 
-            entity.HasIndex(e => e.AccountId);
+            entity.HasIndex(e => new { e.AccountId, e.WalletKind }).IsUnique();
         });
 
         // WalletTransaction configuration
@@ -198,8 +205,19 @@ public class PaymentDbContext : DbContext
             entity.Property(e => e.RelatedOrderId)
                 .HasColumnName("related_order_id");
 
+            entity.Property(e => e.RelatedShopId)
+                .HasColumnName("related_shop_id");
+
             entity.Property(e => e.RelatedPaymentId)
                 .HasColumnName("related_payment_id");
+
+            entity.Property(e => e.ReferenceType)
+                .HasColumnName("reference_type")
+                .HasMaxLength(40);
+
+            entity.Property(e => e.IdempotencyKey)
+                .HasColumnName("idempotency_key")
+                .HasMaxLength(200);
 
             entity.Property(e => e.Status)
                 .HasColumnName("status")
@@ -225,6 +243,36 @@ public class PaymentDbContext : DbContext
             entity.HasIndex(e => e.WalletId);
             entity.HasIndex(e => e.RelatedOrderId);
             entity.HasIndex(e => e.RelatedPaymentId);
+            entity.HasIndex(e => e.IdempotencyKey)
+                .IsUnique()
+                .HasFilter("\"idempotency_key\" IS NOT NULL");
+        });
+
+        modelBuilder.Entity<WithdrawalTicket>(entity =>
+        {
+            entity.ToTable("withdrawal_ticket");
+            entity.HasKey(e => e.TicketId);
+
+            entity.Property(e => e.TicketId).HasColumnName("ticket_id");
+            entity.Property(e => e.SellerAccountId).HasColumnName("seller_account_id");
+            entity.Property(e => e.ShopId).HasColumnName("shop_id");
+            entity.Property(e => e.AmountVnd).HasColumnName("amount_vnd");
+            entity.Property(e => e.BankName).HasColumnName("bank_name").HasMaxLength(200);
+            entity.Property(e => e.BankAccountNumber).HasColumnName("bank_account_number").HasMaxLength(64);
+            entity.Property(e => e.BankAccountHolder).HasColumnName("bank_account_holder").HasMaxLength(200);
+            entity.Property(e => e.Status)
+                .HasColumnName("status")
+                .HasConversion<string>()
+                .HasMaxLength(20);
+            entity.Property(e => e.ReviewedByAccountId).HasColumnName("reviewed_by_account_id");
+            entity.Property(e => e.AdminNote).HasColumnName("admin_note");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.ReviewedAt).HasColumnName("reviewed_at");
+            entity.Property(e => e.PaidAt).HasColumnName("paid_at");
+
+            entity.HasIndex(e => e.SellerAccountId);
+            entity.HasIndex(e => e.ShopId);
+            entity.HasIndex(e => e.Status);
         });
     }
 }

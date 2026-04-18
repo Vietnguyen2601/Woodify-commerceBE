@@ -1,8 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrderService.Application.Interfaces;
-using OrderService.Application.DTOs;
-using OrderService.Domain.Entities;
+using OrderService.Application.Services;
 using OrderService.Infrastructure.Repositories.IRepositories;
 using Shared.Events;
 using Shared.Messaging;
@@ -10,21 +8,26 @@ using Shared.Messaging;
 namespace OrderService.Application.Consumers;
 
 /// <summary>
-/// Consumes PaymentOrdersPaidEvent — marks orders COMPLETED after PayOS or wallet payment.
+/// Consumes <see cref="PaymentOrdersPaidEvent"/> after PayOS, wallet, or other successful payment.
+/// Order aggregate status is <b>not</b> changed here (no COMPLETED from payment).
+/// Publishes <see cref="OrderSellerNetEligibleEvent"/> so PaymentService credits the shop owner wallet (idempotent).
 /// </summary>
 public class PaymentOrdersPaidConsumer
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly RabbitMQConsumer _consumer;
+    private readonly OrderEventPublisher _orderEventPublisher;
     private readonly ILogger<PaymentOrdersPaidConsumer> _logger;
 
     public PaymentOrdersPaidConsumer(
         IServiceScopeFactory scopeFactory,
         RabbitMQConsumer consumer,
+        OrderEventPublisher orderEventPublisher,
         ILogger<PaymentOrdersPaidConsumer> logger)
     {
         _scopeFactory = scopeFactory;
         _consumer = consumer;
+        _orderEventPublisher = orderEventPublisher;
         _logger = logger;
     }
 
@@ -58,7 +61,7 @@ public class PaymentOrdersPaidConsumer
         {
             using var scope = _scopeFactory.CreateScope();
             var orderRepository = scope.ServiceProvider.GetRequiredService<IOrderRepository>();
-            var notifier = scope.ServiceProvider.GetService<IOrderRealtimeNotifier>();
+            var shopInfoCache = scope.ServiceProvider.GetRequiredService<IShopInfoCacheRepository>();
 
             var orders = await orderRepository.GetByIdsAsync(evt.OrderIds);
             foreach (var order in orders)
@@ -71,38 +74,38 @@ public class PaymentOrdersPaidConsumer
                     continue;
                 }
 
-                if (order.Status != OrderStatus.PENDING)
+                _logger.LogInformation(
+                    "Payment {PaymentId} succeeded for Order {OrderId} ({Provider}); order status left unchanged ({Status})",
+                    evt.PaymentId,
+                    order.OrderId,
+                    evt.Provider,
+                    order.Status);
+
+                var shop = await shopInfoCache.GetByShopIdAsync(order.ShopId);
+                if (shop == null || shop.OwnerAccountId == Guid.Empty)
                 {
-                    _logger.LogInformation(
-                        "Skip Order {OrderId}: status is {Status}, expected PENDING",
-                        order.OrderId, order.Status);
+                    _logger.LogWarning(
+                        "Skip seller net for Order {OrderId}: shop missing or no OwnerAccountId (ShopId={ShopId})",
+                        order.OrderId,
+                        order.ShopId);
                     continue;
                 }
 
-                order.Status = OrderStatus.COMPLETED;
-                order.UpdatedAt = DateTime.UtcNow;
-                await orderRepository.UpdateAsync(order);
+                var net = (long)Math.Max(0, order.TotalAmountVnd - order.CommissionVnd);
+                if (net <= 0)
+                    continue;
 
-                if (notifier != null)
+                _orderEventPublisher.PublishOrderSellerNetEligible(new OrderSellerNetEligibleEvent
                 {
-                    await notifier.NotifyOrderShipmentStatusAsync(new OrderShipmentRealtimePayload
-                    {
-                        ShipmentId = Guid.Empty,
-                        OrderId = order.OrderId,
-                        ShopId = order.ShopId,
-                        AccountId = order.AccountId,
-                        ShipmentPreviousStatus = string.Empty,
-                        ShipmentNewStatus = string.Empty,
-                        OrderPreviousStatus = OrderStatus.PENDING.ToString(),
-                        OrderNewStatus = OrderStatus.COMPLETED.ToString(),
-                        OrderRowUpdated = true,
-                        OccurredAt = DateTime.UtcNow
-                    });
-                }
-
-                _logger.LogInformation(
-                    "Order {OrderId} completed after payment {PaymentId} ({Provider})",
-                    order.OrderId, evt.PaymentId, evt.Provider);
+                    OrderId = order.OrderId,
+                    ShopId = order.ShopId,
+                    SellerAccountId = shop.OwnerAccountId,
+                    TotalAmountVnd = (long)order.TotalAmountVnd,
+                    CommissionVnd = order.CommissionVnd,
+                    NetAmountVnd = net,
+                    OccurredAt = DateTime.UtcNow,
+                    IdempotencyKey = $"order_net:{order.OrderId}"
+                });
             }
         }
         catch (Exception ex)

@@ -36,7 +36,8 @@ public static class ProductMasterMapper
             StockQuantity = totalStock > 0 ? totalStock : null,
             WoodType = firstVersion?.WoodType,
             AverageRating = product.AverageRating,
-            ReviewCount = product.ReviewCount
+            ReviewCount = product.ReviewCount,
+            Sales = product.Sales
         };
     }
 

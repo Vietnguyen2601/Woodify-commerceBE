@@ -231,7 +231,7 @@ public class OrderDeliveredStockEvent
 
 /// <summary>
 /// PaymentService publishes after gateway payment succeeds for one or more shop orders (e.g. PayOS PAID).
-/// OrderService sets orders to COMPLETED (PayOS, wallet, etc.).
+/// OrderService consumes for logging/audit only; order status is not set to COMPLETED from payment.
 /// Exchange: payment.events / Routing key: payment.orders.paid
 /// </summary>
 public class PaymentOrdersPaidEvent

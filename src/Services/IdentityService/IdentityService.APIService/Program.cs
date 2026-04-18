@@ -202,8 +202,7 @@ using (var scope = app.Services.CreateScope())
     {
         dbContext.Database.Migrate();
         
-        // Seed initial data
-        await AccountDbSeeder.SeedAsync(dbContext);
+        await RoleDbSeeder.SeedAsync(dbContext);
     }
     catch (Exception)
     {

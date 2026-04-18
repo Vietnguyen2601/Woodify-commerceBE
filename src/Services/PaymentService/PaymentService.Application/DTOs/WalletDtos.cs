@@ -105,6 +105,9 @@ public class WalletResponse
     public Guid WalletId { get; set; }
     public Guid AccountId { get; set; }
 
+    /// <summary>Buyer hoặc Seller.</summary>
+    public string WalletKind { get; set; } = "Buyer";
+
     /// <summary>
     /// Số dư (VND)
     /// </summary>
@@ -146,6 +149,8 @@ public class WalletTransactionResponse
 
     public Guid? RelatedOrderId { get; set; }
     public Guid? RelatedPaymentId { get; set; }
+    public Guid? RelatedShopId { get; set; }
+    public string? ReferenceType { get; set; }
 
     public string Status { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }

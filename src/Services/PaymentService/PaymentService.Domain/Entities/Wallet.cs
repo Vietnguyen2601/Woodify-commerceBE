@@ -15,6 +15,11 @@ public class Wallet
     public Guid AccountId { get; set; }
 
     /// <summary>
+    /// Một ví / account: Buyer (nạp, thanh toán, doanh thu shop đều dùng row này).
+    /// </summary>
+    public WalletKind WalletKind { get; set; } = WalletKind.Buyer;
+
+    /// <summary>
     /// Số dư (VND)
     /// </summary>
     public long BalanceVnd { get; set; } = 0;

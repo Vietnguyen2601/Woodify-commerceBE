@@ -113,6 +113,9 @@ builder.Services.AddHttpClient<IPayOsService, PayOsService>(client =>
 // ==========================================
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IWalletRepository, WalletRepository>();
+builder.Services.AddScoped<IWithdrawalTicketRepository, WithdrawalTicketRepository>();
+builder.Services.AddScoped<ISellerWalletReadService, SellerWalletReadService>();
+builder.Services.AddScoped<IWithdrawalTicketService, WithdrawalTicketService>();
 
 // ==========================================
 // 5.1 Unit of Work
@@ -159,6 +162,7 @@ for (int attempt = 1; attempt <= 5; attempt++)
         var rabbitMQPublisher = new RabbitMQPublisher(rabbitMQSettings);
         builder.Services.AddSingleton(rabbitMQPublisher);
         builder.Services.AddHostedService<AccountCreatedConsumer>();
+        builder.Services.AddHostedService<SellerSettlementEventsConsumer>();
         break;
     }
     catch (IOException ex)

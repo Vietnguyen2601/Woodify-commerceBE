@@ -4,7 +4,6 @@ using Serilog.Events;
 using Serilog.Sinks.SystemConsole.Themes;
 using Shared.Messaging;
 using OrderService.Infrastructure.Data.Context;
-using OrderService.Infrastructure.Data.Seeders;
 using OrderService.APIService.Extensions;
 using OrderService.APIService.Services;
 using OrderService.APIService.HostedServices;
@@ -65,6 +64,7 @@ builder.Services.AddOrderServices(builder.Configuration);
 
 // Always register publisher; it no-ops if RabbitMQPublisher isn't available
 builder.Services.AddSingleton<OrderEventPublisher>();
+builder.Services.AddSingleton<OrderSideEffectPublisher>();
 
 builder.Services.AddSingleton<OrderService.Application.Interfaces.IOrderRealtimeNotifier,
     OrderService.APIService.Services.OrderRealtimeNotifier>();
@@ -134,14 +134,10 @@ using (var scope = app.Services.CreateScope())
     {
         dbContext.Database.Migrate();
         Console.WriteLine("Database migration applied successfully");
-
-        // Seed initial data
-        await OrderDbSeeder.SeedAsync(dbContext);
-        Console.WriteLine("Database seeding completed successfully");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Database migration/seeding failed: {ex.Message}");
+        Console.WriteLine($"Database migration failed: {ex.Message}");
     }
 }
 

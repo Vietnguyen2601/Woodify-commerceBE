@@ -401,7 +401,7 @@ public class PaymentAppService : IPaymentAppService
     /// - Deduct amount từ wallet
     /// - Tạo WalletTransaction (DEBIT)
     /// - Return payment với remaining balance
-    /// - OrderService: PaymentOrdersPaidEvent (RabbitMQ) → đơn chuyển COMPLETED
+    /// - OrderService: PaymentOrdersPaidEvent (RabbitMQ) - order status unchanged (log/audit only)
     /// </summary>
     private async Task<ServiceResult<CreatePaymentResponse>> CreateWalletPaymentAsync(CreatePaymentRequest request)
     {
