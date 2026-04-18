@@ -36,6 +36,8 @@ namespace ProductService.APIService.Extensions
                 new ImageUrlRepository(sp.GetRequiredService<ProductDbContext>()));
             services.AddScoped<IShopRegistryRepository>(sp =>
                 new ShopRegistryRepository(sp.GetRequiredService<ProductDbContext>()));
+            services.AddScoped<IOrderProductMirrorRepository>(sp =>
+                new OrderProductMirrorRepository(sp.GetRequiredService<ProductDbContext>()));
 
             // Services
             services.AddScoped<IProductMasterService, ProductMasterService>();
@@ -49,6 +51,7 @@ namespace ProductService.APIService.Extensions
 
             services.AddScoped<OrderReviewEligibilityIngestService>();
             services.AddScoped<OrderDeliveredStockIngestService>();
+            services.AddScoped<OrderProductMirrorIngestService>();
 
             return services;
         }
@@ -63,6 +66,9 @@ namespace ProductService.APIService.Extensions
 
             var orderDeliveredStockConsumer = serviceProvider.GetService<OrderDeliveredStockConsumer>();
             orderDeliveredStockConsumer?.StartListening();
+
+            var orderProductMirrorConsumer = serviceProvider.GetService<OrderProductMirrorConsumer>();
+            orderProductMirrorConsumer?.StartListening();
         }
 
         public static IServiceCollection AddValidators(this IServiceCollection services)

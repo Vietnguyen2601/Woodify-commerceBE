@@ -20,6 +20,7 @@ public class OrderService : IOrderService
     private readonly IShopInfoCacheRepository _shopInfoCacheRepository;
     private readonly IAccountDirectoryRepository _accountDirectoryRepository;
     private readonly OrderEventPublisher _orderEventPublisher;
+    private readonly OrderSideEffectPublisher _orderSideEffects;
     private readonly IOrderRealtimeNotifier? _realtimeNotifier;
 
     public OrderService(
@@ -30,6 +31,7 @@ public class OrderService : IOrderService
         IShopInfoCacheRepository shopInfoCacheRepository,
         IAccountDirectoryRepository accountDirectoryRepository,
         OrderEventPublisher orderEventPublisher,
+        OrderSideEffectPublisher orderSideEffects,
         IOrderRealtimeNotifier? realtimeNotifier = null)
     {
         _orderRepository = orderRepository;
@@ -39,6 +41,7 @@ public class OrderService : IOrderService
         _shopInfoCacheRepository = shopInfoCacheRepository;
         _accountDirectoryRepository = accountDirectoryRepository;
         _orderEventPublisher = orderEventPublisher;
+        _orderSideEffects = orderSideEffects;
         _realtimeNotifier = realtimeNotifier;
     }
 
@@ -219,6 +222,8 @@ public class OrderService : IOrderService
                     ProviderServiceCode = order.ProviderServiceCode,
                     CreatedAt = order.CreatedAt
                 });
+
+                _orderSideEffects.PublishOrderSnapshotForProduct(order);
             }
 
             // 10. DELETE ONLY SELECTED/PROCESSED ITEMS FROM CART
@@ -435,6 +440,8 @@ public class OrderService : IOrderService
                 ProviderServiceCode = order.ProviderServiceCode,
                 CreatedAt = order.CreatedAt
             });
+
+            _orderSideEffects.PublishOrderSnapshotForProduct(order);
 
             // ===== REMOVE SELECTED CART ITEMS =====
             // Important: Remove only items that were processed (not entire cart)
@@ -659,32 +666,8 @@ public class OrderService : IOrderService
             // 5. Save changes
             await _orderRepository.UpdateAsync(order);
 
-            // 6. Publish events for dashboard metrics
-            PublishDashboardEvents(order, oldStatus, newStatus.ToString());
-
-            // 7. Notify ProductService: lines eligible for review (event-driven, no HTTP)
-            if (newStatus is OrderStatus.DELIVERED or OrderStatus.COMPLETED)
-            {
-                _orderEventPublisher.PublishOrderReviewEligible(new OrderReviewEligibleEvent
-                {
-                    OrderId = order.OrderId,
-                    ShopId = order.ShopId,
-                    AccountId = order.AccountId,
-                    EligibleAt = DateTime.UtcNow,
-                    Lines = order.OrderItems.Select(oi => new OrderReviewEligibleLineItem
-                    {
-                        OrderItemId = oi.OrderItemId,
-                        VersionId = oi.VersionId
-                    }).ToList()
-                });
-            }
-
-            // 8. Decrement catalog stock only when order is actually delivered (not on payment-only COMPLETED)
-            if (newStatus == OrderStatus.DELIVERED &&
-                !string.Equals(oldStatus, "DELIVERED", StringComparison.OrdinalIgnoreCase))
-            {
-                PublishOrderDeliveredStock(order);
-            }
+            // 6–8. Dashboard, ProductService mirror, review eligibility, delivered stock (event-driven)
+            _orderSideEffects.PublishAfterStatusChange(order, oldStatus, newStatus.ToString());
 
             // 9. SignalR realtime (order list by account/shop/order detail)
             if (_realtimeNotifier != null)
@@ -768,29 +751,7 @@ public class OrderService : IOrderService
             order.UpdatedAt = DateTime.UtcNow;
             await _orderRepository.UpdateAsync(order);
 
-            PublishDashboardEvents(order, oldStatus, mapped.Value.ToString());
-
-            if (mapped is OrderStatus.DELIVERED or OrderStatus.COMPLETED)
-            {
-                _orderEventPublisher.PublishOrderReviewEligible(new OrderReviewEligibleEvent
-                {
-                    OrderId = order.OrderId,
-                    ShopId = order.ShopId,
-                    AccountId = order.AccountId,
-                    EligibleAt = DateTime.UtcNow,
-                    Lines = order.OrderItems.Select(oi => new OrderReviewEligibleLineItem
-                    {
-                        OrderItemId = oi.OrderItemId,
-                        VersionId = oi.VersionId
-                    }).ToList()
-                });
-            }
-
-            if (mapped == OrderStatus.DELIVERED &&
-                !string.Equals(oldStatus, "DELIVERED", StringComparison.OrdinalIgnoreCase))
-            {
-                PublishOrderDeliveredStock(order);
-            }
+            _orderSideEffects.PublishAfterStatusChange(order, oldStatus, mapped.Value.ToString());
 
             payload.OrderPreviousStatus = oldStatus;
             payload.OrderNewStatus = mapped.Value.ToString();
@@ -801,122 +762,6 @@ public class OrderService : IOrderService
         {
             return ServiceResult<OrderShipmentRealtimePayload>.InternalServerError(
                 $"Shipment sync error: {ex.Message}");
-        }
-    }
-
-    private void PublishOrderDeliveredStock(Order order)
-    {
-        if (order.OrderItems == null || !order.OrderItems.Any())
-            return;
-
-        _orderEventPublisher.PublishOrderDeliveredStock(new OrderDeliveredStockEvent
-        {
-            OrderId = order.OrderId,
-            ShopId = order.ShopId,
-            DeliveredAt = DateTime.UtcNow,
-            Lines = order.OrderItems.Select(oi => new OrderDeliveredStockLineItem
-            {
-                VersionId = oi.VersionId,
-                Quantity = oi.Quantity
-            }).ToList()
-        });
-    }
-
-    /// <summary>
-    /// Publish events for dashboard metrics when order status changes
-    /// </summary>
-    private void PublishDashboardEvents(Order order, string oldStatus, string newStatus)
-    {
-        try
-        {
-            // Calculate item count from orderItems
-            var itemCount = order.OrderItems?.Sum(x => x.Quantity) ?? 0;
-            
-            // Get first product version as main product (most common scenario)
-            var mainProduct = order.OrderItems?.FirstOrDefault();
-            var productVersionId = mainProduct?.VersionId;
-            
-            // Always publish OrderStatusChangedEvent
-            var statusChangeEvent = new OrderStatusChangedEvent
-            {
-                OrderId = order.OrderId,
-                ShopId = order.ShopId,
-                PreviousStatus = oldStatus,
-                NewStatus = newStatus,
-                TotalAmountCents = (long)(order.TotalAmountVnd),
-                CommissionCents = (long)(order.CommissionVnd),
-                NetAmountCents = (long)(order.TotalAmountVnd - order.CommissionVnd),
-                StatusChangedAt = DateTime.UtcNow,
-                OrderCreatedAt = order.CreatedAt,
-                ItemCount = itemCount,
-                ProductVersionId = productVersionId
-                // Note: ProductVersionName, CategoryId, CategoryName akan được populated
-                // qua ProductService cache lookup ở ShopService consumer layer
-            };
-            _orderEventPublisher.PublishOrderStatusChanged(statusChangeEvent);
-
-            // Publish OrderCompletedEvent if status became COMPLETED
-            if (newStatus.Equals("COMPLETED", StringComparison.OrdinalIgnoreCase) &&
-                !oldStatus.Equals("COMPLETED", StringComparison.OrdinalIgnoreCase))
-            {
-                var totalAmountCents = (long)(order.TotalAmountVnd);
-                var commissionCents = (long)(order.CommissionVnd);
-                
-                var completedEvent = new OrderCompletedEvent
-                {
-                    OrderId = order.OrderId,
-                    ShopId = order.ShopId,
-                    TotalAmountCents = totalAmountCents,
-                    CommissionRate = order.CommissionRate,
-                    CommissionCents = commissionCents,
-                    CompletedAt = DateTime.UtcNow,
-                    ItemCount = itemCount,
-                    ProductVersionId = productVersionId
-                };
-                _orderEventPublisher.PublishOrderCompleted(completedEvent);
-            }
-
-            // Publish OrderCancelledEvent if status became CANCELLED
-            if (newStatus.Equals("CANCELLED", StringComparison.OrdinalIgnoreCase) &&
-                !oldStatus.Equals("CANCELLED", StringComparison.OrdinalIgnoreCase))
-            {
-                var cancelledEvent = new OrderCancelledEvent
-                {
-                    OrderId = order.OrderId,
-                    ShopId = order.ShopId,
-                    CancelReason = "Order cancelled via dashboard",
-                    CancelledAmountCents = (long)(order.TotalAmountVnd),
-                    CancelledAt = DateTime.UtcNow,
-                    ItemCount = itemCount,
-                    ProductVersionId = productVersionId
-                };
-                _orderEventPublisher.PublishOrderCancelled(cancelledEvent);
-            }
-
-            // Publish OrderRefundedEvent if status became REFUNDED/REFUNDING
-            if ((newStatus.Equals("REFUNDED", StringComparison.OrdinalIgnoreCase) ||
-                 newStatus.Equals("REFUNDING", StringComparison.OrdinalIgnoreCase)) &&
-                !oldStatus.Equals("REFUNDED", StringComparison.OrdinalIgnoreCase) &&
-                !oldStatus.Equals("REFUNDING", StringComparison.OrdinalIgnoreCase))
-            {
-                var refundedEvent = new OrderRefundedEvent
-                {
-                    OrderId = order.OrderId,
-                    ShopId = order.ShopId,
-                    RefundAmountCents = (long)(order.TotalAmountVnd),
-                    RefundReason = "Order refunded via dashboard",
-                    RefundedAt = DateTime.UtcNow,
-                    OrderCreatedAt = order.CreatedAt,
-                    ItemCount = itemCount,
-                    ProductVersionId = productVersionId
-                };
-                _orderEventPublisher.PublishOrderRefunded(refundedEvent);
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[OrderService] Error publishing dashboard events: {ex.Message}");
-            // Don't throw - events are not critical, order update should still succeed
         }
     }
 

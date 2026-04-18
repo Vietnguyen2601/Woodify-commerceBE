@@ -2,7 +2,7 @@ namespace ProductService.Domain.Entities;
 
 /// <summary>
 /// Entity ProductMaster - Bảng Product_Master
-/// Quản lý thông tin master của sản phẩm
+/// Quản lý thông tin master của sản ph��m
 /// </summary>
 public class ProductMaster
 {
@@ -31,13 +31,16 @@ public class ProductMaster
     /// <summary>Visible review count for this product master.</summary>
     public int ReviewCount { get; set; }
 
+    /// <summary>Total units sold (from order line items by version). Updated via order snapshot events.</summary>
+    public int Sales { get; set; }
+
     // Navigation properties
     public virtual Category? Category { get; set; }
     public virtual ICollection<ProductVersion> Versions { get; set; } = new List<ProductVersion>();
 }
 
 /// <summary>
-/// Enum cho trạng thái sản phẩm
+/// Enum cho trạng thái sản ph��m
 /// </summary>
 public enum ProductStatus
 {
@@ -51,7 +54,7 @@ public enum ProductStatus
 }
 
 /// <summary>
-/// Enum cho trạng thái duyệt sản phẩm
+/// Enum cho trạng thái duyệt sản ph��m
 /// </summary>
 public enum ModerationStatus
 {

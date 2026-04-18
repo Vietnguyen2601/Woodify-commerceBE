@@ -65,6 +65,7 @@ builder.Services.AddOrderServices(builder.Configuration);
 
 // Always register publisher; it no-ops if RabbitMQPublisher isn't available
 builder.Services.AddSingleton<OrderEventPublisher>();
+builder.Services.AddSingleton<OrderSideEffectPublisher>();
 
 builder.Services.AddSingleton<OrderService.Application.Interfaces.IOrderRealtimeNotifier,
     OrderService.APIService.Services.OrderRealtimeNotifier>();
