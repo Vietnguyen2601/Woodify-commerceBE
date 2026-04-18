@@ -1,9 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrderService.Application.Interfaces;
-using OrderService.Application.DTOs;
-using OrderService.Application.Services;
-using OrderService.Domain.Entities;
 using OrderService.Infrastructure.Repositories.IRepositories;
 using Shared.Events;
 using Shared.Messaging;
@@ -11,25 +7,23 @@ using Shared.Messaging;
 namespace OrderService.Application.Consumers;
 
 /// <summary>
-/// Consumes PaymentOrdersPaidEvent — marks orders COMPLETED after PayOS or wallet payment.
+/// Consumes <see cref="PaymentOrdersPaidEvent"/> after PayOS, wallet, or other successful payment.
+/// Order aggregate status is <b>not</b> changed here (no COMPLETED from payment).
 /// </summary>
 public class PaymentOrdersPaidConsumer
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly RabbitMQConsumer _consumer;
     private readonly ILogger<PaymentOrdersPaidConsumer> _logger;
-    private readonly OrderSideEffectPublisher _orderSideEffects;
 
     public PaymentOrdersPaidConsumer(
         IServiceScopeFactory scopeFactory,
         RabbitMQConsumer consumer,
-        ILogger<PaymentOrdersPaidConsumer> logger,
-        OrderSideEffectPublisher orderSideEffects)
+        ILogger<PaymentOrdersPaidConsumer> logger)
     {
         _scopeFactory = scopeFactory;
         _consumer = consumer;
         _logger = logger;
-        _orderSideEffects = orderSideEffects;
     }
 
     public void StartListening()
@@ -62,7 +56,6 @@ public class PaymentOrdersPaidConsumer
         {
             using var scope = _scopeFactory.CreateScope();
             var orderRepository = scope.ServiceProvider.GetRequiredService<IOrderRepository>();
-            var notifier = scope.ServiceProvider.GetService<IOrderRealtimeNotifier>();
 
             var orders = await orderRepository.GetByIdsAsync(evt.OrderIds);
             foreach (var order in orders)
@@ -75,43 +68,12 @@ public class PaymentOrdersPaidConsumer
                     continue;
                 }
 
-                if (order.Status != OrderStatus.PENDING)
-                {
-                    _logger.LogInformation(
-                        "Skip Order {OrderId}: status is {Status}, expected PENDING",
-                        order.OrderId, order.Status);
-                    continue;
-                }
-
-                var oldStatus = order.Status.ToString();
-                order.Status = OrderStatus.COMPLETED;
-                order.UpdatedAt = DateTime.UtcNow;
-                await orderRepository.UpdateAsync(order);
-
-                var fullOrder = await orderRepository.GetOrderWithItemsAsync(order.OrderId);
-                if (fullOrder != null)
-                    _orderSideEffects.PublishAfterStatusChange(fullOrder, oldStatus, OrderStatus.COMPLETED.ToString());
-
-                if (notifier != null)
-                {
-                    await notifier.NotifyOrderShipmentStatusAsync(new OrderShipmentRealtimePayload
-                    {
-                        ShipmentId = Guid.Empty,
-                        OrderId = order.OrderId,
-                        ShopId = order.ShopId,
-                        AccountId = order.AccountId,
-                        ShipmentPreviousStatus = string.Empty,
-                        ShipmentNewStatus = string.Empty,
-                        OrderPreviousStatus = OrderStatus.PENDING.ToString(),
-                        OrderNewStatus = OrderStatus.COMPLETED.ToString(),
-                        OrderRowUpdated = true,
-                        OccurredAt = DateTime.UtcNow
-                    });
-                }
-
                 _logger.LogInformation(
-                    "Order {OrderId} completed after payment {PaymentId} ({Provider})",
-                    order.OrderId, evt.PaymentId, evt.Provider);
+                    "Payment {PaymentId} succeeded for Order {OrderId} ({Provider}); order status left unchanged ({Status})",
+                    evt.PaymentId,
+                    order.OrderId,
+                    evt.Provider,
+                    order.Status);
             }
         }
         catch (Exception ex)
