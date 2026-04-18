@@ -28,9 +28,24 @@ public class WalletTransaction
     public Guid? RelatedOrderId { get; set; }
 
     /// <summary>
+    /// Shop liên quan (seller payout / reversal).
+    /// </summary>
+    public Guid? RelatedShopId { get; set; }
+
+    /// <summary>
     /// FK to Payment (optional)
     /// </summary>
     public Guid? RelatedPaymentId { get; set; }
+
+    /// <summary>
+    /// Loại nghiệp vụ ledger: ORDER_NET_CREDIT, ORDER_NET_REVERSAL, WITHDRAWAL_PAYOUT, ...
+    /// </summary>
+    public string? ReferenceType { get; set; }
+
+    /// <summary>
+    /// Khóa idempotent — mỗi ghi có/ghi nợ nghiệp vụ chỉ một bản ghi.
+    /// </summary>
+    public string? IdempotencyKey { get; set; }
 
     public WalletTransactionStatus Status { get; set; } = WalletTransactionStatus.Pending;
 
