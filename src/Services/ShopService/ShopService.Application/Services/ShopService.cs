@@ -14,10 +14,15 @@ public class ShopService : IShopService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly RabbitMQPublisher? _rabbitPublisher;
+    private readonly IShopReadModelTotalsQuery _readModelTotals;
 
-    public ShopService(IUnitOfWork unitOfWork, RabbitMQPublisher? rabbitPublisher = null)
+    public ShopService(
+        IUnitOfWork unitOfWork,
+        IShopReadModelTotalsQuery readModelTotals,
+        RabbitMQPublisher? rabbitPublisher = null)
     {
         _unitOfWork = unitOfWork;
+        _readModelTotals = readModelTotals;
         _rabbitPublisher = rabbitPublisher;
     }
 
@@ -204,12 +209,87 @@ public class ShopService : IShopService
         }
     }
 
+    public async Task<ServiceResult<ShopBankAccountDto>> GetShopBankAccountAsync(Guid shopId)
+    {
+        try
+        {
+            var shop = await _unitOfWork.Shops.GetByIdAsync(shopId);
+            if (shop == null)
+                return ServiceResult<ShopBankAccountDto>.NotFound("Shop not found");
+
+            return ServiceResult<ShopBankAccountDto>.Success(new ShopBankAccountDto
+            {
+                BankName = shop.BankName,
+                BankAccountNumber = shop.BankAccountNumber,
+                BankAccountName = shop.BankAccountName
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
+        {
+            return ServiceResult<ShopBankAccountDto>.InternalServerError($"Error retrieving bank account info: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<ShopBankAccountDto>> UpdateShopBankAccountAsync(Guid shopId, UpdateShopBankAccountDto dto)
+    {
+        try
+        {
+            var shop = await _unitOfWork.Shops.GetByIdAsync(shopId);
+            if (shop == null)
+                return ServiceResult<ShopBankAccountDto>.NotFound("Shop not found");
+
+            if (shop.Status is ShopStatus.SUSPENDED or ShopStatus.BANNED)
+                return ServiceResult<ShopBankAccountDto>.BadRequest(
+                    $"Cannot update bank account for shop with status '{shop.Status}'.");
+
+            var bankName = dto.BankName?.Trim();
+            var bankAccountNumber = dto.BankAccountNumber?.Trim();
+            var bankAccountName = dto.BankAccountName?.Trim();
+
+            if (string.IsNullOrWhiteSpace(bankName) ||
+                string.IsNullOrWhiteSpace(bankAccountNumber) ||
+                string.IsNullOrWhiteSpace(bankAccountName))
+            {
+                return ServiceResult<ShopBankAccountDto>.BadRequest(
+                    "bankName, bankAccountNumber, bankAccountName are required.");
+            }
+
+            shop.BankName = bankName;
+            shop.BankAccountNumber = bankAccountNumber;
+            shop.BankAccountName = bankAccountName;
+            shop.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.Shops.Update(shop);
+            await _unitOfWork.SaveChangesAsync();
+
+            return ServiceResult<ShopBankAccountDto>.Success(new ShopBankAccountDto
+            {
+                BankName = shop.BankName,
+                BankAccountNumber = shop.BankAccountNumber,
+                BankAccountName = shop.BankAccountName
+            }, "Bank account info updated successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
+        {
+            return ServiceResult<ShopBankAccountDto>.InternalServerError($"Error updating bank account info: {ex.Message}");
+        }
+    }
+
     public async Task<ServiceResult<IEnumerable<ShopPublicDto>>> GetAllShopsAsync()
     {
         try
         {
-            var shops = await _unitOfWork.Shops.GetActiveShopsAsync();
-            return ServiceResult<IEnumerable<ShopPublicDto>>.Success(shops.ToPublicDto());
+            var shops = (await _unitOfWork.Shops.GetActiveShopsAsync()).ToList();
+            var totals = await _readModelTotals.GetTotalsByShopIdsAsync(shops.Select(s => s.ShopId).ToList());
+            return ServiceResult<IEnumerable<ShopPublicDto>>.Success(shops.ToPublicDto(totals));
         }
         catch (OperationCanceledException)
         {
@@ -225,8 +305,9 @@ public class ShopService : IShopService
     {
         try
         {
-            var shops = await _unitOfWork.Shops.GetAllShopsAsync();
-            return ServiceResult<IEnumerable<ShopDto>>.Success(shops.ToDto());
+            var shops = (await _unitOfWork.Shops.GetAllShopsAsync()).ToList();
+            var totals = await _readModelTotals.GetTotalsByShopIdsAsync(shops.Select(s => s.ShopId).ToList());
+            return ServiceResult<IEnumerable<ShopDto>>.Success(shops.ToDto(totals));
         }
         catch (OperationCanceledException)
         {
@@ -246,7 +327,9 @@ public class ShopService : IShopService
             if (shop == null)
                 return ServiceResult<ShopPublicDto>.NotFound("Shop not found");
 
-            return ServiceResult<ShopPublicDto>.Success(shop.ToPublicDto());
+            var totals = await _readModelTotals.GetTotalsByShopIdsAsync(new List<Guid> { shopId });
+            totals.TryGetValue(shopId, out var t);
+            return ServiceResult<ShopPublicDto>.Success(shop.ToPublicDto(t.TotalProducts, t.TotalOrders));
         }
         catch (OperationCanceledException)
         {
@@ -266,7 +349,9 @@ public class ShopService : IShopService
             if (shop == null)
                 return ServiceResult<ShopDetailDto>.NotFound("Shop not found for this owner");
 
-            return ServiceResult<ShopDetailDto>.Success(shop.ToDetailDto());
+            var totals = await _readModelTotals.GetTotalsByShopIdsAsync(new List<Guid> { shop.ShopId });
+            totals.TryGetValue(shop.ShopId, out var t);
+            return ServiceResult<ShopDetailDto>.Success(shop.ToDetailDto(t.TotalProducts, t.TotalOrders));
         }
         catch (OperationCanceledException)
         {
@@ -309,7 +394,9 @@ public class ShopService : IShopService
                 Console.WriteLine($"[ShopService] Published ShopCreated event: ShopId={shop.ShopId}, ShopName={shop.Name}");
             }
 
-            return ServiceResult<ShopDto>.Created(shop.ToDto(), "Shop created successfully");
+            var totals = await _readModelTotals.GetTotalsByShopIdsAsync(new List<Guid> { shop.ShopId });
+            totals.TryGetValue(shop.ShopId, out var t);
+            return ServiceResult<ShopDto>.Created(shop.ToDto(t.TotalProducts, t.TotalOrders), "Shop created successfully");
         }
         catch (OperationCanceledException)
         {
@@ -354,7 +441,9 @@ public class ShopService : IShopService
                 Console.WriteLine($"[ShopService] Published ShopUpdated event: ShopId={shop.ShopId}, ShopName={shop.Name}");
             }
 
-            return ServiceResult<ShopDto>.Success(shop.ToDto(), "Shop updated successfully");
+            var totals = await _readModelTotals.GetTotalsByShopIdsAsync(new List<Guid> { shop.ShopId });
+            totals.TryGetValue(shop.ShopId, out var t);
+            return ServiceResult<ShopDto>.Success(shop.ToDto(t.TotalProducts, t.TotalOrders), "Shop updated successfully");
         }
         catch (OperationCanceledException)
         {

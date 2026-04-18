@@ -131,6 +131,33 @@ public class ShopsController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpGet("{id}/bank-account")]
+    public async Task<ActionResult<ServiceResult<ShopBankAccountDto>>> GetShopBankAccount(Guid id)
+    {
+        var result = await _shopService.GetShopBankAccountAsync(id);
+
+        if (result.Status == 404)
+            return NotFound(result);
+
+        return Ok(result);
+    }
+
+    [HttpPatch("{id}/bank-account")]
+    public async Task<ActionResult<ServiceResult<ShopBankAccountDto>>> UpdateShopBankAccount(
+        Guid id,
+        [FromBody] UpdateShopBankAccountDto dto)
+    {
+        var result = await _shopService.UpdateShopBankAccountAsync(id, dto);
+
+        if (result.Status == 404)
+            return NotFound(result);
+
+        if (result.Status != 200)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
 }
 
 

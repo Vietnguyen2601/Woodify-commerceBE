@@ -6,7 +6,7 @@ using Shared.Results;
 namespace OrderService.APIService.Controllers;
 
 [ApiController]
-[Route("api/analytics")]
+[Route("api/order/analytics")]
 public class AnalyticsController : ControllerBase
 {
     private readonly IAnalyticsService _analyticsService;
