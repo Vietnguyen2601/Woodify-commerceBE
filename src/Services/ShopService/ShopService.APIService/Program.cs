@@ -77,6 +77,7 @@ for (int attempt = 0; attempt < 5; attempt++)
         builder.Services.AddSingleton(consumer);
         builder.Services.AddSingleton<ShopReviewStatsUpdatedConsumer>();
         builder.Services.AddSingleton<ShopNamesRequestConsumer>();
+        builder.Services.AddSingleton<ProductMasterReplicaConsumer>();
         break;
     }
     catch (Exception ex) when (
@@ -213,6 +214,9 @@ try
 
     var shopNamesRequestConsumer = app.Services.GetService<ShopNamesRequestConsumer>();
     shopNamesRequestConsumer?.StartListening();
+
+    var productMasterReplicaConsumer = app.Services.GetService<ProductMasterReplicaConsumer>();
+    productMasterReplicaConsumer?.StartListening();
 }
 catch (InvalidOperationException ex)
 {

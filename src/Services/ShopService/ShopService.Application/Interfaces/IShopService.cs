@@ -31,6 +31,8 @@ public interface IShopService
     Task<ServiceResult<RegisterShopResponseDto>> RegisterShopAsync(RegisterShopDto dto);
     Task<ServiceResult<UpdateShopInfoResponseDto>> UpdateShopInfoAsync(Guid shopId, UpdateShopInfoDto dto);
     Task<ServiceResult<UpdateShopStatusResponseDto>> UpdateShopStatusAsync(Guid shopId, UpdateShopStatusDto dto);
+    Task<ServiceResult<ShopBankAccountDto>> GetShopBankAccountAsync(Guid shopId);
+    Task<ServiceResult<ShopBankAccountDto>> UpdateShopBankAccountAsync(Guid shopId, UpdateShopBankAccountDto dto);
     Task<ServiceResult<ShopDto>> CreateShopAsync(CreateShopDto dto);
     Task<ServiceResult<ShopDto>> UpdateShopAsync(Guid shopId, UpdateShopDto dto);
     Task<ServiceResult> DeleteShopAsync(Guid shopId);

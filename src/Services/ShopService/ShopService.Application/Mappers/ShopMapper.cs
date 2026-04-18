@@ -8,7 +8,7 @@ public static class ShopMapper
     /// <summary>
     /// Map to public DTO (ẩn thông tin ngân hàng) - dùng cho GetAllShops
     /// </summary>
-    public static ShopPublicDto ToPublicDto(this Shop shop)
+    public static ShopPublicDto ToPublicDto(this Shop shop, int totalProducts, int totalOrders)
     {
         return new ShopPublicDto
         {
@@ -22,13 +22,16 @@ public static class ShopMapper
             DefaultProvider = shop.DefaultProvider,
             Rating = shop.Rating,
             ReviewCount = shop.ReviewCount,
-            TotalProducts = shop.TotalProducts,
-            TotalOrders = shop.TotalOrders,
+            TotalProducts = totalProducts,
+            TotalOrders = totalOrders,
             Status = shop.Status.ToString(),
             CreatedAt = shop.CreatedAt,
             UpdatedAt = shop.UpdatedAt
         };
     }
+
+    public static ShopPublicDto ToPublicDto(this Shop shop) =>
+        shop.ToPublicDto(shop.TotalProducts, shop.TotalOrders);
 
     /// <summary>
     /// Map to public DTO list (ẩn thông tin ngân hàng)
@@ -38,10 +41,21 @@ public static class ShopMapper
         return shops.Select(s => s.ToPublicDto());
     }
 
+    public static IEnumerable<ShopPublicDto> ToPublicDto(
+        this IEnumerable<Shop> shops,
+        IReadOnlyDictionary<Guid, (int TotalProducts, int TotalOrders)> totalsByShopId)
+    {
+        return shops.Select(s =>
+        {
+            totalsByShopId.TryGetValue(s.ShopId, out var t);
+            return s.ToPublicDto(t.TotalProducts, t.TotalOrders);
+        });
+    }
+
     /// <summary>
     /// Map to detail DTO (hiển thị thông tin ngân hàng) - dùng cho GetShopById, GetShopByOwnerId
     /// </summary>
-    public static ShopDetailDto ToDetailDto(this Shop shop)
+    public static ShopDetailDto ToDetailDto(this Shop shop, int totalProducts, int totalOrders)
     {
         return new ShopDetailDto
         {
@@ -58,18 +72,21 @@ public static class ShopMapper
             BankAccountName = shop.BankAccountName,
             Rating = shop.Rating,
             ReviewCount = shop.ReviewCount,
-            TotalProducts = shop.TotalProducts,
-            TotalOrders = shop.TotalOrders,
+            TotalProducts = totalProducts,
+            TotalOrders = totalOrders,
             Status = shop.Status.ToString(),
             CreatedAt = shop.CreatedAt,
             UpdatedAt = shop.UpdatedAt
         };
     }
 
+    public static ShopDetailDto ToDetailDto(this Shop shop) =>
+        shop.ToDetailDto(shop.TotalProducts, shop.TotalOrders);
+
     /// <summary>
     /// Backward compatibility - hiển thị bank info
     /// </summary>
-    public static ShopDto ToDto(this Shop shop)
+    public static ShopDto ToDto(this Shop shop, int totalProducts, int totalOrders)
     {
         return new ShopDto
         {
@@ -86,13 +103,16 @@ public static class ShopMapper
             BankAccountName = shop.BankAccountName,
             Rating = shop.Rating,
             ReviewCount = shop.ReviewCount,
-            TotalProducts = shop.TotalProducts,
-            TotalOrders = shop.TotalOrders,
+            TotalProducts = totalProducts,
+            TotalOrders = totalOrders,
             Status = shop.Status.ToString(),
             CreatedAt = shop.CreatedAt,
             UpdatedAt = shop.UpdatedAt
         };
     }
+
+    public static ShopDto ToDto(this Shop shop) =>
+        shop.ToDto(shop.TotalProducts, shop.TotalOrders);
 
     /// <summary>
     /// Backward compatibility
@@ -100,6 +120,17 @@ public static class ShopMapper
     public static IEnumerable<ShopDto> ToDto(this IEnumerable<Shop> shops)
     {
         return shops.Select(s => s.ToDto());
+    }
+
+    public static IEnumerable<ShopDto> ToDto(
+        this IEnumerable<Shop> shops,
+        IReadOnlyDictionary<Guid, (int TotalProducts, int TotalOrders)> totalsByShopId)
+    {
+        return shops.Select(s =>
+        {
+            totalsByShopId.TryGetValue(s.ShopId, out var t);
+            return s.ToDto(t.TotalProducts, t.TotalOrders);
+        });
     }
 
     public static Shop ToModel(this CreateShopDto dto)
@@ -141,9 +172,6 @@ public static class ShopMapper
         if (dto.CoverImageUrl != null) shop.CoverImageUrl = dto.CoverImageUrl;
         if (dto.DefaultPickupAddress != null) shop.DefaultPickupAddress = dto.DefaultPickupAddress;
         if (dto.DefaultProvider.HasValue) shop.DefaultProvider = dto.DefaultProvider;
-        if (dto.BankName != null) shop.BankName = dto.BankName;
-        if (dto.BankAccountNumber != null) shop.BankAccountNumber = dto.BankAccountNumber;
-        if (dto.BankAccountName != null) shop.BankAccountName = dto.BankAccountName;
         shop.UpdatedAt = DateTime.UtcNow;
     }
 }

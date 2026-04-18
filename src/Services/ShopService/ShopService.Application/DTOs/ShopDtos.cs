@@ -132,9 +132,6 @@ public class UpdateShopInfoDto
     public string? CoverImageUrl { get; set; }
     public string? DefaultPickupAddress { get; set; }
     public Guid? DefaultProvider { get; set; }
-    public string? BankName { get; set; }
-    public string? BankAccountNumber { get; set; }
-    public string? BankAccountName { get; set; }
 }
 
 public class UpdateShopInfoResponseDto
@@ -158,4 +155,18 @@ public class UpdateShopStatusResponseDto
     public string Status { get; set; } = string.Empty;
     public DateTime? UpdatedAt { get; set; }
     public string Message { get; set; } = string.Empty;
+}
+
+public class ShopBankAccountDto
+{
+    public string? BankName { get; set; }
+    public string? BankAccountNumber { get; set; }
+    public string? BankAccountName { get; set; }
+}
+
+public class UpdateShopBankAccountDto
+{
+    public string BankName { get; set; } = string.Empty;
+    public string BankAccountNumber { get; set; } = string.Empty;
+    public string BankAccountName { get; set; } = string.Empty;
 }

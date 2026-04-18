@@ -60,19 +60,6 @@ public class UpdateShopInfoValidator : AbstractValidator<UpdateShopInfoDto>
         RuleFor(x => x.CoverImageUrl)
             .Must(url => url == null || url.StartsWith("https://res.cloudinary.com/"))
             .WithMessage("Cover image URL must be a valid Cloudinary URL");
-
-        RuleFor(x => x.BankName)
-            .MaximumLength(100).WithMessage("Bank name cannot exceed 100 characters")
-            .When(x => !string.IsNullOrEmpty(x.BankName));
-
-        RuleFor(x => x.BankAccountNumber)
-            .MaximumLength(50).WithMessage("Bank account number cannot exceed 50 characters")
-            .Matches(@"^\d+$").WithMessage("Bank account number must contain only digits")
-            .When(x => !string.IsNullOrEmpty(x.BankAccountNumber));
-
-        RuleFor(x => x.BankAccountName)
-            .MaximumLength(100).WithMessage("Bank account name cannot exceed 100 characters")
-            .When(x => !string.IsNullOrEmpty(x.BankAccountName));
     }
 }
 

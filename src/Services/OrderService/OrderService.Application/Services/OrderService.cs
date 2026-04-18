@@ -562,7 +562,8 @@ public class OrderService : IOrderService
             }
 
             var accountMap = await _accountDirectoryRepository.GetByIdsAsync(new[] { order.AccountId });
-            var orderDto = MapToOrderDto(order, accountMap.GetValueOrDefault(order.AccountId));
+            var thumbMap = await LoadThumbnailUrlsByVersionIdAsync(order.OrderItems.Select(i => i.VersionId));
+            var orderDto = MapToOrderDto(order, accountMap.GetValueOrDefault(order.AccountId), null, thumbMap);
             return ServiceResult<OrderDto>.Success(orderDto);
         }
         catch (Exception ex)
@@ -577,8 +578,9 @@ public class OrderService : IOrderService
         {
             var orders = await _orderRepository.GetOrdersByAccountIdAsync(accountId);
             var accountMap = await _accountDirectoryRepository.GetByIdsAsync(orders.Select(o => o.AccountId));
+            var thumbMap = await LoadThumbnailUrlsByVersionIdAsync(orders.SelectMany(o => o.OrderItems.Select(i => i.VersionId)));
             var orderDtos = orders
-                .Select(o => MapToOrderDto(o, accountMap.GetValueOrDefault(o.AccountId)))
+                .Select(o => MapToOrderDto(o, accountMap.GetValueOrDefault(o.AccountId), null, thumbMap))
                 .ToList();
 
             return ServiceResult<List<OrderDto>>.Success(orderDtos);
@@ -704,7 +706,8 @@ public class OrderService : IOrderService
 
             // 10. Return updated order
             var accountMap = await _accountDirectoryRepository.GetByIdsAsync(new[] { order.AccountId });
-            var orderDto = MapToOrderDto(order, accountMap.GetValueOrDefault(order.AccountId));
+            var thumbMap = await LoadThumbnailUrlsByVersionIdAsync(order.OrderItems.Select(i => i.VersionId));
+            var orderDto = MapToOrderDto(order, accountMap.GetValueOrDefault(order.AccountId), null, thumbMap);
             return ServiceResult<OrderDto>.Success(orderDto, "Order status updated successfully");
         }
         catch (Exception ex)
@@ -928,9 +931,23 @@ public class OrderService : IOrderService
                 page, pageSize, query.Status, query.ShopId, query.AccountId);
 
             var accountMap = await _accountDirectoryRepository.GetByIdsAsync(items.Select(o => o.AccountId));
+            var shopNameMap = new Dictionary<Guid, string?>();
+            foreach (var shopId in items.Select(o => o.ShopId).Distinct())
+            {
+                var shop = await _shopInfoCacheRepository.GetByShopIdAsync(shopId);
+                shopNameMap[shopId] = shop?.Name;
+            }
+
+            var thumbMap = await LoadThumbnailUrlsByVersionIdAsync(items.SelectMany(o => o.OrderItems.Select(i => i.VersionId)));
             var result = new OrderListResultDto
             {
-                Items = items.Select(o => MapToOrderDto(o, accountMap.GetValueOrDefault(o.AccountId))).ToList(),
+                Items = items.Select(o =>
+                        MapToOrderDto(
+                            o,
+                            accountMap.GetValueOrDefault(o.AccountId),
+                            shopNameMap.GetValueOrDefault(o.ShopId),
+                            thumbMap))
+                    .ToList(),
                 Page = page,
                 PageSize = pageSize,
                 Total = total
@@ -952,8 +969,13 @@ public class OrderService : IOrderService
         dto.AccountEmail = string.IsNullOrWhiteSpace(account.Email) ? null : account.Email.Trim();
     }
 
-    private OrderDto MapToOrderDto(Order order, AccountDirectoryEntry? account = null)
+    private OrderDto MapToOrderDto(
+        Order order,
+        AccountDirectoryEntry? account = null,
+        string? shopName = null,
+        IReadOnlyDictionary<Guid, string?>? thumbnailsByVersionId = null)
     {
+        var thumbMap = thumbnailsByVersionId ?? new Dictionary<Guid, string?>();
         var dto = new OrderDto
         {
             OrderId = order.OrderId,
@@ -961,6 +983,7 @@ public class OrderService : IOrderService
             AccountName = null,
             AccountEmail = null,
             ShopId = order.ShopId,
+            ShopName = shopName,
             SubtotalVnd = order.SubtotalVnd,
             TotalAmountVnd = order.TotalAmountVnd,
             CommissionRate = order.CommissionRate,      // === Commission rate (6%)
@@ -983,11 +1006,23 @@ public class OrderService : IOrderService
                 LineTotalVnd = oi.LineTotalVnd,
                 ShipmentId = oi.ShipmentId,
                 Status = oi.Status.ToString(),
-                CreatedAt = oi.CreatedAt
+                CreatedAt = oi.CreatedAt,
+                ThumbnailUrl = thumbMap.GetValueOrDefault(oi.VersionId)
             }).ToList()
         };
         ApplyAccountDirectoryToOrderDto(dto, account);
         return dto;
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, string?>> LoadThumbnailUrlsByVersionIdAsync(
+        IEnumerable<Guid> versionIds)
+    {
+        var ids = versionIds.Distinct().ToList();
+        if (ids.Count == 0)
+            return new Dictionary<Guid, string?>();
+
+        var rows = await _productCacheRepository.GetByVersionIdsAsync(ids);
+        return rows.ToDictionary(r => r.VersionId, r => r.ThumbnailUrl);
     }
 
     /// <summary>
@@ -1200,10 +1235,13 @@ public class OrderService : IOrderService
             OrderItems = new List<OrderItemWithProductDetailsDto>()
         };
 
-        // Fetch product details for each order item
+        var cacheRows = await _productCacheRepository.GetByVersionIdsAsync(
+            order.OrderItems.Select(i => i.VersionId).ToList());
+        var cacheByVersionId = cacheRows.ToDictionary(c => c.VersionId);
+
         foreach (var orderItem in order.OrderItems)
         {
-            var productCache = await _productCacheRepository.GetByVersionIdAsync(orderItem.VersionId);
+            cacheByVersionId.TryGetValue(orderItem.VersionId, out var productCache);
 
             var orderItemDto = new OrderItemWithProductDetailsDto
             {
@@ -1227,7 +1265,8 @@ public class OrderService : IOrderService
                 WeightGrams = productCache?.WeightGrams ?? 0,
                 LengthCm = productCache?.LengthCm ?? 0,
                 WidthCm = productCache?.WidthCm ?? 0,
-                HeightCm = productCache?.HeightCm ?? 0
+                HeightCm = productCache?.HeightCm ?? 0,
+                ThumbnailUrl = productCache?.ThumbnailUrl
             };
 
             orderDto.OrderItems.Add(orderItemDto);
@@ -1276,9 +1315,13 @@ public class OrderService : IOrderService
             OrderItems = new List<CustomerAccountOrderItemDto>()
         };
 
+        var cacheRows = await _productCacheRepository.GetByVersionIdsAsync(
+            order.OrderItems.Select(i => i.VersionId).ToList());
+        var cacheByVersionId = cacheRows.ToDictionary(c => c.VersionId);
+
         foreach (var orderItem in order.OrderItems)
         {
-            var productCache = await _productCacheRepository.GetByVersionIdAsync(orderItem.VersionId);
+            cacheByVersionId.TryGetValue(orderItem.VersionId, out var productCache);
             dto.OrderItems.Add(new CustomerAccountOrderItemDto
             {
                 OrderItemId = orderItem.OrderItemId,
@@ -1299,7 +1342,8 @@ public class OrderService : IOrderService
                 WeightGrams = productCache?.WeightGrams ?? 0,
                 LengthCm = productCache?.LengthCm ?? 0,
                 WidthCm = productCache?.WidthCm ?? 0,
-                HeightCm = productCache?.HeightCm ?? 0
+                HeightCm = productCache?.HeightCm ?? 0,
+                ThumbnailUrl = productCache?.ThumbnailUrl
             });
         }
 

@@ -15,6 +15,7 @@ public class ShopDbContext : DbContext
     public DbSet<OrderMetricsSnapshot> OrderMetricsSnapshots { get; set; }
     public DbSet<ShopOrderCounterLedger> ShopOrderCounterLedgers { get; set; }
     public DbSet<ShopProductCounterLedger> ShopProductCounterLedgers { get; set; }
+    public DbSet<ProductMasterReplica> ProductMasterReplicas { get; set; }
 
     private static string? GetConnectionString(string connectionStringName)
     {
@@ -144,6 +145,26 @@ public class ShopDbContext : DbContext
             entity.Property(e => e.CountedAt).HasColumnName("counted_at").IsRequired();
             entity.Property(e => e.UncountedAt).HasColumnName("uncounted_at");
             entity.HasIndex(e => e.ShopId);
+        });
+
+        modelBuilder.Entity<ProductMasterReplica>(entity =>
+        {
+            entity.ToTable("product_master_replica");
+            entity.HasKey(e => e.ProductId);
+            entity.Property(e => e.ProductId).HasColumnName("product_id");
+            entity.Property(e => e.ShopId).HasColumnName("shop_id").IsRequired();
+            entity.Property(e => e.CategoryId).HasColumnName("category_id").IsRequired();
+            entity.Property(e => e.Name).HasColumnName("name").IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Description).HasColumnName("description");
+            entity.Property(e => e.Status).HasColumnName("status").IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ModerationStatus).HasColumnName("moderation_status").HasMaxLength(50);
+            entity.Property(e => e.HasVersions).HasColumnName("has_versions").IsRequired();
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted").IsRequired();
+            entity.Property(e => e.DeletedAtUtc).HasColumnName("deleted_at_utc");
+            entity.Property(e => e.CreatedAtUtc).HasColumnName("created_at_utc").IsRequired();
+            entity.Property(e => e.UpdatedAtUtc).HasColumnName("updated_at_utc").IsRequired();
+            entity.HasIndex(e => e.ShopId);
+            entity.HasIndex(e => new { e.ShopId, e.Status });
         });
     }
 }

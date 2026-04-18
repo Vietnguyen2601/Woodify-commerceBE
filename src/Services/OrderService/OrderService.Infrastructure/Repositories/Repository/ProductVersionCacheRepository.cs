@@ -17,6 +17,19 @@ public class ProductVersionCacheRepository : GenericRepository<ProductVersionCac
         return await _dbSet.FirstOrDefaultAsync(p => p.VersionId == versionId);
     }
 
+    public async Task<List<ProductVersionCache>> GetByVersionIdsAsync(
+        IReadOnlyList<Guid> versionIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (versionIds == null || versionIds.Count == 0)
+            return new List<ProductVersionCache>();
+
+        return await _dbSet
+            .AsNoTracking()
+            .Where(p => versionIds.Contains(p.VersionId))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<List<ProductVersionCache>> GetByProductIdAsync(Guid productId)
     {
         return await _dbSet.Where(p => p.ProductId == productId).ToListAsync();
@@ -50,6 +63,7 @@ public class ProductVersionCacheRepository : GenericRepository<ProductVersionCac
             
             // Version Info
             existing.SellerSku = cache.SellerSku;
+            existing.VersionNumber = cache.VersionNumber;
             existing.VersionName = cache.VersionName;
             
             // Pricing
@@ -59,6 +73,8 @@ public class ProductVersionCacheRepository : GenericRepository<ProductVersionCac
             // Stock
             existing.StockQuantity = cache.StockQuantity;
             
+            existing.WoodType = cache.WoodType;
+
             // Shipping Dimensions
             existing.WeightGrams = cache.WeightGrams;
             existing.LengthCm = cache.LengthCm;
@@ -67,7 +83,9 @@ public class ProductVersionCacheRepository : GenericRepository<ProductVersionCac
             
             // Status
             existing.IsActive = cache.IsActive;
-            
+
+            existing.ThumbnailUrl = cache.ThumbnailUrl;
+
             existing.LastUpdated = DateTime.UtcNow;
             await UpdateAsync(existing);
         }
