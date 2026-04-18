@@ -14,6 +14,7 @@ using ProductService.APIService.Converters;
 using ProductService.APIService.Extensions;
 using ProductService.APIService.HostedServices;
 using DotNetEnv;
+using Microsoft.AspNetCore.Http;
 using System.Text.Json.Serialization;
 
 Log.Logger = new LoggerConfiguration()
@@ -25,6 +26,14 @@ Log.Logger = new LoggerConfiguration()
     .CreateBootstrapLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+
+// .env sớm để PRODUCT_ALLOWED_ORIGINS (nếu có) áp dụng cho CORS
+{
+    var rootPathEarly = Directory.GetParent(Directory.GetCurrentDirectory())?.Parent?.Parent?.Parent?.FullName;
+    var envPathEarly = Path.Combine(rootPathEarly ?? "", ".env");
+    if (File.Exists(envPathEarly))
+        Env.Load(envPathEarly);
+}
 
 builder.Host.UseSerilog((ctx, _, cfg) => cfg
     .ReadFrom.Configuration(ctx.Configuration)
@@ -38,14 +47,16 @@ builder.Host.UseSerilog((ctx, _, cfg) => cfg
         outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{Service}] {Message:lj}{NewLine}{Exception}",
         theme: AnsiConsoleTheme.Code));
 
-// Add CORS configuration
+// CORS + credentials: dùng SetIsOriginAllowed (không cần liệt kê URL trong appsettings).
+var productCorsExtraOrigins = BuildProductCorsExtraOriginSet(builder.Configuration);
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("ProductCors", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.SetIsOriginAllowed(origin => IsProductCorsOriginAllowed(origin, productCorsExtraOrigins))
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
 
@@ -118,13 +129,6 @@ if (!rabbitMQAvailable)
     Console.WriteLine("WARNING: RabbitMQ is not available. Event publishing will be disabled.");
     // Register a null publisher to satisfy dependencies
     builder.Services.AddSingleton<RabbitMQPublisher>(sp => null!);
-}
-
-var rootPath = Directory.GetParent(Directory.GetCurrentDirectory())?.Parent?.Parent?.Parent?.FullName;
-var envPath = Path.Combine(rootPath ?? "", ".env");
-if (File.Exists(envPath))
-{
-    Env.Load(envPath);
 }
 
 builder.Services.AddProductServices();
@@ -200,8 +204,20 @@ try
 
     app.UseValidationExceptionMiddleware();
 
-    // Enable CORS
-    app.UseCors("AllowAll");
+    app.Use(async (context, next) =>
+    {
+        var path = context.Request.Path.Value ?? string.Empty;
+        if ((path.StartsWith("/product/", StringComparison.OrdinalIgnoreCase)
+             || string.Equals(path, "/product", StringComparison.OrdinalIgnoreCase))
+            && !path.StartsWith("/api/product", StringComparison.OrdinalIgnoreCase))
+        {
+            context.Request.Path = new PathString("/api" + path);
+        }
+
+        await next();
+    });
+
+    app.UseCors("ProductCors");
 
     app.UseAuthorization();
 
@@ -226,4 +242,47 @@ try
 catch (Exception ex)
 {
     Console.WriteLine($"Failed to start application: {ex.Message}");
+}
+
+static HashSet<string> BuildProductCorsExtraOriginSet(IConfiguration configuration)
+{
+    var csv = Environment.GetEnvironmentVariable("PRODUCT_ALLOWED_ORIGINS")
+        ?? configuration["Cors:AllowedOrigins"];
+    var list = ParseCommaSeparated(csv);
+    return new HashSet<string>(list, StringComparer.OrdinalIgnoreCase);
+}
+
+static bool IsProductCorsOriginAllowed(string? origin, HashSet<string> extraOrigins)
+{
+    if (string.IsNullOrEmpty(origin))
+        return false;
+
+    if (extraOrigins.Count > 0 && extraOrigins.Contains(origin))
+        return true;
+
+    if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+        return false;
+
+    if (uri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase)
+        && (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+            || uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase)))
+        return true;
+
+    if (uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)
+        && uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase))
+        return true;
+
+    return false;
+}
+
+static List<string> ParseCommaSeparated(string? csv)
+{
+    if (string.IsNullOrWhiteSpace(csv))
+        return [];
+
+    return csv
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Where(s => Uri.TryCreate(s, UriKind.Absolute, out _))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
 }
